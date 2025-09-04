@@ -3,7 +3,7 @@
 import { getCategoryProducts } from "@/lib/apiCalls";
 import { Product } from "@/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type PriceInputProps = {
   data: Product[];
@@ -14,18 +14,19 @@ const PriceInput = ({ data }: PriceInputProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [minPrice, setMinPrice] = useState<number>();
-  const [maxPrice, setMaxPrice] = useState<number>();
-  const [value, setValue] = useState<number>();
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(0);
+  const [value, setValue] = useState<number>(0);
 
   const handleSortChange = useCallback(
-    async (value: string) => {
+    async (val: string) => {
       const current = new URLSearchParams(Array.from(searchParams.entries()));
 
-      if (!value || +value === maxPrice) {
+      const num = Number(val);
+      if (!val || Number.isNaN(num) || num === maxPrice) {
         current.delete("price");
       } else {
-        current.set("price", value);
+        current.set("price", String(num));
       }
       const search = current.toString();
       const query = search ? `?${search}` : "";
@@ -36,36 +37,36 @@ const PriceInput = ({ data }: PriceInputProps) => {
   );
 
   useEffect(() => {
-    const fetchProductPrice = async () => {
+    const computeFromProducts = (products: Product[]) => {
+      if (!products || products.length === 0) {
+        setMinPrice(0);
+        setMaxPrice(0);
+        setValue(0);
+        return;
+      }
+      const prices = products.map((p) =>
+        p.finalPrice && p.finalPrice > 0 ? p.finalPrice : p.price
+      );
+      const computedMin = Math.min(...prices);
+      const computedMax = Math.max(...prices);
+      setMinPrice(computedMin);
+      setMaxPrice(computedMax);
+      setValue(computedMax);
+    };
+
+    const init = async () => {
       if (pathName.startsWith("/shop/") && pathName !== "/shop") {
         const urlString = pathName.substring("/shop/".length);
-        const data = await getCategoryProducts(urlString);
-        const prices = data?.map((product: Product) => {
-          if (product.finalPrice && product.finalPrice > 0) {
-            return product.finalPrice;
-          } else {
-            return product.price;
-          }
-        });
-        setMaxPrice(Math.max(...prices));
-        setMinPrice(Math.min(...prices));
-        setValue(maxPrice);
+        const categoryProducts = await getCategoryProducts(urlString);
+        computeFromProducts(categoryProducts as unknown as Product[]);
       } else {
-        const prices = data?.map((product: Product) => {
-          if (product.finalPrice && product.finalPrice > 0) {
-            return product.finalPrice;
-          } else {
-            return +product.price;
-          }
-        });
-        setMaxPrice(Math.max(...prices));
-        setMinPrice(Math.min(...prices));
-        setValue(maxPrice);
+        computeFromProducts(data);
       }
     };
 
-    fetchProductPrice();
-  }, [pathName, data, maxPrice]);
+    init();
+    // Recompute when pathname or data changes
+  }, [pathName, data]);
 
   return (
     <div className="range-container mt-2">
@@ -79,8 +80,8 @@ const PriceInput = ({ data }: PriceInputProps) => {
         type="range"
         min={minPrice}
         max={maxPrice}
-        value={value || 0}
-        step="0.01"
+        value={value}
+        step="1"
         onChange={(e) => {
           handleSortChange(e.target.value);
           setValue(parseFloat(e.target.value));

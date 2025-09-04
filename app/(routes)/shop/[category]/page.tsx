@@ -1,10 +1,10 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { getProducts } from "@/lib/apiCalls";
+import { PrismaClient } from "@prisma/client";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import ProductCard from "@/components/ui/product-card";
-import Container from "@/components/ui/container";
+
+const prisma = new PrismaClient();
 
 interface CategoryPageProps {
   params: {
@@ -28,34 +28,66 @@ const CategoryPage = async ({
   params,
   searchParams,
 }: CategoryPageProps) => {
-  const data = await getProducts();
+  try {
+    const dbProducts = await prisma.product.findMany({
+      include: {
+        productSizes: {
+          include: {
+            size: true,
+          },
+        },
+      },
+    });
 
-  if (!data) {
-    notFound();
-  }
+    const products: Product[] = dbProducts.map((dbProduct) => ({
+      id: dbProduct.id,
+      title: dbProduct.title,
+      description: dbProduct.description,
+      price: dbProduct.price,
+      finalPrice: dbProduct.finalPrice || undefined,
+      discount: dbProduct.discount || undefined,
+      featured: dbProduct.featured,
+      imageURLs: dbProduct.imageURLs,
+      category: dbProduct.category,
+      categoryId: dbProduct.categoryId,
+      createdAt: dbProduct.createdAt.toISOString(),
+      updatedAt: dbProduct.updatedAt.toISOString(),
+    }));
 
-  const filtered = data.filter(
-    (product: Product) =>
-      product.category.toLowerCase() === params.category.toLowerCase()
-  );
+    const inCategory = products.filter(
+      (product: Product) =>
+        product.category.toLowerCase() === params.category.toLowerCase()
+    );
 
-  let sorted: Product[] | undefined;
+    // Apply sorting/filtering for price and sort
+    const displayed = filteredData(searchParams || {}, [...inCategory]);
 
-  if (searchParams.sort) {
-    sorted = filteredData(searchParams, filtered);
-  }
-
-  return (
-    <Container>
-      <div className="flex flex-col gap-y-8 mt-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {(sorted || filtered)?.map((product: Product) => (
-            <ProductCard key={product.id} data={product} />
-          ))}
+    if (displayed.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No products found in {params.category} category.</p>
         </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-10">
+        {displayed.map((product: Product) => (
+          <ProductCard key={product.id} data={product} />
+        ))}
       </div>
-    </Container>
-  );
+    );
+  } catch (error) {
+    console.error("Category page error:", error);
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Error loading products. Please try again.</p>
+        <p className="text-sm text-gray-500 mt-2">
+          Error: {error instanceof Error ? error.message : "Unknown error"}
+        </p>
+      </div>
+    );
+  }
 };
 
 export default CategoryPage;

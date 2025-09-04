@@ -1,5 +1,6 @@
 import ProductCard from "@/components/ui/product-card";
 import { PrismaClient } from "@prisma/client";
+import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 
 const prisma = new PrismaClient();
@@ -9,7 +10,11 @@ export const metadata = {
   description: "Shop for luxury cars, sports cars, SUVs, and electric vehicles",
 };
 
-const ShopPage = async () => {
+const ShopPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) => {
   try {
     const dbProducts = await prisma.product.findMany({
       include: {
@@ -21,8 +26,7 @@ const ShopPage = async () => {
       },
     });
 
-    // Transform the database products to match the Product interface
-    const products: Product[] = dbProducts.map(dbProduct => ({
+    const products: Product[] = dbProducts.map((dbProduct) => ({
       id: dbProduct.id,
       title: dbProduct.title,
       description: dbProduct.description,
@@ -37,9 +41,6 @@ const ShopPage = async () => {
       updatedAt: dbProduct.updatedAt.toISOString(),
     }));
 
-    console.log('Shop page - Products data:', products);
-    console.log('Shop page - Data length:', products?.length);
-
     if (!products || products.length === 0) {
       return (
         <div className="text-center py-8">
@@ -48,19 +49,24 @@ const ShopPage = async () => {
       );
     }
 
+    // Apply filtering/sorting (price, sort, q) via helper
+    const displayed = filteredData(searchParams || {}, [...products]);
+
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-        {products.map((product: Product) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-10">
+        {displayed.map((product: Product) => (
           <ProductCard key={product.id} data={product} />
         ))}
       </div>
     );
   } catch (error) {
-    console.error('Shop page error:', error);
+    console.error("Shop page error:", error);
     return (
       <div className="text-center py-8">
         <p className="text-red-600">Error loading products. Please try again.</p>
-        <p className="text-sm text-gray-500 mt-2">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+        <p className="text-sm text-gray-500 mt-2">
+          Error: {error instanceof Error ? error.message : "Unknown error"}
+        </p>
       </div>
     );
   }

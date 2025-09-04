@@ -4,52 +4,72 @@ import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { ChangeEvent } from "react";
 
-const SidebarItems = ({ category }: any) => {
+interface Category {
+  id: string;
+  category: string;
+}
+
+interface SidebarItemsProps {
+  categories: Category[];
+}
+
+const SidebarItems: React.FC<SidebarItemsProps> = ({ categories }) => {
   const pathName = usePathname();
   const router = useRouter();
 
   const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedCategory = event.target.value;
-    router.push(`${selectedCategory}`);
+    if (selectedCategory === "/shop") {
+      router.push("/shop");
+    } else {
+      router.push(selectedCategory);
+    }
   };
 
   return (
-    <>
-      <select
-        onChange={handleSelectChange}
-        className="w-full p-2 border border-neutral-800 mt-2 text-sm font-serif sm:hidden"
-        value={pathName}
-      >
-        <option value="/shop">All</option>
-        {category?.map((category: any) => (
-          <option key={category.id} value={`/shop/${category.category}`}>
-            {category.category[0].toUpperCase() + category.category.slice(1)}
-          </option>
-        ))}
-      </select>
-      <div className="hidden sm:block">
+    <div className="space-y-3">
+      {/* Mobile selector */}
+      <div className="lg:hidden">
+        <select
+          onChange={handleSelectChange}
+          className="w-full p-2 border border-gray-300 rounded-md text-sm"
+          value={pathName.startsWith("/shop/") ? pathName : "/shop"}
+        >
+          <option value="/shop">All</option>
+          {categories?.map((category) => (
+            <option key={category.id} value={`/shop/${category.category}`}>
+              {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Desktop links */}
+      <div className="hidden lg:block space-y-2">
         <Link href="/shop">
           <p
-            className={`w-full  hover:underline underline-offset-4 tracking-widest font-serif ${
-              pathName === "/shop" ? "underline" : ""
+            className={`text-sm font-medium hover:text-blue-600 transition-colors ${
+              pathName === "/shop" ? "text-blue-600" : "text-gray-600"
             }`}
           >
             All
           </p>
         </Link>
-        {category?.map((category: any) => (
+        {categories?.map((category) => (
           <Link key={category.id} href={`/shop/${category.category}`}>
             <p
-              className={`w-full   hover:underline underline-offset-4 tracking-widest font-serif ${
-                pathName === "/shop/" + category.category ? "underline" : ""
+              className={`text-sm font-medium hover:text-blue-600 transition-colors ${
+                pathName === `/shop/${category.category}`
+                  ? "text-blue-600"
+                  : "text-gray-600"
               }`}
             >
-              {category.category[0].toUpperCase() + category.category.slice(1)}
+              {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
             </p>
           </Link>
         ))}
       </div>
-    </>
+    </div>
   );
 };
 

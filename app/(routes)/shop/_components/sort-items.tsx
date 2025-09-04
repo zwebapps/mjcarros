@@ -7,13 +7,15 @@ const SortItems = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [selectedSort, setSelectedSort] = useState<string>("Relevance");
+  const [selectedSort, setSelectedSort] = useState<string>(
+    (searchParams.get("sort") as string) || ""
+  );
 
   const handleSortChange = useCallback(
     async (value: string) => {
       const current = new URLSearchParams(Array.from(searchParams.entries()));
 
-      if (!value || value === "Relevance") {
+      if (!value || value === "") {
         current.delete("sort");
       } else {
         current.set("sort", value);
@@ -29,8 +31,8 @@ const SortItems = () => {
   );
 
   useEffect(() => {
-    handleSortChange(selectedSort);
-  }, [selectedSort, handleSortChange]);
+    setSelectedSort(searchParams.get("sort") || "");
+  }, [searchParams]);
 
   return (
     <div className="flex items-center mb-4">
