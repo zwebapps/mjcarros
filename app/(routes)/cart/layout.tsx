@@ -1,10 +1,14 @@
-export const metadata = {
-  title: "Cart | Kemal Store",
-  description: `Cart for e-ecommerce, selling products, and new productivity`,
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Cart | MJ Carros",
+  description: "Your shopping cart",
 };
 
-const layout = ({ children }: { children: React.ReactNode }) => {
-  return children;
-};
-
-export default layout;
+export default function CartLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <>{children}</>;
+}

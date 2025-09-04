@@ -1,14 +1,6 @@
 "use client";
 import * as React from "react";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import { Trash2, Edit } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Spinner from "@/components/Spinner";
@@ -34,7 +26,8 @@ type createData = {
 export default function ProductTable() {
   const [currentPage, setCurrentPage] = useState(0);
   const productsPerPage = 5;
-  const baseUrl = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
+  // Use environment variable for S3 base URL
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "https://your-s3-bucket.s3.region.amazonaws.com";
 
   const queryClient = useQueryClient();
 
@@ -80,81 +73,83 @@ export default function ProductTable() {
         description="Manage products for your store"
         url="/admin/products/new"
       />
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <TableCell width={5}>
-                <p className="text-gray-700">Image</p>
-              </TableCell>
-
-              <TableCell>
-                <p className="text-gray-700">Name</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Categories</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Featured</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Price</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Description</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Date</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Actions</p>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {currentProducts?.map((product: createData) => (
-              <TableRow
-                key={product.id}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell component="th" scope="row">
-                  <Image
-                    src={`${baseUrl}${product.imageURLs[0]}`}
-                    alt="Product Image"
-                    className="border rounded-sm"
-                    width={60}
-                    height={60}
-                  />
-                </TableCell>
-                <TableCell align="left">{product.title}</TableCell>
-                <TableCell align="center">{product.category}</TableCell>
-                <TableCell align="center">
-                  {product.featured.toString()}
-                </TableCell>
-                <TableCell align="center">${product.price}</TableCell>
-                <TableCell align="center">
-                  {product.description.slice(0, 11)}
-                  {product.description.length > 12 && "..."}
-                </TableCell>
-                <TableCell align="center">
-                  <p>{formatDate(product.createdAt)}</p>
-                </TableCell>
-                <TableCell align="center">
-                  <button>
-                    <DeleteIcon
-                      onClick={() => deleteTask(product.id)}
-                      className="text-red-600"
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Image
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Categories
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Featured
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Price
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {currentProducts?.map((product) => (
+              <tr key={product.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex-shrink-0 h-10 w-10">
+                    <Image
+                      className="h-10 w-10 rounded-full object-cover"
+                      src={product.imageURLs[0] || "/placeholder-image.jpg"}
+                      alt={product.title}
+                      width={40}
+                      height={40}
                     />
-                  </button>
-                  <Link href={`/admin/products/${product.id}`}>
-                    <EditIcon />
-                  </Link>
-                </TableCell>
-              </TableRow>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {product.title}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  {product.category}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  {product.featured ? "Yes" : "No"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  ${product.price.toLocaleString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  {formatDate(product.createdAt)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  <div className="flex items-center justify-center space-x-2">
+                    <button
+                      onClick={() => deleteTask(product.id)}
+                      className="text-red-600 hover:text-red-800 p-1"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <Link 
+                      href={`/admin/products/edit/${product.id}`}
+                      className="text-blue-600 hover:text-blue-800 p-1"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </tbody>
+        </table>
+      </div>
       {data && (
         <ReactPaginate
           previousLabel={"Previous"}

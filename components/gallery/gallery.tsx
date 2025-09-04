@@ -10,7 +10,6 @@ interface GalleryProps {
 }
 
 const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
-  const baseUrl = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
   return (
     <Tab.Group as="div" className="flex flex-col-reverse">
       <div className="mx-auto mt-6 w-full max-w-2xl sm:block lg:max-w-2xl">
@@ -26,8 +25,8 @@ const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
             <div className="aspect-square relative h-full w-full sm:rounded-lg overflow-hidden">
               <NextImage
                 fill
-                src={`${baseUrl}${image}`}
-                alt="Image"
+                src={image}
+                alt="Product Image"
                 className="object-cover object-center opacity-0 duration-300 transition-opacity"
                 onLoad={(
                   event: React.SyntheticEvent<HTMLImageElement, Event>

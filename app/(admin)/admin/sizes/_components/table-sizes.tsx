@@ -1,20 +1,13 @@
 "use client";
 import TitleHeader from "@/app/(admin)/_components/title-header";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
+import { Trash2, Edit } from "lucide-react";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import Spinner from "@/components/Spinner";
 import formatDate, { sortByDate } from "@/app/utils/formateDate";
 import ReactPaginate from "react-paginate";
 import { useState } from "react";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import Link from "next/link";
 
 type Sizes = {
   id: string;
@@ -59,48 +52,53 @@ const TableSizes = () => {
         description="Manage sizes for your store"
         url="/admin/sizes/new"
       />
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <p className="text-gray-700">Value</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Date</p>
-              </TableCell>
-              <TableCell align="right">
-                <p className="text-gray-700">Actions</p>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {currentProducts?.map((order) => (
-              <TableRow
-                key={order.id}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell component="th" scope="row" align="left">
-                  {order.name}
-                </TableCell>
-                <TableCell align="center">
-                  {formatDate(order.createdAt)}
-                </TableCell>
-                <TableCell align="right">
-                  <button>
-                    <DeleteIcon className="text-red-600" />
-                  </button>
-                  <EditIcon />
-                </TableCell>
-              </TableRow>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Value
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {currentProducts?.map((size) => (
+              <tr key={size.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {size.name}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  {formatDate(size.createdAt)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  <div className="flex items-center justify-center space-x-2">
+                    <button className="text-red-600 hover:text-red-800 p-1">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <Link 
+                      href={`/admin/sizes/edit/${size.id}`}
+                      className="text-blue-600 hover:text-blue-800 p-1"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </tbody>
+        </table>
+      </div>
       {data && (
         <ReactPaginate
           previousLabel={"Previous"}
           nextLabel={"Next"}
+          breakLabel={"..."}
           pageCount={Math.ceil(data?.length / productsPerPage)}
           marginPagesDisplayed={2}
           pageRangeDisplayed={5}

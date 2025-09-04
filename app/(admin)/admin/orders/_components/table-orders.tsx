@@ -1,11 +1,4 @@
 "use client";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import Spinner from "@/components/Spinner";
@@ -64,51 +57,61 @@ const TableOrders = () => {
         count={data?.length}
         description="Manage orders for your store"
       />
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <p className="text-gray-700">Products</p>
-              </TableCell>
-              <TableCell>
-                <p className="text-gray-700">Phone</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Address</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Paid</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Date</p>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Products
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Phone
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Address
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Paid
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
             {currentProducts?.map((order) => (
-              <TableRow
-                key={order.id}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell component="th" scope="row">
-                  {order.orderItems[0].productName || ""}
-                </TableCell>
-                <TableCell align="left">{order.phone}</TableCell>
-                <TableCell align="center">{order.address}</TableCell>
-                <TableCell align="center">{order.isPaid.toString()}</TableCell>
-                <TableCell align="center">
+              <tr key={order.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {order.orderItems[0]?.productName || "N/A"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {order.phone}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  {order.address}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    order.isPaid 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {order.isPaid ? 'Yes' : 'No'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   {formatDate(order.createdAt)}
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </tbody>
+        </table>
+      </div>
       {data && (
         <ReactPaginate
           previousLabel={"Previous"}
           nextLabel={"Next"}
+          breakLabel={"..."}
           pageCount={Math.ceil(data?.length / productsPerPage)}
           marginPagesDisplayed={2}
           pageRangeDisplayed={5}

@@ -1,77 +1,54 @@
-import { db } from "@/lib/db";
-import { s3Client } from "@/lib/s3";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-async function uploadFileToS3(file: any, fileName: any) {
-  const fileBuffer = file;
+const prisma = new PrismaClient();
 
-  const randomSuffix = Math.random().toString(36).substring(7);
-
-  const params = {
-    Bucket: process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME,
-    Key: `billboards/${fileName}-${randomSuffix}`,
-    Body: fileBuffer,
-    ContentType: "image/jpg",
-  };
-
-  const command = new PutObjectCommand(params);
-  await s3Client.send(command);
-
-  return `billboards/${fileName}-${randomSuffix}`;
+export async function GET() {
+  try {
+    const billboards = await prisma.billboard.findMany();
+    return NextResponse.json(billboards);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error fetching billboards" },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(req: Request) {
-  const { userId } = auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized", status: 401 });
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const formData = await req.formData();
-    const file: File | null = formData.get("file") as File;
-
-    if (!file) {
-      return NextResponse.json({ error: "File is required" }, { status: 400 });
+    // Check if user is admin (middleware sets these headers)
+    const userRole = request.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const body = await request.json();
+    const { billboard, imageURL } = body;
 
-    const fileName = await uploadFileToS3(buffer, file.name);
-
-    const requestData = formData.get("billboard") as string;
-    const productInfo = JSON.parse(requestData);
-    const title = productInfo;
-
-    if (!title || title.length < 4) {
+    if (!billboard || !imageURL) {
       return NextResponse.json(
-        { error: "Missing required fields." },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    const billboard = await db?.billboard.create({
+    const newBillboard = await prisma.billboard.create({
       data: {
-        billboard: title,
-        imageURL: fileName,
+        billboard,
+        imageURL,
       },
     });
-    return NextResponse.json({ msg: "Successful create billboard", billboard });
-  } catch (error) {
-    return NextResponse.json({ error: "Error uploading file" });
-  }
-}
 
-export async function GET(req: Request) {
-  try {
-    const category = await db.billboard.findMany();
-    return NextResponse.json(category);
+    return NextResponse.json(newBillboard);
   } catch (error) {
-    return NextResponse.json({
-      error: "Error getting billboards.",
-      status: 500,
-    });
+    console.error("Error creating billboard:", error);
+    return NextResponse.json(
+      { error: "Error creating billboard" },
+      { status: 500 }
+    );
   }
 }

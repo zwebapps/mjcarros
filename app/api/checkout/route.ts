@@ -1,63 +1,43 @@
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-import { stripe } from "@/lib/stripe";
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { CartItem } from "@/hooks/use-cart";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2023-10-16",
+});
 
-const base_URL = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { items, email } = body;
 
-export async function POST(req: Request) {
-  const { items } = await req.json();
+    if (!items || items.length === 0) {
+      return new NextResponse("Items are required", { status: 400 });
+    }
 
-  if (!items || items.length === 0) {
-    return NextResponse.json("Product its are required", { status: 400 });
-  }
-
-  const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
-
-  items.forEach((product: CartItem) => {
-    line_items.push({
-      quantity: product.quantity,
-      price_data: {
-        currency: "USD",
-        product_data: {
-          name: product.title,
-          images: [`${base_URL}${product.imageURLs[0]}`],
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: items.map((item: any) => ({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: item.title,
+            images: [item.imageURLs[0] || "/placeholder-image.jpg"],
+          },
+          unit_amount: item.price * 100,
         },
-        unit_amount: +product.price * 100,
+        quantity: item.quantity,
+      })),
+      mode: "payment",
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/cart?success=1`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/cart?canceled=1`,
+      metadata: {
+        email,
       },
     });
-  });
 
-  const order = await db.order.create({
-    data: {
-      isPaid: false,
-      orderItems: {
-        create: items.map((product: CartItem) => ({
-          productName: product.title,
-          product: {
-            connect: {
-              id: product.id,
-            },
-          },
-        })),
-      },
-    },
-  });
-
-  const session = await stripe.checkout.sessions.create({
-    line_items,
-    mode: "payment",
-    billing_address_collection: "required",
-    phone_number_collection: {
-      enabled: true,
-    },
-    success_url: `${process.env.FRONTEND_STORE_URL}/cart?success=1`,
-    cancel_url: `${process.env.FRONTEND_STORE_URL}/cart?canceled=1`,
-    metadata: {
-      orderdId: order.id,
-    },
-  });
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ sessionId: session.id });
+  } catch (error) {
+    console.log("[CHECKOUT_ERROR]", error);
+    return new NextResponse("Internal error", { status: 500 });
+  }
 }

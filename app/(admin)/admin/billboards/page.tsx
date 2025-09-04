@@ -4,7 +4,7 @@ import TableBillboards from "./_components/table-billboards";
 
 const BillboardsPage = () => {
   return (
-    <div className="p-4 mt-2 w-3/4 max-md:w-full mx-auto">
+    <div className="p-4 mt-2 w-full max-w-none">
       <TableBillboards />
     </div>
   );

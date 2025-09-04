@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import React from "react";
-import AddIcon from "@mui/icons-material/Add";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -20,7 +20,7 @@ const TitleHeader = ({ title, description, count, url }: Props) => {
         {url && (
           <Link href={url}>
             <Button size="sm" className="bg-green-600">
-              <AddIcon />
+              <Plus className="h-4 w-4 mr-2" />
               Add New
             </Button>
           </Link>

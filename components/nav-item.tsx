@@ -1,56 +1,52 @@
 "use client";
-import { useUser } from "@clerk/nextjs";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React from "react";
+import { cn } from "@/lib/utils";
 
-const NavItem = () => {
-  const pathname = usePathname();
-  const user = useUser();
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
 
-  const routes = [
-    {
-      label: "Home",
-      href: "/",
-    },
-    {
-      label: "Shop",
-      href: "/shop",
-    },
-    {
-      label: "Featured",
-      href: "/featured",
-    },
-    {
-      label: "Admin",
-      href: "/admin",
-    },
-  ];
+interface NavItemProps {
+  href: string;
+  label: string;
+  isActive?: boolean;
+}
 
-  const isAdmin = user.user && user.user.unsafeMetadata.isAdmin;
+export const NavItem = ({ href, label, isActive }: NavItemProps) => {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Check for user in localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
+
+  // Hide admin link for non-admin users
+  if (href === '/admin' && (!user || user.role !== 'ADMIN')) {
+    return null;
+  }
 
   return (
-    <div className="flex items-center gap-2 mx-2 max-md:flex-col max-md:items-start max-md:mt-3">
-      {routes.map((route) => {
-        if (route.label === "Admin" && !isAdmin) {
-          return null;
-        }
-        return (
-          <Link key={route.label} href={route.href} className="p-2 max-md:p-0">
-            <p
-              className={`max-md:text-yellow-50 font-serif text-gray-600 text-l max-md:text-xl hover:text-gray-300  ${
-                (pathname === route.href ||
-                  pathname.startsWith(`${route.href}/`)) &&
-                "font-semibold max-md:underline"
-              }`}
-            >
-              {route.label}
-            </p>
-          </Link>
-        );
-      })}
-    </div>
+    <Link
+      href={href}
+      className={cn(
+        "text-sm font-medium transition-colors hover:text-primary",
+        isActive ? "text-black dark:text-white" : "text-muted-foreground"
+      )}
+    >
+      {label}
+    </Link>
   );
 };
-
-export default NavItem;

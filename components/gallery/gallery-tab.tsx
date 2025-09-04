@@ -8,8 +8,6 @@ interface GalleryTabProps {
 }
 
 const GalleryTab: React.FC<GalleryTabProps> = ({ image }) => {
-  const baseUrl = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
-
   return (
     <Tab className="relative flex aspect-square cursor-pointer items-center justify-center rounded-md bg-white">
       {({ selected }) => (
@@ -17,8 +15,8 @@ const GalleryTab: React.FC<GalleryTabProps> = ({ image }) => {
           <span className="absolute h-full w-full aspect-square inset-0 overflow-hidden rounded-md">
             <NextImage
               fill
-              src={`${baseUrl}${image}`}
-              alt=""
+              src={image}
+              alt="Product thumbnail"
               className="object-cover object-center"
               sizes="any"
             />

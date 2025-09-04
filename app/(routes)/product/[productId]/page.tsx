@@ -1,35 +1,42 @@
 import { type Metadata } from "next";
-import ProductItem from "./_components/product-item";
-import { getProduct } from "@/lib/apiCalls";
-import Footer from "@/components/footer";
+import { PrismaClient } from "@prisma/client";
+import { notFound } from "next/navigation";
 import { siteConfig } from "@/config/site";
+import ProductDetail from "./_components/product-detail";
+
+const prisma = new PrismaClient();
 
 export async function generateMetadata({
   params,
 }: {
   params: { productId: string };
 }): Promise<Metadata> {
-  const getProducts = await getProduct(params.productId);
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: params.productId },
+    });
 
-  if (!getProducts)
+    if (!product) {
+      return {
+        title: "Product Not Found | MJ Carros",
+        description: "The requested product could not be found",
+      };
+    }
+
     return {
-      title: "Kemal Store",
-      description: "E-ecommerce, selling products, and new productivity",
+      title: `${product.title} | ${siteConfig.name}`,
+      description: product.description,
     };
-
-  return {
-    title: `${getProducts.title} | ${siteConfig.name}`,
-    description: getProducts.description,
-  };
+  } catch (error) {
+    return {
+      title: "Product | MJ Carros",
+      description: "Product details",
+    };
+  }
 }
 
 const ProductPage = ({ params }: { params: { productId: string } }) => {
-  return (
-    <div>
-      <ProductItem />
-      <Footer />
-    </div>
-  );
+  return <ProductDetail productId={params.productId} />;
 };
 
 export default ProductPage;

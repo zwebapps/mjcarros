@@ -1,68 +1,51 @@
 "use client";
-import { Card, CardContent } from "../ui/card";
-import axios from "axios";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Trash } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { Billboard } from "@/types";
-import LoadingSkeleton from "../loading-skeleton";
-import { Button } from "../ui/button";
 
-type CardProps = {
-  billboard: string;
-  category: string;
-};
+interface CardItemProps {
+  data: any;
+  onRemove: () => void;
+}
 
-const CardItem = ({ billboard, category }: CardProps) => {
-  const [billboards, setBillboards] = useState<Billboard>();
+const CardItem: React.FC<CardItemProps> = ({ data, onRemove }) => {
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await axios.get(`/api/billboards/edit/${billboard}`);
-      setBillboards(data.data);
-    };
-    fetchData();
-  }, [billboard]);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return null;
-  }
-
-  const baseUrl = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
+  const handleRemove = async () => {
+    try {
+      setIsLoading(true);
+      onRemove();
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <Card>
-      <CardContent className="flex aspect-square justify-center relative ">
-        {billboards?.imageURL ? (
-          <>
-            <Image
-              src={`${baseUrl}/${billboards?.imageURL}`}
-              style={{
-                width: "100%",
-                height: "100%",
-                borderRadius: "5px",
-              }}
-              fill
-              alt="Image"
-              sizes="any"
-            />
-            <div className="absolute left-8 bottom-8 flex gap-2 flex-col w-24">
-              <p className="text-black font-bold text-2xl">
-                {category[0].toUpperCase() + category.slice(1)}
-              </p>
-              <Button>Shop</Button>
-            </div>
-          </>
-        ) : (
-          <LoadingSkeleton />
-        )}
-      </CardContent>
-    </Card>
+    <div className="bg-white border rounded-lg p-3 space-y-4">
+      <div className="aspect-square rounded-lg bg-gray-100 relative overflow-hidden">
+        <Image
+          fill
+          src={data.url}
+          alt=""
+          className="object-cover"
+        />
+      </div>
+      <div className="flex items-center gap-x-2">
+        <Button
+          disabled={isLoading}
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={handleRemove}
+        >
+          <Trash className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 };
 

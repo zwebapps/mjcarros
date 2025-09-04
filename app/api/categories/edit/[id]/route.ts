@@ -1,20 +1,21 @@
-import { db } from "@/lib/db";
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  const { userId } = auth();
+  // const { userId } = auth(); // Removed Clerk auth
 
   try {
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized", status: 401 });
-    }
+    // if (!userId) { // Removed Clerk auth
+    //   return NextResponse.json({ error: "Unauthorized", status: 401 });
+    // }
 
-    const category = await db.category.findUnique({
+    const category = await prisma.category.findUnique({ // Changed db to prisma
       where: {
         id,
       },
@@ -27,33 +28,56 @@ export async function GET(
 }
 
 export async function PUT(
-  req: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  const { userId } = auth();
-
   try {
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized", status: 401 });
+    // Check if user is admin (middleware sets these headers)
+    const userRole = request.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
     }
 
-    const { category, billboard } = await req.json();
+    const body = await request.json();
+    const { billboard, billboardId, category, categorySizes } = body;
 
-    const formData = { category, billboard };
-    const categoryProduct = await db.category.update({
-      where: {
-        id: id,
+    if (!billboard || !billboardId || !category) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const updatedCategory = await prisma.category.update({
+      where: { id: params.id },
+      data: {
+        billboard,
+        billboardId,
+        category,
+        categorySizes: {
+          deleteMany: {},
+          create: categorySizes || [],
+        },
       },
-      data: formData,
+      include: {
+        categorySizes: {
+          include: {
+            size: true,
+          },
+        },
+      },
     });
 
-    return NextResponse.json({
-      msg: "Successful edit category",
-      categoryProduct,
-    });
+    return NextResponse.json(updatedCategory);
   } catch (error) {
-    return NextResponse.json({ error: "Error updating category", status: 500 });
+    console.error("Error updating category:", error);
+    return NextResponse.json(
+      { error: "Error updating category" },
+      { status: 500 }
+    );
   }
 }
 
@@ -62,14 +86,14 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  const { userId } = auth();
+  // const { userId } = auth(); // Removed Clerk auth
 
   try {
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized", status: 401 });
-    }
+    // if (!userId) { // Removed Clerk auth
+    //   return NextResponse.json({ error: "Unauthorized", status: 401 });
+    // }
 
-    const productSizes = await db.categorySize.findMany({
+    const productSizes = await prisma.categorySize.findMany({ // Changed db to prisma
       where: {
         categoryId: id,
       },
@@ -77,7 +101,7 @@ export async function DELETE(
 
     await Promise.all(
       productSizes.map(async (productSize) => {
-        await db.categorySize.delete({
+        await prisma.categorySize.delete({ // Changed db to prisma
           where: {
             id: productSize.id,
           },
@@ -85,7 +109,7 @@ export async function DELETE(
       })
     );
 
-    const task = await db.category.delete({
+    const task = await prisma.category.delete({ // Changed db to prisma
       where: {
         id,
       },

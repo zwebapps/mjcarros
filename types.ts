@@ -3,12 +3,15 @@ export interface Product {
   category: string;
   description: string;
   title: string;
-  price: string;
+  price: number;
+  finalPrice?: number;
+  discount?: number;
   featured: boolean;
   imageURLs: string[];
-  discount?: number;
-  finalPrice?: number;
+  categoryId: string;
   size?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Image {

@@ -1,149 +1,74 @@
-import { db } from "@/lib/db";
-import { s3Client } from "@/lib/s3";
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-async function uploadFileToS3(file: any, fileName: any) {
-  const fileBuffer = file;
-
-  const randomSuffix = Math.random().toString(36).substring(7);
-
-  const params = {
-    Bucket: process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME,
-    Key: `billboards/${fileName}-${randomSuffix}`,
-    Body: fileBuffer,
-    ContentType: "image/jpg",
-  };
-
-  const command = new PutObjectCommand(params);
-  await s3Client.send(command);
-
-  return `billboards/${fileName}-${randomSuffix}`;
-}
-
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
-  const { userId } = auth();
-  try {
-
-
-    const billboard = await db.billboard.findUnique({
-      where: {
-        id,
-      },
-    });
-
-    return NextResponse.json(billboard);
-  } catch (error) {
-    return NextResponse.json({ error: "Error getting billboard", status: 500 });
-  }
-}
+const prisma = new PrismaClient();
 
 export async function PUT(
-  req: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  const { userId } = auth();
-
   try {
-    const formData = await req.formData();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized", status: 401 });
-    }
-
-    const file: File | null = formData.get("file") as File;
-    const requestData = formData.get("billboard") as string;
-    const productInfo = JSON.parse(requestData);
-    const title = productInfo;
-
-    let fileName: string | undefined;
-
-    if (file && file instanceof File && file.name) {
-      const imageName = file.name;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      fileName = await uploadFileToS3(buffer, imageName);
-    }
-
-    if (!title || title.length < 4) {
+    // Check if user is admin (middleware sets these headers)
+    const userRole = request.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: "Missing required fields." },
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { billboard, imageURL } = body;
+
+    if (!billboard || !imageURL) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    const updateData: {
-      billboard: string;
-      imageURL?: string;
-    } = {
-      billboard: title,
-    };
-
-    if (fileName) {
-      updateData.imageURL = fileName;
-    }
-    const product = await db.billboard.update({
-      where: {
-        id: id,
+    const updatedBillboard = await prisma.billboard.update({
+      where: { id: params.id },
+      data: {
+        billboard,
+        imageURL,
       },
-      data: updateData,
     });
 
-    return NextResponse.json({ product, msg: "Successful edit billboard" });
+    return NextResponse.json(updatedBillboard);
   } catch (error) {
-    return NextResponse.json({
-      error: "Error ediiting billboard",
-      status: 500,
-    });
+    console.error("Error updating billboard:", error);
+    return NextResponse.json(
+      { error: "Error updating billboard" },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(
-  req: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  const { userId } = auth();
-
   try {
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized", status: 401 });
+    // Check if user is admin (middleware sets these headers)
+    const userRole = request.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
     }
-    const billboard = await db.billboard.findUnique({
-      where: {
-        id,
-      },
+
+    await prisma.billboard.delete({
+      where: { id: params.id },
     });
 
-    const imageKey = billboard?.imageURL;
-
-    const task = await db.billboard.delete({
-      where: {
-        id,
-      },
-    });
-
-    const bucketName = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME;
-
-    const s3Key = imageKey;
-
-    const deleteCommand = new DeleteObjectCommand({
-      Bucket: bucketName,
-      Key: s3Key,
-    });
-    await s3Client.send(deleteCommand);
-
-    return NextResponse.json(task);
+    return NextResponse.json({ message: "Billboard deleted successfully" });
   } catch (error) {
-    return NextResponse.json({
-      error: "Error deleting billboard",
-      status: 500,
-    });
+    console.error("Error deleting billboard:", error);
+    return NextResponse.json(
+      { error: "Error deleting billboard" },
+      { status: 500 }
+    );
   }
 }

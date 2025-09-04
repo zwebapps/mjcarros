@@ -1,103 +1,83 @@
-import { db } from "@/lib/db";
-import { s3Client } from "@/lib/s3";
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-export async function DELETE(
-  req: Request,
+const prisma = new PrismaClient();
+
+export async function GET(
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  const { userId } = auth();
   try {
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized", status: 401 });
-    }
-    const productSizes = await db.productSize.findMany({
-      where: {
-        productId: id,
-      },
-    });
-
-    const orderItems = await db.orderItem.findMany({
-      where: {
-        productId: id,
-      },
-    });
-
-    await Promise.all(
-      orderItems.map(async (orderItem) => {
-        await db.orderItem.delete({
-          where: {
-            id: orderItem.id,
+    const product = await prisma.product.findUnique({
+      where: { id: params.id },
+      include: {
+        productSizes: {
+          include: {
+            size: true,
           },
-        });
-      })
-    );
-
-    await Promise.all(
-      productSizes.map(async (productSize) => {
-        await db.productSize.delete({
-          where: {
-            id: productSize.id,
-          },
-        });
-      })
-    );
-
-    const product = await db.product.findUnique({
-      where: {
-        id,
+        },
       },
     });
 
-    const imageKey = product?.imageURLs;
-
-    const task = await db.product.delete({
-      where: {
-        id,
-      },
-    });
-
-    const bucketName = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME;
-
-    if (imageKey) {
-      for (const image of Array.from(imageKey)) {
-        const s3Key = image.slice(1);
-
-        const deleteCommand = new DeleteObjectCommand({
-          Bucket: bucketName,
-          Key: s3Key,
-        });
-        await s3Client.send(deleteCommand);
-      }
+    if (!product) {
+      return NextResponse.json(
+        { error: "Product not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({});
+    // Get related products
+    const relatedProducts = await prisma.product.findMany({
+      where: {
+        category: product.category,
+        id: { not: product.id },
+      },
+      take: 4,
+    });
+
+    return NextResponse.json({
+      product,
+      relatedProducts,
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Error deleting task", status: 500 });
+    console.error("Error fetching product:", error);
+    return NextResponse.json(
+      { error: "Error fetching product" },
+      { status: 500 }
+    );
   }
 }
 
-export async function GET(
-  req: Request,
+export async function DELETE(
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-
   try {
-    const product = await db.product.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        productSizes: true,
-      },
+    // Check if user is admin (middleware sets these headers)
+    const userRole = request.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    // Delete product sizes first
+    await prisma.productSize.deleteMany({
+      where: { productId: params.id },
     });
 
-    return NextResponse.json(product);
+    // Delete the product
+    await prisma.product.delete({
+      where: { id: params.id },
+    });
+
+    return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {
-    return NextResponse.json({ error: "Error getting product", status: 500 });
+    console.error("Error deleting product:", error);
+    return NextResponse.json(
+      { error: "Error deleting product" },
+      { status: 500 }
+    );
   }
 }

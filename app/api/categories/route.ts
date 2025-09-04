@@ -1,47 +1,74 @@
-import { db } from "@/lib/db";
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-export async function POST(req: Request) {
-  const { userId } = auth();
+const prisma = new PrismaClient();
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized", status: 401 });
-  }
-
+export async function GET() {
   try {
-    const { category, billboard, billboardId } = await req.json();
+    const categories = await prisma.category.findMany({
+      include: {
+        categorySizes: {
+          include: {
+            size: true,
+          },
+        },
+      },
+    });
 
-    if (!category || category.length < 2) {
+    return NextResponse.json(categories);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error fetching categories" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Check if user is admin (middleware sets these headers)
+    const userRole = request.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
       return NextResponse.json(
-        { error: "Missing required fields." },
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { billboard, billboardId, category, categorySizes } = body;
+
+    if (!billboard || !billboardId || !category) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    const categoryCase = category.toLowerCase();
-
-    const categoryProduct = await db?.category.create({
+    const newCategory = await prisma.category.create({
       data: {
-        category: categoryCase,
         billboard,
         billboardId,
+        category,
+        categorySizes: {
+          create: categorySizes || [],
+        },
+      },
+      include: {
+        categorySizes: {
+          include: {
+            size: true,
+          },
+        },
       },
     });
-    return NextResponse.json({
-      msg: "Successful create category",
-      categoryProduct,
-    });
-  } catch (error) {
-    return NextResponse.json({ error: "Error creating category" });
-  }
-}
 
-export async function GET(req: Request) {
-  try {
-    const category = await db.category.findMany();
-    return NextResponse.json(category);
+    return NextResponse.json(newCategory);
   } catch (error) {
-    return NextResponse.json({ error: "Error getting category.", status: 500 });
+    console.error("Error creating category:", error);
+    return NextResponse.json(
+      { error: "Error creating category" },
+      { status: 500 }
+    );
   }
 }

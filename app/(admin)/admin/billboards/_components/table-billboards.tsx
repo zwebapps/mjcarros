@@ -1,36 +1,31 @@
 "use client";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import Link from "next/link";
-import axios from "axios";
+import * as React from "react";
+import { Trash2, Edit } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import Spinner from "@/components/Spinner";
-import TitleHeader from "@/app/(admin)/_components/title-header";
-import formatDate, { sortByDate } from "@/app/utils/formateDate";
-import ReactPaginate from "react-paginate";
-import { useState } from "react";
-import toast from "react-hot-toast";
 import Image from "next/image";
+import toast from "react-hot-toast";
+import Link from "next/link";
+import { useState } from "react";
+import ReactPaginate from "react-paginate";
+import formatDate, { sortByDate } from "@/app/utils/formateDate";
+import TitleHeader from "@/app/(admin)/_components/title-header";
 
-type Billboards = {
-  id: string;
-  billboard: string;
+type createData = {
+  label: string;
   imageURL: string;
+  id: string;
   createdAt: string;
 };
 
-const TableBillboards = () => {
+export default function TableBillboards() {
   const [currentPage, setCurrentPage] = useState(0);
   const productsPerPage = 5;
+  // Use environment variable for S3 base URL
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "https://your-s3-bucket.s3.region.amazonaws.com";
+
   const queryClient = useQueryClient();
-  const baseUrl = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
 
   const { error, data, isLoading } = useQuery({
     queryKey: ["billboards"],
@@ -38,7 +33,7 @@ const TableBillboards = () => {
       const { data } = await axios.get("/api/billboards");
 
       const sortedData = sortByDate(data);
-      return sortedData as Billboards[];
+      return sortedData as createData[];
     },
   });
 
@@ -46,7 +41,7 @@ const TableBillboards = () => {
     try {
       const res = await axios.delete(`/api/billboards/edit/${id}`);
       queryClient.invalidateQueries({ queryKey: ["billboards"] });
-      toast.success("Billboards deleted");
+      toast.success("Task deleted");
     } catch (error) {
       toast.error("Something went wrong");
     }
@@ -66,8 +61,6 @@ const TableBillboards = () => {
   if (error) {
     return <p>Something went wrong!</p>;
   }
-
-
   return (
     <>
       <TitleHeader
@@ -76,62 +69,65 @@ const TableBillboards = () => {
         description="Manage billboards for your store"
         url="/admin/billboards/new"
       />
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <TableCell width="100px">
-                <p className="text-gray-700">Image</p>
-              </TableCell>
-              <TableCell align="left">
-                <p className="text-gray-700">Billboard</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Date</p>
-              </TableCell>
-              <TableCell align="center">
-                <p className="text-gray-700">Actions</p>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Image
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Label
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
             {currentProducts?.map((billboard) => (
-              <TableRow
-                key={billboard.id}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell component="th" scope="row">
-                  <Image
-                    src={`${baseUrl}/${billboard?.imageURL}`}
-                    alt="billboard Image"
-                    className="border rounded-sm"
-                    width={60}
-                    height={60}
-                  />
-                </TableCell>
-                <TableCell component="th" scope="row">
-                  {billboard.billboard}
-                </TableCell>
-                <TableCell align="center">
-                  {formatDate(billboard.createdAt)}
-                </TableCell>
-
-                <TableCell align="center">
-                  <button>
-                    <DeleteIcon
-                      className="text-red-600"
-                      onClick={() => deleteTask(billboard.id)}
+              <tr key={billboard.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex-shrink-0 h-10 w-10">
+                    <Image
+                      className="h-10 w-10 rounded-full object-cover"
+                      src={billboard.imageURL || "/placeholder-image.jpg"}
+                      alt={billboard.label}
+                      width={40}
+                      height={40}
                     />
-                  </button>
-                  <Link href={`/admin/billboards/edit/${billboard.id}`}>
-                    <EditIcon />
-                  </Link>
-                </TableCell>
-              </TableRow>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {billboard.label}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  {formatDate(billboard.createdAt)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  <div className="flex items-center justify-center space-x-2">
+                    <button
+                      onClick={() => deleteTask(billboard.id)}
+                      className="text-red-600 hover:text-red-800 p-1"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <Link 
+                      href={`/admin/billboards/edit/${billboard.id}`}
+                      className="text-blue-600 hover:text-blue-800 p-1"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </tbody>
+        </table>
+      </div>
       {data && (
         <ReactPaginate
           previousLabel={"Previous"}
@@ -151,6 +147,4 @@ const TableBillboards = () => {
       )}
     </>
   );
-};
-
-export default TableBillboards;
+}

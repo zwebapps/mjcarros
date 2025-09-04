@@ -4,11 +4,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "kemal-web-storage.s3.eu-north-1.amazonaws.com",
+        hostname: "*.s3.*.amazonaws.com",
       },
       {
         protocol: "https",
-        hostname: "img.clerk.com",
+        hostname: "images.unsplash.com",
       },
     ],
   },
