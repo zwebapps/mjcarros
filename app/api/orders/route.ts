@@ -1,33 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { db } from "@/lib/db";
+import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if user is admin (middleware sets these headers)
-    const userRole = request.headers.get('x-user-role');
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
+    let userEmail = request.headers.get('x-user-email');
+    let userRole = request.headers.get('x-user-role');
+
+    // If middleware didn't inject headers, verify JWT here
+    if (!userEmail || !userRole) {
+      const token = extractTokenFromHeader(request.headers.get('authorization'));
+      const payload = token ? verifyToken(token) : null;
+      if (payload) {
+        userEmail = payload.email;
+        userRole = payload.role;
+      }
     }
 
-    const orders = await prisma.order.findMany({
-      include: {
-        orderItems: {
-          include: {
-            product: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    // Admin: return all orders
+    if (userRole === 'ADMIN') {
+      const orders = await db.order.findMany({
+        include: { orderItems: { include: { product: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      return NextResponse.json(orders);
+    }
 
-    return NextResponse.json(orders);
+    // Authenticated user: return own orders
+    if (userEmail) {
+      const orders = await db.order.findMany({
+        where: { userEmail },
+        include: { orderItems: { include: { product: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      return NextResponse.json(orders);
+    }
+
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   } catch (error) {
     console.error("Error fetching orders:", error);
     return NextResponse.json(
@@ -40,7 +49,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orderItems, phone, address } = body;
+    const { orderItems, phone, address, userEmail } = body;
 
     if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
       return NextResponse.json(
@@ -49,10 +58,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newOrder = await prisma.order.create({
+    const newOrder = await db.order.create({
       data: {
         phone: phone || "",
         address: address || "",
+        userEmail: userEmail || "",
         orderItems: {
           create: orderItems.map((item: any) => ({
             productId: item.productId,
@@ -61,11 +71,7 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        orderItems: {
-          include: {
-            product: true,
-          },
-        },
+        orderItems: { include: { product: true } },
       },
     });
 

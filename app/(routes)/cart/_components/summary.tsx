@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/hooks/use-cart";
+import useCart from "@/hooks/use-cart";
 import { Trash } from "lucide-react";
 
 interface User {
@@ -20,20 +20,17 @@ export const Summary = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for user in localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
+      try { setUser(JSON.parse(userData)); } catch {}
     }
     setIsLoading(false);
   }, []);
 
   const totalPrice = cart.items.reduce((total, item) => {
-    return total + Number(item.price);
+    const unit = item.finalPrice && item.finalPrice > 0 ? item.finalPrice : Number(item.price);
+    const itemTotal = item.totalPrice ?? unit * (item.quantity ?? 1);
+    return total + itemTotal;
   }, 0);
 
   const onCheckout = async () => {
@@ -52,19 +49,30 @@ export const Summary = () => {
         body: JSON.stringify({
           items: cart.items.map((item) => ({
             id: item.id,
-            quantity: 1,
+            title: item.title,
+            price: (item.finalPrice && item.finalPrice > 0 ? item.finalPrice : Number(item.price)),
+            quantity: item.quantity ?? 1,
+            imageURLs: item.imageURLs,
           })),
+          email: user.email,
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        // Handle successful checkout
-        cart.removeAll();
-        router.push('/');
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof data === 'string' ? data : (data?.error || 'Checkout failed'));
       }
+
+      if (data?.url) {
+        window.location.href = data.url; // Redirect to Stripe Checkout
+        return;
+      }
+
+      // Fallback
+      router.push('/');
     } catch (error) {
       console.error('Checkout error:', error);
+      alert('Checkout failed. Please verify payment configuration.');
     }
   };
 
@@ -100,11 +108,11 @@ export const Summary = () => {
       </Button>
       <div className="mt-6 text-center text-sm text-gray-600">
         <p>
-          or{" "}
+          {" "}
           <Button
             variant="link"
             className="p-0 text-base text-black underline-offset-4 hover:underline"
-            onClick={() => cart.removeAll()}
+            onClick={() => cart.removeAllCart()}
           >
             Continue Shopping
           </Button>

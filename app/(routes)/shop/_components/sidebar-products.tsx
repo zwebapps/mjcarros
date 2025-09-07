@@ -1,26 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 import SidebarItems from "./sidebar-items";
 import PriceInput from "./price-input";
 import { Product as UIProduct } from "@/types";
 
-const prisma = new PrismaClient();
-
 const SidebarProducts = async () => {
-  // Fetch categories and products directly from DB
   const [dbCategories, dbProducts] = await Promise.all([
-    prisma.category.findMany(),
-    prisma.product.findMany({
-      include: {
-        productSizes: {
-          include: {
-            size: true,
-          },
-        },
-      },
-    }),
+    db.category.findMany(),
+    db.product.findMany({ include: { productSizes: { include: { size: true } } } }),
   ]);
 
-  // Transform products to UI Product type (only fields that PriceInput uses)
   const products: UIProduct[] = dbProducts.map((p) => ({
     id: p.id,
     title: p.title,

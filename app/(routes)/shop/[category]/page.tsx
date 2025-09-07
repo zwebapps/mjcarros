@@ -1,42 +1,25 @@
 import { Metadata } from "next";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import ProductCard from "@/components/ui/product-card";
 
-const prisma = new PrismaClient();
-
 interface CategoryPageProps {
-  params: {
-    category: string;
-  };
-  searchParams: {
-    [key: string]: string | string[] | undefined;
-  };
+  params: { category: string };
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export async function generateMetadata({
-  params,
-}: CategoryPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   return {
     title: `${params.category} | MJ Carros`,
     description: `Browse ${params.category} vehicles`,
   };
 }
 
-const CategoryPage = async ({
-  params,
-  searchParams,
-}: CategoryPageProps) => {
+const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
   try {
-    const dbProducts = await prisma.product.findMany({
-      include: {
-        productSizes: {
-          include: {
-            size: true,
-          },
-        },
-      },
+    const dbProducts = await db.product.findMany({
+      include: { productSizes: { include: { size: true } } },
     });
 
     const products: Product[] = dbProducts.map((dbProduct) => ({
@@ -55,11 +38,9 @@ const CategoryPage = async ({
     }));
 
     const inCategory = products.filter(
-      (product: Product) =>
-        product.category.toLowerCase() === params.category.toLowerCase()
+      (p) => p.category.toLowerCase() === params.category.toLowerCase()
     );
 
-    // Apply sorting/filtering for price and sort
     const displayed = filteredData(searchParams || {}, [...inCategory]);
 
     if (displayed.length === 0) {
@@ -82,9 +63,7 @@ const CategoryPage = async ({
     return (
       <div className="text-center py-8">
         <p className="text-red-600">Error loading products. Please try again.</p>
-        <p className="text-sm text-gray-500 mt-2">
-          Error: {error instanceof Error ? error.message : "Unknown error"}
-        </p>
+        <p className="text-sm text-gray-500 mt-2">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
       </div>
     );
   }

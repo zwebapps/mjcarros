@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { db } from "@/lib/db";
 
 export async function PUT(
   request: NextRequest,
@@ -27,7 +25,7 @@ export async function PUT(
       );
     }
 
-    const updatedBillboard = await prisma.billboard.update({
+    const updatedBillboard = await db.billboard.update({
       where: { id: params.id },
       data: {
         billboard,
@@ -50,25 +48,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check if user is admin (middleware sets these headers)
-    const userRole = request.headers.get('x-user-role');
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    await prisma.billboard.delete({
-      where: { id: params.id },
-    });
-
-    return NextResponse.json({ message: "Billboard deleted successfully" });
+    const deleted = await db.billboard.delete({ where: { id: params.id } });
+    return NextResponse.json(deleted);
   } catch (error) {
     console.error("Error deleting billboard:", error);
-    return NextResponse.json(
-      { error: "Error deleting billboard" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error deleting billboard" }, { status: 500 });
   }
 }

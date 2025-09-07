@@ -9,13 +9,14 @@ export function middleware(request: NextRequest) {
     '/shop',
     '/product',
     '/featured',
+    '/orders',
     '/api/auth/signin',
     '/api/auth/signup',
     '/sign-in',
     '/sign-up'
   ];
 
-  const isPublicRoute = publicRoutes.some(route => 
+  const isPublicRoute = publicRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   );
 
@@ -24,11 +25,10 @@ export function middleware(request: NextRequest) {
     '/admin',
     '/api/categories',
     '/api/products',
-    '/api/billboards',
-    '/api/orders'
+    '/api/billboards'
   ];
 
-  const isAdminRoute = adminRoutes.some(route => 
+  const isAdminRoute = adminRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   );
 

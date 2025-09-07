@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const products = await prisma.product.findMany({
-      include: {
-        productSizes: {
-          include: {
-            size: true,
-          },
-        },
-      },
-    });
-
+    const products = await db.product.findMany();
     return NextResponse.json(products);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error fetching products" },
-      { status: 500 }
-    );
+    console.error("Error fetching products:", error);
+    return NextResponse.json({ error: "Error fetching products" }, { status: 500 });
   }
 }
 
@@ -45,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newProduct = await prisma.product.create({
+    const newProduct = await db.product.create({
       data: {
         title,
         description,

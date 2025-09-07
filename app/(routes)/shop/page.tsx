@@ -1,9 +1,7 @@
 import ProductCard from "@/components/ui/product-card";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
-
-const prisma = new PrismaClient();
 
 export const metadata = {
   title: "Shop | MJ Carros",
@@ -16,7 +14,7 @@ const ShopPage = async ({
   searchParams: { [key: string]: string | string[] | undefined };
 }) => {
   try {
-    const dbProducts = await prisma.product.findMany({
+    const dbProducts = await db.product.findMany({
       include: {
         productSizes: {
           include: {
@@ -49,7 +47,6 @@ const ShopPage = async ({
       );
     }
 
-    // Apply filtering/sorting (price, sort, q) via helper
     const displayed = filteredData(searchParams || {}, [...products]);
 
     return (

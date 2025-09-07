@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/hooks/use-cart";
+import useCart from "@/hooks/use-cart";
 import { Product } from "@/types";
 import Image from "next/image";
 
@@ -16,7 +16,7 @@ const CartItem: React.FC<CartItemProps> = ({ data }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const onRemove = () => {
-    cart.removeItem(data.id);
+    cart.removeItem(data);
   };
 
   return (

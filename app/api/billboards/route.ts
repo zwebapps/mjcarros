@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const billboards = await prisma.billboard.findMany();
+    const billboards = await db.billboard.findMany({
+      orderBy: { createdAt: "desc" },
+    });
     return NextResponse.json(billboards);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error fetching billboards" },
-      { status: 500 }
-    );
+    console.error("Error fetching billboards:", error);
+    return NextResponse.json({ error: "Error fetching billboards" }, { status: 500 });
   }
 }
 
@@ -36,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newBillboard = await prisma.billboard.create({
+    const newBillboard = await db.billboard.create({
       data: {
         billboard,
         imageURL,

@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 import { hashPassword, generateToken } from '@/lib/auth';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password, name, role = 'USER' } = await request.json();
 
-    // Validate input
     if (!email || !password || !name) {
       return NextResponse.json(
         { error: 'Email, password, and name are required' },
@@ -16,19 +13,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
-    if (role && !['USER', 'ADMIN'].includes(role)) {
+    const allowedRoles = ['USER', 'ADMIN', 'CUSTOMER'];
+    if (role && !allowedRoles.includes(role)) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be USER or ADMIN' },
+        { error: 'Invalid role. Must be USER, CUSTOMER or ADMIN' },
         { status: 400 }
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
+    const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json(
         { error: 'User with this email already exists' },
@@ -36,39 +29,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        role: role as 'USER' | 'ADMIN'
-      }
+    const user = await db.user.create({
+      data: { email, password: hashedPassword, name, role: role as any }
     });
 
-    // Generate token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role
-    });
+    const token = generateToken({ userId: user.id, email: user.email, role: user.role });
 
-    // Return user data (without password) and token
     const { password: _, ...userWithoutPassword } = user;
-    
-    return NextResponse.json({
-      user: userWithoutPassword,
-      token
-    });
-
+    return NextResponse.json({ user: userWithoutPassword, token });
   } catch (error) {
     console.error('Signup error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

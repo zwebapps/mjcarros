@@ -87,6 +87,16 @@ export function Navbar() {
           >
             Featured
           </Link>
+          {user && (
+            <Link
+              href="/orders"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                isActive("/orders") ? "text-black dark:text-white" : "text-muted-foreground"
+              }`}
+            >
+              Orders
+            </Link>
+          )}
         </div>
         <div className="ml-auto flex items-center space-x-4">
           <NavbarSearch />

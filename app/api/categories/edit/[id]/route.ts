@@ -1,29 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { db } from "@/lib/db";
 
 export async function GET(
-  req: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  // const { userId } = auth(); // Removed Clerk auth
-
   try {
-    // if (!userId) { // Removed Clerk auth
-    //   return NextResponse.json({ error: "Unauthorized", status: 401 });
-    // }
-
-    const category = await prisma.category.findUnique({ // Changed db to prisma
-      where: {
-        id,
-      },
-    });
-
+    const category = await db.category.findUnique({ where: { id: params.id } });
     return NextResponse.json(category);
   } catch (error) {
-    return NextResponse.json({ error: "Error getting category", status: 500 });
+    console.error("Error fetching category:", error);
+    return NextResponse.json({ error: "Error fetching category" }, { status: 500 });
   }
 }
 
@@ -51,7 +38,7 @@ export async function PUT(
       );
     }
 
-    const updatedCategory = await prisma.category.update({
+    const updatedCategory = await db.category.update({
       where: { id: params.id },
       data: {
         billboard,
@@ -82,41 +69,14 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  // const { userId } = auth(); // Removed Clerk auth
-
   try {
-    // if (!userId) { // Removed Clerk auth
-    //   return NextResponse.json({ error: "Unauthorized", status: 401 });
-    // }
-
-    const productSizes = await prisma.categorySize.findMany({ // Changed db to prisma
-      where: {
-        categoryId: id,
-      },
-    });
-
-    await Promise.all(
-      productSizes.map(async (productSize) => {
-        await prisma.categorySize.delete({ // Changed db to prisma
-          where: {
-            id: productSize.id,
-          },
-        });
-      })
-    );
-
-    const task = await prisma.category.delete({ // Changed db to prisma
-      where: {
-        id,
-      },
-    });
-
-    return NextResponse.json(task);
+    const deleted = await db.category.delete({ where: { id: params.id } });
+    return NextResponse.json(deleted);
   } catch (error) {
-    return NextResponse.json({ error: "Error deleting task", status: 500 });
+    console.error("Error deleting category:", error);
+    return NextResponse.json({ error: "Error deleting category" }, { status: 500 });
   }
 }

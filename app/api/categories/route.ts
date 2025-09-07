@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const categories = await prisma.category.findMany({
-      include: {
-        categorySizes: {
-          include: {
-            size: true,
-          },
-        },
-      },
-    });
-
+    const categories = await db.category.findMany({ orderBy: { createdAt: 'desc' } });
     return NextResponse.json(categories);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error fetching categories" },
-      { status: 500 }
-    );
+    console.error("Error fetching categories:", error);
+    return NextResponse.json({ error: "Error fetching categories" }, { status: 500 });
   }
 }
 
@@ -45,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newCategory = await prisma.category.create({
+    const newCategory = await db.category.create({
       data: {
         billboard,
         billboardId,
