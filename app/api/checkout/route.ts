@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const origin = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
 
-    // Create a pending order (schema without quantity on OrderItem)
+    // Create a pending order
     const order = await db.order.create({
       data: {
         isPaid: false,
@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: `${origin}/cart?success=1`,
+      // Include Stripe's {CHECKOUT_SESSION_ID} token so we can verify server-side without webhooks
+      success_url: `${origin}/cart?success=1&orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart?canceled=1`,
       metadata: { email: email || "", orderId: order.id },
     });

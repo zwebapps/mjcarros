@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import useCart from "@/hooks/use-cart";
 import { Trash } from "lucide-react";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 interface User {
   id: string;
@@ -34,18 +35,11 @@ export const Summary = () => {
   }, 0);
 
   const onCheckout = async () => {
-    if (!user) {
-      router.push('/sign-in');
-      return;
-    }
-
+    if (!user) { router.push('/sign-in'); return; }
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
         body: JSON.stringify({
           items: cart.items.map((item) => ({
             id: item.id,
@@ -54,21 +48,12 @@ export const Summary = () => {
             quantity: item.quantity ?? 1,
             imageURLs: item.imageURLs,
           })),
-          email: user.email,
+          email: user?.email,
         }),
       });
-
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(typeof data === 'string' ? data : (data?.error || 'Checkout failed'));
-      }
-
-      if (data?.url) {
-        window.location.href = data.url; // Redirect to Stripe Checkout
-        return;
-      }
-
-      // Fallback
+      if (!response.ok) throw new Error(typeof data === 'string' ? data : data?.error || 'Checkout failed');
+      if (data?.url) { window.location.href = data.url; return; }
       router.push('/');
     } catch (error) {
       console.error('Checkout error:', error);
@@ -88,6 +73,8 @@ export const Summary = () => {
     );
   }
 
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
+
   return (
     <div className="mt-16 rounded-lg bg-gray-50 px-4 py-6 sm:p-6 lg:col-span-5 lg:mt-0 lg:p-8">
       <h2 className="text-lg font-medium text-gray-900">Order Summary</h2>
@@ -99,21 +86,57 @@ export const Summary = () => {
           </div>
         </div>
       </div>
-      <Button
-        onClick={onCheckout}
-        disabled={cart.items.length === 0}
-        className="w-full mt-6"
-      >
-        {user ? 'Checkout' : 'Sign in to checkout'}
+
+      {/* Stripe */}
+      <Button onClick={onCheckout} disabled={cart.items.length === 0} className="w-full mt-6">
+        {user ? 'Checkout with Stripe' : 'Sign in to checkout'}
       </Button>
+
+      {/* PayPal */}
+      {paypalClientId && (
+        <div className="mt-4">
+          <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'USD', intent: 'capture', components: 'buttons' }}>
+            <PayPalButtons
+              style={{ layout: 'horizontal' }}
+              createOrder={(data, actions) => {
+                return actions.order.create({
+                  intent: 'CAPTURE',
+                  purchase_units: [
+                    { amount: { currency_code: 'USD', value: totalPrice.toFixed(2) }, description: 'MJ Carros Order' },
+                  ],
+                });
+              }}
+              onApprove={async (data, actions) => {
+                await actions.order?.capture();
+                try {
+                  await fetch('/api/paypal/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+                    body: JSON.stringify({
+                      items: cart.items.map((item) => ({ id: item.id, title: item.title })),
+                      email: user?.email,
+                    }),
+                  });
+                } catch (e) {
+                  console.error('Record order error', e);
+                }
+                cart.removeAllCart();
+                alert('Payment successful via PayPal');
+                router.push('/orders');
+              }}
+              onError={(err) => {
+                console.error('PayPal error', err);
+                alert('PayPal payment failed.');
+              }}
+              disabled={cart.items.length === 0}
+            />
+          </PayPalScriptProvider>
+        </div>
+      )}
+
       <div className="mt-6 text-center text-sm text-gray-600">
         <p>
-          {" "}
-          <Button
-            variant="link"
-            className="p-0 text-base text-black underline-offset-4 hover:underline"
-            onClick={() => cart.removeAllCart()}
-          >
+          <Button variant="link" className="p-0 text-base text-black underline-offset-4 hover:underline" onClick={() => cart.removeAllCart()}>
             Continue Shopping
           </Button>
         </p>

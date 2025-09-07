@@ -16,29 +16,53 @@ const CartPage = () => {
   const router = useRouter();
   const success = searchParams?.get("success");
   const canceled = searchParams?.get("canceled");
-  const [status, setStatus] = useState<"success" | "canceled" | null>(null);
+  const orderId = searchParams?.get("orderId");
+  const sessionId = searchParams?.get("session_id");
+  const [status, setStatus] = useState<"success" | "canceled" | "verifying" | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Handle Stripe return
+  // Verify payment server-side and clear cart only on success
+  useEffect(() => {
+    const verify = async () => {
+      if (success === "1" && orderId && sessionId) {
+        const flagKey = `confirmed-${sessionId}`;
+        if (sessionStorage.getItem(flagKey)) {
+          setStatus("success");
+          return;
+        }
+        setStatus("verifying");
+        try {
+          const res = await fetch('/api/orders/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, sessionId })
+          });
+          if (res.ok) {
+            cart.removeAllCart();
+            sessionStorage.setItem(flagKey, "1");
+            setStatus("success");
+            const t = setTimeout(() => router.push("/orders"), 2000);
+            return () => clearTimeout(t);
+          } else {
+            setStatus("canceled");
+          }
+        } catch (e) {
+          setStatus("canceled");
+        }
+      }
+    };
+    verify();
+  }, [success, orderId, sessionId, cart, router]);
+
   useEffect(() => {
     if (!isMounted) return;
-    if (success === "1") {
-      const processed = sessionStorage.getItem("stripe-success-processed");
-      if (!processed) {
-        cart.removeAllCart();
-        sessionStorage.setItem("stripe-success-processed", "1");
-      }
-      setStatus("success");
-      const t = setTimeout(() => router.push("/shop"), 2500);
-      return () => clearTimeout(t);
-    }
     if (canceled === "1") {
       setStatus("canceled");
     }
-  }, [isMounted, success, canceled, cart, router]);
+  }, [isMounted, canceled]);
 
   if (!isMounted) {
     return null;
@@ -50,14 +74,19 @@ const CartPage = () => {
         <div className="px-4 py-8 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold text-black">Shopping Cart</h1>
 
+          {status === "verifying" && (
+            <div className="mt-4 rounded bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3">
+              Verifying payment...
+            </div>
+          )}
           {status === "success" && (
             <div className="mt-4 rounded bg-green-50 border border-green-200 text-green-800 px-4 py-3">
-              Payment successful. Your order is confirmed. Redirecting to shop...
+              Payment successful. Your order is confirmed. Redirecting to orders...
             </div>
           )}
           {status === "canceled" && (
             <div className="mt-4 rounded bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3">
-              Payment canceled. You can try again or continue shopping.
+              Payment not completed. You can try again or continue shopping.
             </div>
           )}
 
