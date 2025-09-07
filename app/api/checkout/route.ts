@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
       return {
         price_data: {
-          currency: "usd",
+          currency: "eur",
           product_data: {
             name: item.title,
             ...(image ? { images: image } : {}),

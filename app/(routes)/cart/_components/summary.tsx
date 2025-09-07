@@ -95,14 +95,14 @@ export const Summary = () => {
       {/* PayPal */}
       {paypalClientId && (
         <div className="mt-4">
-          <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'USD', intent: 'capture', components: 'buttons' }}>
+          <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'EUR', intent: 'capture', components: 'buttons' }}>
             <PayPalButtons
               style={{ layout: 'horizontal' }}
               createOrder={(data, actions) => {
                 return actions.order.create({
                   intent: 'CAPTURE',
                   purchase_units: [
-                    { amount: { currency_code: 'USD', value: totalPrice.toFixed(2) }, description: 'MJ Carros Order' },
+                    { amount: { currency_code: 'EUR', value: totalPrice.toFixed(2) }, description: 'MJ Carros Order' },
                   ],
                 });
               }}

@@ -1,4 +1,5 @@
 "use client";
+import { formatCurrency } from "@/lib/utils";
 
 import { ShoppingCart } from "lucide-react";
 
@@ -41,19 +42,19 @@ const Info: React.FC<InfoProps> = ({ data, categories, availableSizes }) => {
           <div className="font-semibold">
             <div className="flex items-center gap-2">
               <span className="text-gray-500 line-through">
-                ${Number(data?.price).toLocaleString()}
+                {formatCurrency(Number(data?.price), 'EUR')}
               </span>
               <div className="bg-red-600 text-sm text-white p-1 px-2 font-semibold rounded-sm">
                 -{data?.discount}%
               </div>
             </div>
             <p className="text-2xl text-gray-900 font-semibold mt-1">
-              ${data.finalPrice.toLocaleString()}
+              {formatCurrency(Number(data.finalPrice), 'EUR')}
             </p>
           </div>
         ) : (
           <p className="text-2xl text-gray-900 font-semibold">
-            ${Number(data?.price).toLocaleString()}
+            {formatCurrency(Number(data?.price), 'EUR')}
           </p>
         )}
       </div>

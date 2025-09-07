@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Star } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -66,15 +67,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
                 {hasDiscount ? (
                   <>
                     <div className="text-2xl font-bold text-red-600">
-                      ${displayPrice.toLocaleString()}
+                      {formatCurrency(displayPrice, 'EUR')}
                     </div>
                     <div className="text-base text-gray-500 line-through">
-                      ${product.price.toLocaleString()}
+                      {formatCurrency(product.price, 'EUR')}
                     </div>
                   </>
                 ) : (
                   <div className="text-2xl font-bold text-gray-900">
-                    ${displayPrice.toLocaleString()}
+                    {formatCurrency(displayPrice, 'EUR')}
                   </div>
                 )}
               </div>
