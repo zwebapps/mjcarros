@@ -29,7 +29,10 @@ const TableOrders = () => {
   const { error, data, isLoading } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
-      const { data } = await axios.get("/api/orders");
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const { data } = await axios.get("/api/orders", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       const sortedData = sortByDate(data);
       return sortedData as Order[];
     },

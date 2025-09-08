@@ -105,12 +105,11 @@ export default function ProductTable() {
               <tr key={product.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex-shrink-0 h-10 w-10">
-                    <Image
+                    <img
                       className="h-10 w-10 rounded-full object-cover"
                       src={product.imageURLs[0] || "/placeholder-image.jpg"}
                       alt={product.title}
-                      width={40}
-                      height={40}
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder-image.jpg"; }}
                     />
                   </div>
                 </td>
@@ -138,7 +137,7 @@ export default function ProductTable() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                     <Link 
-                      href={`/admin/products/edit/${product.id}`}
+                      href={`/admin/products/${product.id}`}
                       className="text-blue-600 hover:text-blue-800 p-1"
                     >
                       <Edit className="h-4 w-4" />

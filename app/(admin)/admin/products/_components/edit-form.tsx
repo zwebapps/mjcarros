@@ -42,7 +42,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     categoryId,
     discount,
   } = data;
-  const baseUrl = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
+  const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
 
   const initialState = {
     title,
@@ -283,8 +283,13 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       />
       <div className="flex gap-2">
         {previewImage?.map((preview, index) => {
-          const isImageIncluded = imageURLs.includes(preview);
-          const imagePath = isImageIncluded ? `${baseUrl}${preview}` : preview;
+          const isAbsolute = /^https?:\/\//.test(preview);
+          const cleaned = preview.replace(/^\/+/, "");
+          const imagePath = isAbsolute
+            ? preview
+            : baseUrl
+              ? `${baseUrl}/${cleaned}`
+              : `/${cleaned}`;
           return (
             <Image
               key={index}
