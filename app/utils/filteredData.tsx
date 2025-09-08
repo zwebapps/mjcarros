@@ -34,9 +34,13 @@ const filteredData = (params: any, data: Product[]) => {
   }
 
   if (params.q) {
-    const filteredSearch = data.filter((product: Product) =>
-      product.title.toLowerCase().includes(params.q)
-    );
+    const q = Array.isArray(params.q)
+      ? params.q.join(" ").toLowerCase().trim()
+      : String(params.q || "").toLowerCase().trim();
+    const filteredSearch = data.filter((product: Product) => {
+      const haystack = `${product.title} ${product.description || ""} ${product.category || ""}`.toLowerCase();
+      return haystack.includes(q);
+    });
     return filteredSearch;
   }
 

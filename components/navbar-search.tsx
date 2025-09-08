@@ -15,17 +15,17 @@ const NavbarSearch = () => {
   const handleSearchChange = async () => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
 
-    if (search.length >= 1) {
-      current.set("q", search);
+    const value = search.trim();
+    if (value.length >= 3) {
+      current.set("q", value);
     } else {
       current.delete("q");
-      await router.replace("/shop");
     }
 
     const searchq = current.toString();
     const query = searchq ? `?${searchq}` : "";
 
-    await router.replace(`/shop/${query}`);
+    await router.replace(`/shop${query}`);
   };
 
   const handleKeyDown = (e: any) => {
@@ -42,12 +42,30 @@ const NavbarSearch = () => {
     if (searchStr) setSearch(searchStr);
   }, [searchStr, setSearch]);
 
+  // Debounce typing and only search when 3+ chars
+  useEffect(() => {
+    if (pathname !== "/shop") return;
+    const timer = setTimeout(() => {
+      const value = search.trim();
+      const current = new URLSearchParams(Array.from(searchParams.entries()));
+      if (value.length >= 3) {
+        current.set("q", value);
+      } else {
+        current.delete("q");
+      }
+      const searchq = current.toString();
+      const query = searchq ? `?${searchq}` : "";
+      router.replace(`/shop${query}`);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, pathname, searchParams, router]);
+
   return (
     <div className="flex mx-auto relative">
       <Input
         size={35}
         className="pr-12 outline-none rounded-xl max-md:text-white bg-transparent"
-        placeholder="Search for products..."
+        placeholder="Search for products (min 3 chars)..."
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={handleKeyDown}
         value={search}
