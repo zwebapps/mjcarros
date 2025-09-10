@@ -87,8 +87,8 @@ const HomePage = () => {
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-5xl font-bold mb-6">Discover the Difference</h1>
-            <p className="text-xl mb-8 opacity-90">Professional guidance, trusted financing, and timely delivery.</p>
+            <h1 className="text-5xl font-bold mb-6">Your Next Car, Simplified</h1>
+            <p className="text-xl mb-8 opacity-90">Intelligent search, trusted listings, seamless checkout.</p>
             <div className="flex justify-center space-x-4">
               <Link href="/shop">
                 <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">Browse Cars</Button>
