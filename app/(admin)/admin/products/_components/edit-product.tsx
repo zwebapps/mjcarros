@@ -22,6 +22,14 @@ export type createData = {
   productSizes?: SizeProduct[];
   categoryId: string;
   discount?: number;
+  modelName?: string;
+  year?: number;
+  stockQuantity?: number;
+  color?: string;
+  fuelType?: string;
+  transmission?: string;
+  mileage?: number;
+  condition?: string;
 };
 const EditProduct = () => {
   const params = useParams();
