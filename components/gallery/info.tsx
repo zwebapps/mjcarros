@@ -6,6 +6,8 @@ import { ShoppingCart } from "lucide-react";
 import { Category, Product } from "@/types";
 import { Button } from "../ui/button";
 import useCart from "@/hooks/use-cart";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface InfoProps {
   data: Product;
@@ -59,17 +61,15 @@ const Info: React.FC<InfoProps> = ({ data, categories, availableSizes }) => {
         )}
       </div>
 
-      {/* Description */}
-      <div className="flex items-center gap-x-4 mt-3">
-        <span className="text-sm font-serif text-[#4a4a4a]">
-          {data?.description}
-        </span>
+      {/* Rich Description */}
+      <div className="mt-6 prose max-w-none prose-headings:mt-4 prose-th:text-gray-900 prose-td:text-gray-700">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{data?.description || ''}</ReactMarkdown>
       </div>
 
       {/* Size Selection - Only show if sizes are available */}
       {categories && categories.length > 0 && (
         <>
-          <div className="flex mt-2 flex-wrap gap-2 flex-col">
+          <div className="flex mt-6 flex-wrap gap-2 flex-col">
             <span className="text-xl font-semibold py-2 text-gray-900">Size</span>
             <div className="flex flex-wrap gap-2">
               {categories?.map((category: any) => {

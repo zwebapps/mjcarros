@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Editor styles (SimpleMDE) */
+@import 'easymde/dist/easymde.min.css';
+
+/* SimpleMDE contrast fixes */
+.editor-toolbar {
+  background-color: #f8fafc; /* slate-50 */
+  border-color: #e5e7eb; /* gray-200 */
+}
+.editor-toolbar a,
+.editor-toolbar button,
+.EasyMDEContainer .editor-toolbar button {
+  color: #111827 !important; /* gray-900 */
+}
+.editor-toolbar a:hover,
+.editor-toolbar button:hover,
+.editor-toolbar a.active {
+  background-color: #e5e7eb !important; /* gray-200 */
+}
+.editor-toolbar i,
+.editor-toolbar svg,
+.editor-toolbar svg path,
+.EasyMDEContainer .editor-toolbar svg,
+.EasyMDEContainer .editor-toolbar svg path {
+  color: #111827 !important;
+  fill: #111827 !important;
+  stroke: #111827 !important;
+}
+.cm-s-easymde .CodeMirror,
+.CodeMirror {
+  background-color: #ffffff; /* white */
+  color: #111827; /* gray-900 */
+}
+.cm-s-easymde .CodeMirror-cursor { border-left: 1px solid #111827; }
+.cm-s-easymde .cm-header { color: #1f2937; }
+
+/* Fix toolbar separators showing as slashes */
+.editor-toolbar i.separator,
+.EasyMDEContainer .editor-toolbar i.separator {
+  display: inline-block;
+  width: 0;
+  height: 16px;
+  margin: 0 8px;
+  border-left: 1px solid #d1d5db; /* gray-300 */
+  vertical-align: middle;
+}
+.editor-toolbar i.separator::before,
+.EasyMDEContainer .editor-toolbar i.separator::before {
+  content: '';
+}
+
 /* Custom utilities */
 .line-clamp-2 {
   display: -webkit-box;

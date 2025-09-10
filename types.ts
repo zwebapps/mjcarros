@@ -12,6 +12,15 @@ export interface Product {
   size?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Car attributes
+  modelName?: string;
+  year?: number;
+  stockQuantity?: number;
+  color?: string;
+  fuelType?: string;
+  transmission?: string;
+  mileage?: number;
+  condition?: string;
 }
 
 export interface Image {
@@ -46,4 +55,13 @@ export interface RequestData {
   sizes: SelectedSize[];
   categoryId: string;
   discount?: number;
+  // New optional attributes
+  modelName?: string;
+  year?: number;
+  stockQuantity?: number;
+  color?: string;
+  fuelType?: string;
+  transmission?: string;
+  mileage?: number;
+  condition?: string;
 }

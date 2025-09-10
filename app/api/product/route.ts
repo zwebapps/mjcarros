@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     let featured: boolean = false;
     let productSizes: any[] | undefined = undefined;
     let imageURLs: string[] = [];
+    let extras: any = {};
 
     const bucket = process.env.AWS_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
     const region = process.env.NEXT_PUBLIC_AWS_S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
@@ -53,6 +54,17 @@ export async function POST(request: NextRequest) {
       discount = parsed.discount ? Number(parsed.discount) : undefined;
       featured = !!parsed.featured;
       productSizes = parsed.sizes?.map((s: any) => ({ sizeId: s.id, name: s.name })) || [];
+      // Car attributes
+      extras = {
+        modelName: parsed.modelName || "",
+        year: parsed.year ? Number(parsed.year) : 0,
+        stockQuantity: parsed.stockQuantity ? Number(parsed.stockQuantity) : 0,
+        color: parsed.color || "",
+        fuelType: parsed.fuelType || "",
+        transmission: parsed.transmission || "",
+        mileage: parsed.mileage ? Number(parsed.mileage) : null,
+        condition: parsed.condition || "new",
+      };
 
       const files = formData.getAll('files') as File[];
       for (const file of files) {
@@ -64,7 +76,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       const body = await request.json();
-      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, productSizes } = body);
+      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, productSizes, ...extras } = body);
     }
 
     if (!title || !description || !category || !categoryId || !price) {
@@ -85,6 +97,7 @@ export async function POST(request: NextRequest) {
         finalPrice,
         discount,
         featured: featured || false,
+        ...extras,
         productSizes: {
           create: productSizes || [],
         },

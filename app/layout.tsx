@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "font-awesome/css/font-awesome.min.css";
 import { siteConfig } from "@/config/site";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { ToastProvider } from "@/providers/toast-provider";

@@ -1,10 +1,12 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { type SizeProduct, type createData } from "./edit-product";
 import Image from "next/image";
 import axios from "axios";
+import SimpleMDE from "react-simplemde-editor";
+import "easymde/dist/easymde.min.css";
 
 type EditFormProps = {
   data: createData;
@@ -28,6 +30,14 @@ type InitialType = {
   productSizes?: SizeProduct[];
   categoryId: string;
   discount?: number;
+  modelName?: string;
+  year?: number;
+  stockQuantity?: number;
+  color?: string;
+  fuelType?: string;
+  transmission?: string;
+  mileage?: number;
+  condition?: string;
 };
 
 const EditForm = ({ data, onSubmit }: EditFormProps) => {
@@ -41,6 +51,14 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     productSizes,
     categoryId,
     discount,
+    modelName,
+    year,
+    stockQuantity,
+    color,
+    fuelType,
+    transmission,
+    mileage,
+    condition,
   } = data;
   const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
 
@@ -54,6 +72,14 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     productSizes: productSizes,
     categoryId,
     discount,
+    modelName,
+    year,
+    stockQuantity,
+    color,
+    fuelType,
+    transmission,
+    mileage,
+    condition,
   };
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -85,6 +111,14 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       productSizes,
       categoryId,
       discount,
+      modelName,
+      year,
+      stockQuantity,
+      color,
+      fuelType,
+      transmission,
+      mileage,
+      condition,
     });
   }, [
     featured,
@@ -96,6 +130,14 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     productSizes,
     categoryId,
     discount,
+    modelName,
+    year,
+    stockQuantity,
+    color,
+    fuelType,
+    transmission,
+    mileage,
+    condition,
   ]);
 
   useEffect(() => {
@@ -206,17 +248,17 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
           setDataForm({ ...dataForm, discount: +e.target.value })
         }
       />
-      <label htmlFor="description">Enter Product Description</label>
-      <Input
-        value={dataForm.description}
-        type="text"
+      <label htmlFor="description">Product Description</label>
+      <SimpleMDE
         id="description"
-        name="description"
-        required
-        placeholder="Enter Product description"
-        onChange={(e) =>
-          setDataForm({ ...dataForm, description: e.target.value })
-        }
+        value={dataForm.description}
+        onChange={(value) => setDataForm({ ...dataForm, description: value })}
+        options={useMemo(() => ({
+          spellChecker: false,
+          status: false,
+          autoDownloadFontAwesome: false,
+          placeholder: "Write detailed description. Use headings, lists, tables (Markdown).",
+        }), []) as any}
       />
 
       <label htmlFor="category">Choose a category</label>
@@ -233,6 +275,57 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
           </option>
         ))}
       </select>
+      {/* Car-specific fields */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="modelName">Model Name</label>
+          <Input id="modelName" value={dataForm.modelName || ''} onChange={(e) => setDataForm({ ...dataForm, modelName: e.target.value })} />
+        </div>
+        <div>
+          <label htmlFor="year">Year</label>
+          <Input id="year" type="number" value={dataForm.year || 0} onChange={(e) => setDataForm({ ...dataForm, year: +e.target.value })} />
+        </div>
+        <div>
+          <label htmlFor="stockQuantity">Stock Quantity</label>
+          <Input id="stockQuantity" type="number" value={dataForm.stockQuantity || 0} onChange={(e) => setDataForm({ ...dataForm, stockQuantity: +e.target.value })} />
+        </div>
+        <div>
+          <label htmlFor="color">Color</label>
+          <Input id="color" type="color" value={dataForm.color || '#000000'} onChange={(e) => setDataForm({ ...dataForm, color: e.target.value })} />
+        </div>
+        <div>
+          <label htmlFor="fuelType">Fuel Type</label>
+          <Input id="fuelType" value={dataForm.fuelType || ''} onChange={(e) => setDataForm({ ...dataForm, fuelType: e.target.value })} placeholder="petrol, diesel, electric" />
+        </div>
+        <div>
+          <label htmlFor="transmission">Transmission</label>
+          <select
+            id="transmission"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={dataForm.transmission || 'manual'}
+            onChange={(e) => setDataForm({ ...dataForm, transmission: e.target.value })}
+          >
+            <option value="manual">Manual</option>
+            <option value="automatic">Automatic</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="mileage">Mileage</label>
+          <Input id="mileage" type="number" value={dataForm.mileage || 0} onChange={(e) => setDataForm({ ...dataForm, mileage: +e.target.value })} />
+        </div>
+        <div>
+          <label htmlFor="condition">Condition</label>
+          <select
+            id="condition"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={dataForm.condition || 'new'}
+            onChange={(e) => setDataForm({ ...dataForm, condition: e.target.value })}
+          >
+            <option value="new">New</option>
+            <option value="used">Used</option>
+          </select>
+        </div>
+      </div>
       {categorySizes.length > 0 && (
         <label htmlFor="size" className="pb-2">
           Select sizes for this product

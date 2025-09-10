@@ -34,6 +34,15 @@ model Product {
   finalPrice   Float?
   discount     Float?
   featured     Boolean
+  // Car specific attributes
+  modelName    String        @default("")
+  year         Int           @default(0)
+  stockQuantity Int          @default(0)
+  color        String        @default("")
+  fuelType     String        @default("")
+  transmission String        @default("")
+  mileage      Int?
+  condition    String        @default("new")
   productSizes ProductSize[]
 
   createdAt DateTime    @default(now()) @map("created_at")

@@ -40,6 +40,16 @@ export async function PUT(
     const category = String(formData.get("category") || "");
     const isFeatured = String(formData.get("isFeatured") || "false") === "true";
     const productSizesRaw = String(formData.get("productSizes") || "[]");
+    // New fields
+    const modelName = String(formData.get("modelName") || "");
+    const year = Number(formData.get("year") || 0);
+    const stockQuantity = Number(formData.get("stockQuantity") || 0);
+    const color = String(formData.get("color") || "");
+    const fuelType = String(formData.get("fuelType") || "");
+    const transmission = String(formData.get("transmission") || "");
+    const mileageRaw = formData.get("mileage");
+    const mileage = mileageRaw !== null && String(mileageRaw).length > 0 ? Number(mileageRaw) : null;
+    const condition = String(formData.get("condition") || "");
 
     let categoryIdUpdate: string | undefined = undefined;
     if (category) {
@@ -72,6 +82,14 @@ export async function PUT(
         category: category || undefined,
         ...(categoryIdUpdate ? { categoryId: categoryIdUpdate } : {}),
         featured: isFeatured,
+        modelName,
+        year,
+        stockQuantity,
+        color,
+        fuelType,
+        transmission,
+        mileage: mileage === null ? undefined : mileage,
+        condition,
         ...(newUrls.length ? { imageURLs: newUrls } : {}),
       },
     });

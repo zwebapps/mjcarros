@@ -5,8 +5,10 @@ import { RequestData, SelectedSize } from "@/types";
 import axios from "axios";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import SimpleMDE from "react-simplemde-editor";
+import "easymde/dist/easymde.min.css";
 
 type Category = {
   id: string;
@@ -25,6 +27,14 @@ type initialState = {
   categoryId: string;
   sizes: SelectedSize[];
   discount?: string;
+  modelName?: string;
+  year?: string;
+  stockQuantity?: string;
+  color?: string;
+  fuelType?: string;
+  transmission?: string;
+  mileage?: string;
+  condition?: string;
 };
 
 const AddProduct = () => {
@@ -41,6 +51,14 @@ const AddProduct = () => {
     isFeatured: false,
     sizes: selectedSizes,
     discount: "",
+    modelName: "",
+    year: "",
+    stockQuantity: "",
+    color: "",
+    fuelType: "",
+    transmission: "",
+    mileage: "",
+    condition: "",
   };
 
   const [category, setCategory] = useState<Category[]>([]);
@@ -162,6 +180,15 @@ const AddProduct = () => {
     if (dataForm.discount !== undefined) {
       requestData.discount = +dataForm.discount;
     }
+    // Optional car attributes
+    if (dataForm.modelName) requestData.modelName = dataForm.modelName;
+    if (dataForm.year) requestData.year = +dataForm.year;
+    if (dataForm.stockQuantity) requestData.stockQuantity = +dataForm.stockQuantity;
+    if (dataForm.color) requestData.color = dataForm.color;
+    if (dataForm.fuelType) requestData.fuelType = dataForm.fuelType;
+    if (dataForm.transmission) requestData.transmission = dataForm.transmission;
+    if (dataForm.mileage) requestData.mileage = +dataForm.mileage;
+    if (dataForm.condition) requestData.condition = dataForm.condition;
 
     const formData = new FormData();
 
@@ -200,6 +227,14 @@ const AddProduct = () => {
       );
     }
   };
+
+  const mdeOptions = useMemo(() => ({
+    spellChecker: false,
+    status: false,
+    placeholder: "Write detailed description. Use headings, lists, tables (Markdown).",
+    autosave: { enabled: false },
+    autoDownloadFontAwesome: true,
+  }), []);
 
   return (
     <div className="flex justify-center items-center max-md:justify-start">
@@ -243,17 +278,12 @@ const AddProduct = () => {
             setDataForm({ ...dataForm, discount: e.target.value })
           }
         />
-        <label htmlFor="description">Enter Product Description</label>
-        <Input
-          value={dataForm.description}
-          type="text"
+        <label htmlFor="description">Product Description</label>
+        <SimpleMDE
           id="description"
-          name="description"
-          required
-          placeholder="Enter Product description"
-          onChange={(e) =>
-            setDataForm({ ...dataForm, description: e.target.value })
-          }
+          value={dataForm.description}
+          onChange={(value) => setDataForm({ ...dataForm, description: value })}
+          options={mdeOptions as any}
         />
         {errors.description && (
           <p className="text-red-500">{errors.description}</p>
@@ -286,6 +316,57 @@ const AddProduct = () => {
               );
             })}
         </select>
+        {/* Car-specific attributes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="modelName">Model Name</label>
+            <Input id="modelName" value={dataForm.modelName || ''} onChange={(e) => setDataForm({ ...dataForm, modelName: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="year">Year</label>
+            <Input id="year" type="number" value={dataForm.year || ''} onChange={(e) => setDataForm({ ...dataForm, year: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="stockQuantity">Stock Quantity</label>
+            <Input id="stockQuantity" type="number" value={dataForm.stockQuantity || ''} onChange={(e) => setDataForm({ ...dataForm, stockQuantity: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="color">Color</label>
+            <Input id="color" type="color" value={dataForm.color || '#000000'} onChange={(e) => setDataForm({ ...dataForm, color: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="fuelType">Fuel Type</label>
+            <Input id="fuelType" value={dataForm.fuelType || ''} onChange={(e) => setDataForm({ ...dataForm, fuelType: e.target.value })} placeholder="petrol, diesel, electric" />
+          </div>
+          <div>
+            <label htmlFor="transmission">Transmission</label>
+            <select
+              id="transmission"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={dataForm.transmission || 'manual'}
+              onChange={(e) => setDataForm({ ...dataForm, transmission: e.target.value })}
+            >
+              <option value="manual">Manual</option>
+              <option value="automatic">Automatic</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="mileage">Mileage</label>
+            <Input id="mileage" type="number" value={dataForm.mileage || ''} onChange={(e) => setDataForm({ ...dataForm, mileage: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="condition">Condition</label>
+            <select
+              id="condition"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={dataForm.condition || 'new'}
+              onChange={(e) => setDataForm({ ...dataForm, condition: e.target.value })}
+            >
+              <option value="new">New</option>
+              <option value="used">Used</option>
+            </select>
+          </div>
+        </div>
         <div className="my-2 gap-2 flex flex-wrap flex-col">
           {availableSizes.length > 0 && (
             <label htmlFor="size" className="pb-2">
