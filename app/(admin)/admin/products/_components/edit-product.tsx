@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import EditForm from "./edit-form";
 import Spinner from "@/components/Spinner";
 import toast from "react-hot-toast";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export type SizeProduct = {
   sizeId: string;
@@ -58,7 +60,10 @@ const EditProduct = () => {
 
   const handleFormSubmit = async (formData: FormData) => {
     try {
-      const res = await axios.put(`/api/product/edit/${productId}`, formData);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const res = await axios.put(`/api/product/edit/${productId}`, formData, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       toast.success("Product edit successfully");
       router.push("/admin/products");
     } catch (error) {
@@ -67,7 +72,12 @@ const EditProduct = () => {
   };
 
   return (
-    <div className="flex justify-center items-center max-md:justify-start">
+    <div className="flex flex-col gap-4 justify-center items-center max-md:justify-start">
+      <div className="self-end pr-4">
+        <Link href={`/product/${data.id}`} target="_blank">
+          <Button variant="outline">View product</Button>
+        </Link>
+      </div>
       <EditForm onSubmit={handleFormSubmit} data={data} />
     </div>
   );

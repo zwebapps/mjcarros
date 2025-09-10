@@ -61,6 +61,8 @@ export async function PUT(
     const bucket = process.env.AWS_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
     const region = process.env.NEXT_PUBLIC_AWS_S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
     const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || (bucket && region ? `https://${bucket}.s3.${region}.amazonaws.com` : '')).replace(/\/$/, '');
+    // Load existing product to append gallery images
+    const existing = await db.product.findUnique({ where: { id: params.id } });
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
     for (const file of newFiles) {
@@ -70,6 +72,9 @@ export async function PUT(
       await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
       if (baseUrl) newUrls.push(`${baseUrl}/${key}`);
     }
+
+    // Decide final gallery URLs (append new uploads)
+    const combinedUrls = newUrls.length && existing ? [...existing.imageURLs, ...newUrls] : (newUrls.length ? newUrls : undefined);
 
     // Update main product fields
     const updated = await db.product.update({
@@ -90,7 +95,7 @@ export async function PUT(
         transmission,
         mileage: mileage === null ? undefined : mileage,
         condition,
-        ...(newUrls.length ? { imageURLs: newUrls } : {}),
+        ...(combinedUrls ? { imageURLs: combinedUrls } : {}),
       },
     });
 

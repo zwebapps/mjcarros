@@ -376,22 +376,22 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       />
       <div className="flex gap-2">
         {previewImage?.map((preview, index) => {
-          const isAbsolute = /^https?:\/\//.test(preview);
+          const isHttp = /^https?:\/\//.test(preview);
+          const isBlobOrData = /^(blob:|data:)/.test(preview);
           const cleaned = preview.replace(/^\/+/, "");
-          const imagePath = isAbsolute
+          const imagePath = (isHttp || isBlobOrData)
             ? preview
             : baseUrl
               ? `${baseUrl}/${cleaned}`
               : `/${cleaned}`;
           return (
-            <Image
+            <img
               key={index}
               src={imagePath}
               alt={`Preview ${index}`}
               width={100}
               height={100}
-              className="rounded-sm"
-              priority={true}
+              className="rounded-sm object-cover"
             />
           );
         })}
