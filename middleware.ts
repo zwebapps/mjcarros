@@ -25,6 +25,7 @@ export function middleware(request: NextRequest) {
     '/admin',
     '/api/categories',
     '/api/products',
+    '/api/product',
     '/api/billboards'
   ];
 

@@ -199,9 +199,11 @@ const AddProduct = () => {
     formData.append("requestData", JSON.stringify(requestData));
 
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       const res = await axios.post("/api/product", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
       toast.success("Product created successfully");

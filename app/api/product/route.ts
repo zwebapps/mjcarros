@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,8 +16,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if user is admin (middleware sets these headers)
-    const userRole = request.headers.get('x-user-role');
+    // Check if user is admin (middleware sets these headers). Fallback to self-verification.
+    let userRole = request.headers.get('x-user-role');
+    if (!userRole) {
+      const token = extractTokenFromHeader(request.headers.get('authorization'));
+      const payload = token ? verifyToken(token) : null;
+      if (payload) userRole = payload.role;
+    }
     if (userRole !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Admin access required' },

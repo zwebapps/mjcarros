@@ -15,7 +15,7 @@ const nextConfig = {
       "script-src 'self' https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com 'unsafe-eval' 'unsafe-inline'",
       "connect-src 'self' https://api.stripe.com https://r.stripe.com https://www.paypal.com https://api-m.sandbox.paypal.com https://api-m.paypal.com",
       "frame-src https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
-      "img-src 'self' data: https://*.stripe.com https://images.unsplash.com https://www.paypalobjects.com https://*.paypal.com https://*.s3.amazonaws.com https://*.s3.*.amazonaws.com",
+      "img-src 'self' data: blob: https://*.stripe.com https://images.unsplash.com https://www.paypalobjects.com https://*.paypal.com https://*.s3.amazonaws.com https://*.s3.eu-north-1.amazonaws.com",
       "style-src 'self' 'unsafe-inline' https://maxcdn.bootstrapcdn.com",
       "font-src 'self' data: https://maxcdn.bootstrapcdn.com",
     ].join('; ');
@@ -27,7 +27,7 @@ const nextConfig = {
       "script-src 'self' https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
       "connect-src 'self' https://api.stripe.com https://r.stripe.com https://www.paypal.com https://api-m.sandbox.paypal.com https://api-m.paypal.com",
       "frame-src https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
-      "img-src 'self' data: https://*.stripe.com https://images.unsplash.com https://www.paypalobjects.com https://*.paypal.com https://*.s3.amazonaws.com https://*.s3.*.amazonaws.com",
+      "img-src 'self' data: blob: https://*.stripe.com https://images.unsplash.com https://www.paypalobjects.com https://*.paypal.com https://*.s3.amazonaws.com https://*.s3.eu-north-1.amazonaws.com",
       "style-src 'self' 'unsafe-inline' https://maxcdn.bootstrapcdn.com",
       "font-src 'self' data: https://maxcdn.bootstrapcdn.com",
       "object-src 'none'",
