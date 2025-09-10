@@ -72,6 +72,11 @@ export async function POST(request: NextRequest) {
         condition: parsed.condition || "new",
       };
 
+      // Merge any pre-uploaded gallery URLs
+      const preUrls = Array.isArray(parsed.galleryURLs)
+        ? parsed.galleryURLs
+        : (Array.isArray(parsed.imageURLs) ? parsed.imageURLs : []);
+
       const files = formData.getAll('files') as File[];
       for (const file of files) {
         if (!file || !bucket) continue;
@@ -80,6 +85,8 @@ export async function POST(request: NextRequest) {
         await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
         if (baseUrl) imageURLs.push(`${baseUrl}/${key}`);
       }
+
+      imageURLs = [...preUrls, ...imageURLs];
     } else {
       const body = await request.json();
       ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, productSizes, ...extras } = body);

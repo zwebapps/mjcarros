@@ -18,6 +18,7 @@ const GalleryTab: React.FC<GalleryTabProps> = ({ image }) => {
               src={image}
               alt="Product thumbnail"
               className="object-cover object-center"
+              unoptimized
               sizes="any"
             />
           </span>

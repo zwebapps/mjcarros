@@ -65,6 +65,8 @@ const AddProduct = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dataForm, setDataForm] = useState<initialState>(initialState);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const [availableSizes, setAvailableSizes] = useState([]);
   const [errors, setErrors] = useState({
@@ -117,6 +119,32 @@ const AddProduct = () => {
         (file) => URL.createObjectURL(file) as string
       );
       setImagePreviews((prev) => [...prev, ...imagePreviews]);
+    }
+  };
+
+  const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files as FileList;
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const uploaded: string[] = [];
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder', 'products');
+        const res = await fetch('/api/upload', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : undefined, body: fd });
+        if (!res.ok) throw new Error('Upload failed');
+        const data = await res.json();
+        if (data?.url) {
+          uploaded.push(data.url);
+        }
+      }
+      setGalleryPreviews((prev) => [...prev, ...uploaded]);
+    } catch (err) {
+      toast.error('Gallery upload failed');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -197,6 +225,12 @@ const AddProduct = () => {
     });
 
     formData.append("requestData", JSON.stringify(requestData));
+    // include uploaded gallery URLs
+    if (galleryPreviews.length) {
+      const current = JSON.parse(formData.get('requestData') as string);
+      current.imageURLs = [...(current.imageURLs || []), ...galleryPreviews];
+      formData.set('requestData', JSON.stringify(current));
+    }
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
@@ -431,6 +465,16 @@ const AddProduct = () => {
             />
           ))}
         </div>
+        <label htmlFor="gallery">Add Gallery Images (uploads sequentially)</label>
+        <Input type="file" id="gallery" name="gallery" onChange={handleGalleryChange} multiple />
+        {isUploading && <p className="text-sm text-gray-500">Uploading...</p>}
+        {galleryPreviews.length > 0 && (
+          <div className="flex gap-2 mt-2 flex-wrap">
+            {galleryPreviews.map((url, idx) => (
+              <img key={idx} src={url} alt={`Gallery ${idx}`} className="w-[100px] h-[100px] object-cover rounded" />
+            ))}
+          </div>
+        )}
         <Button disabled={isLoading} className="mt-2 bg-green-600">
           Add Product
         </Button>
