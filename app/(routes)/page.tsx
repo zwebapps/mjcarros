@@ -75,26 +75,26 @@ const banners = [
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Banner */}
-      <div className="relative bg-gradient-to-r from-blue-600 to-purple-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+      {/* Hero with background slider */}
+      <div className="relative text-white h-[70vh]">
+        <div className="absolute inset-0 overflow-hidden h-full">
+          <div className="hero-slideshow h-full w-full">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1600&h=800&fit=crop')] bg-cover bg-center opacity-100"></div>
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=1600&h=800&fit=crop')] bg-cover bg-center opacity-0"></div>
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600&h=800&fit=crop')] bg-cover bg-center opacity-0"></div>
+          </div>
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-5xl font-bold mb-6">
-              Find Your Perfect Car
-            </h1>
-            <p className="text-xl mb-8 opacity-90">
-              Discover amazing deals on luxury, sports, and family vehicles
-            </p>
+            <h1 className="text-5xl font-bold mb-6">Find Your Perfect Car</h1>
+            <p className="text-xl mb-8 opacity-90">Discover amazing deals on luxury, sports, and family vehicles</p>
             <div className="flex justify-center space-x-4">
               <Link href="/shop">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
-                  Browse Cars
-                </Button>
+                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">Browse Cars</Button>
               </Link>
               <Link href="/sign-up">
-                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white">
-                  Create Account
-                </Button>
+                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white">Create Account</Button>
               </Link>
             </div>
           </div>
