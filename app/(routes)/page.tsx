@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ui/product-card";
+import { db } from "@/lib/db";
 
 // Real products from database - these will actually work when clicked
 const featuredProducts = [
@@ -44,14 +45,6 @@ const featuredProducts = [
   }
 ];
 
-// Dummy data for categories
-const categories = [
-  { name: "Sedan", count: 45, image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=200&h=150&fit=crop" },
-  { name: "SUV", count: 32, image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=200&h=150&fit=crop" },
-  { name: "Sports", count: 28, image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=200&h=150&fit=crop" },
-  { name: "Electric", count: 15, image: "https://images.unsplash.com/photo-1593941707882-a5bacd19c84b?w=200&h=150&fit=crop" }
-];
-
 // Dummy data for banners
 const banners = [
   {
@@ -72,7 +65,29 @@ const banners = [
   }
 ];
 
-const HomePage = () => {
+// Build categories dynamically from products
+async function getCategoriesWithCounts() {
+  const products = await db.product.findMany({ select: { category: true, imageURLs: true } });
+  const map = new Map<string, { count: number; image?: string }>();
+  for (const p of products) {
+    const key = (p.category || "").trim();
+    const current = map.get(key) || { count: 0, image: undefined };
+    current.count += 1;
+    if (!current.image && Array.isArray(p.imageURLs) && p.imageURLs.length > 0) {
+      current.image = p.imageURLs[0];
+    }
+    map.set(key, current);
+  }
+  // Convert to array and provide fallback images
+  const fallback = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200&h=150&fit=crop";
+  return Array.from(map.entries())
+    .map(([name, { count, image }]) => ({ name, count, image: image || fallback }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+}
+
+const HomePage = async () => {
+  const categories = await getCategoriesWithCounts();
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero with background slider */}
@@ -107,14 +122,13 @@ const HomePage = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Shop by Category</h2>
           <p className="text-lg text-gray-600">Find the perfect vehicle for your needs</p>
         </div>
-        
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {categories.map((category) => (
             <Link key={category.name} href={`/shop/${category.name.toLowerCase()}`}>
               <div className="group cursor-pointer">
                 <div className="relative overflow-hidden rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300">
-                  <img 
-                    src={category.image} 
+                  <img
+                    src={category.image}
                     alt={category.name}
                     className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -136,13 +150,11 @@ const HomePage = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Vehicles</h2>
           <p className="text-lg text-gray-600">Handpicked cars for our valued customers</p>
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuredProducts.map((product) => (
             <ProductCard key={product.id} data={product} />
           ))}
         </div>
-        
         <div className="text-center mt-12">
           <Link href="/shop">
             <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-400 hover:to-amber-400">
@@ -157,8 +169,8 @@ const HomePage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {banners.map((banner) => (
             <div key={banner.id} className="relative overflow-hidden rounded-xl shadow-lg">
-              <img 
-                src={banner.image} 
+              <img
+                src={banner.image}
                 alt={banner.title}
                 className="w-full h-64 object-cover"
               />
