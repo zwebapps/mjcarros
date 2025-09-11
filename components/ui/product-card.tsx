@@ -26,7 +26,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
   
   return (
     <Link href={`/product/${product.id}`}>
-      <div className="bg-white group cursor-pointer rounded-xl border border-gray-200 hover:shadow-xl transition-all duration-300 hover:border-gray-300 h-full flex flex-col overflow-hidden">
+      <div className="bg-white group cursor-pointer rounded-lg border border-gray-200 hover:shadow-xl transition-all duration-300 hover:border-gray-300 h-full flex flex-col overflow-hidden">
         {/* Edge-to-edge image */}
         <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
           <img
@@ -36,13 +36,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
           />
           
           {/* Category Badge */}
-          <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+          <div className="absolute top-3 right-3 bg-black text-orange-400 text-xs px-2 py-1 rounded-full font-medium shadow-sm">
             {product.category}
           </div>
           
           {/* Featured Badge */}
           {product.featured && (
-            <div className="absolute top-3 left-3 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
+            <div className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-amber-500 text-black text-xs px-2 py-1 rounded-full font-medium shadow-sm">
               Featured
             </div>
           )}
@@ -57,31 +57,31 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
         
         {/* Content */}
         <div className="p-4 flex-grow flex flex-col">
-          <h3 className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
+          <h3 className="font-semibold text-[1.05rem] tracking-tight text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2 leading-snug">
             {product.title}
           </h3>
           
           <div className="mt-auto">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-baseline space-x-2">
                 {hasDiscount ? (
                   <>
-                    <div className="text-2xl font-bold text-red-600">
+                    <div className="text-[1.25rem] font-semibold text-red-600">
                       {formatCurrency(displayPrice, 'EUR')}
                     </div>
-                    <div className="text-base text-gray-500 line-through">
+                    <div className="text-sm text-gray-500 line-through">
                       {formatCurrency(product.price, 'EUR')}
                     </div>
                   </>
                 ) : (
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-[1.25rem] font-semibold text-gray-900">
                     {formatCurrency(displayPrice, 'EUR')}
                   </div>
                 )}
               </div>
             </div>
             
-            <div className="text-sm text-gray-500 font-medium">
+            <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
               {product.category}
             </div>
           </div>

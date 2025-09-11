@@ -4,16 +4,18 @@ import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { ChangeEvent } from "react";
 
-interface Category {
+interface CategoryWithCount {
   id: string;
   category: string;
+  count?: number;
 }
 
 interface SidebarItemsProps {
-  categories: Category[];
+  categories: CategoryWithCount[];
+  totalCount?: number;
 }
 
-const SidebarItems: React.FC<SidebarItemsProps> = ({ categories }) => {
+const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) => {
   const pathName = usePathname();
   const router = useRouter();
 
@@ -35,10 +37,10 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories }) => {
           className="w-full p-2 border border-gray-300 rounded-md text-sm"
           value={pathName.startsWith("/shop/") ? pathName : "/shop"}
         >
-          <option value="/shop">All</option>
+          <option value="/shop">All ({totalCount ?? 0})</option>
           {categories?.map((category) => (
             <option key={category.id} value={`/shop/${category.category}`}>
-              {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
+              {category.category.charAt(0).toUpperCase() + category.category.slice(1)} ({category.count ?? 0})
             </option>
           ))}
         </select>
@@ -48,23 +50,25 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories }) => {
       <div className="hidden lg:block space-y-2">
         <Link href="/shop">
           <p
-            className={`text-sm font-medium hover:text-blue-600 transition-colors ${
-              pathName === "/shop" ? "text-blue-600" : "text-gray-600"
+            className={`text-sm font-medium transition-colors ${
+              pathName === "/shop" ? "text-amber-600" : "text-gray-600 hover:text-amber-600"
             }`}
           >
-            All
+            All <span className="text-amber-600">({totalCount ?? 0})</span>
           </p>
         </Link>
         {categories?.map((category) => (
           <Link key={category.id} href={`/shop/${category.category}`}>
             <p
-              className={`text-sm font-medium hover:text-blue-600 transition-colors ${
+              className={`text-sm font-medium transition-colors ${
                 pathName === `/shop/${category.category}`
-                  ? "text-blue-600"
-                  : "text-gray-600"
+                  ? "text-amber-600"
+                  : "text-gray-600 hover:text-amber-600"
               }`}
             >
               {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
+              {" "}
+              <span className="text-amber-600">({category.count ?? 0})</span>
             </p>
           </Link>
         ))}

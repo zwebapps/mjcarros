@@ -51,38 +51,38 @@ export function Navbar() {
 
   if (isLoading) {
     return (
-      <div className="border-b">
+      <div className="border-b bg-orange-500">
         <div className="flex h-16 items-center px-4">
-          <div className="animate-pulse bg-gray-200 h-8 w-32 rounded"></div>
+          <div className="animate-pulse bg-orange-200 h-8 w-32 rounded"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="border-b">
+    <div className="border-b bg-orange-500">
       <div className="flex h-16 items-center px-4">
         <div className="flex items-center space-x-4 lg:space-x-6">
           <Link
             href="/"
-            className={`text-sm font-medium transition-colors hover:text-primary ${
-              isActive("/") ? "text-black dark:text-white" : "text-muted-foreground"
+            className={`text-sm font-medium transition-colors ${
+              isActive("/") ? "text-black" : "text-black/80 hover:text-black"
             }`}
           >
             Home
           </Link>
           <Link
             href="/shop"
-            className={`text-sm font-medium transition-colors hover:text-primary ${
-              isActive("/shop") ? "text-black dark:text-white" : "text-muted-foreground"
+            className={`text-sm font-medium transition-colors ${
+              isActive("/shop") ? "text-black" : "text-black/80 hover:text-black"
             }`}
           >
             Shop
           </Link>
           <Link
             href="/featured"
-            className={`text-sm font-medium transition-colors hover:text-primary ${
-              isActive("/featured") ? "text-black dark:text-white" : "text-muted-foreground"
+            className={`text-sm font-medium transition-colors ${
+              isActive("/featured") ? "text-black" : "text-black/80 hover:text-black"
             }`}
           >
             Featured
@@ -90,8 +90,8 @@ export function Navbar() {
           {user && (
             <Link
               href="/orders"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                isActive("/orders") ? "text-black dark:text-white" : "text-muted-foreground"
+              className={`text-sm font-medium transition-colors ${
+                isActive("/orders") ? "text-black" : "text-black/80 hover:text-black"
               }`}
             >
               Orders
@@ -101,7 +101,7 @@ export function Navbar() {
         <div className="ml-auto flex items-center space-x-4">
           <NavbarSearch />
           <Link href="/cart">
-            <Button size="sm" variant="ghost">
+            <Button size="sm" variant="ghost" className="text-black hover:text-black/80">
               <ShoppingCart className="h-5 w-5" />
               <span className="ml-2 text-sm font-medium">
                 {cart.items.length}
@@ -110,30 +110,30 @@ export function Navbar() {
           </Link>
           {user ? (
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-black">
                 Hello, {user.name}
               </span>
               {user.role === 'ADMIN' && (
                 <Link href="/admin">
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="outline" className="border-black text-black hover:bg-black hover:text-white">
                     Admin
                   </Button>
                 </Link>
               )}
-              <Button size="sm" variant="ghost" onClick={handleSignOut}>
+              <Button size="sm" variant="ghost" className="text-black hover:text-black/80" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               <Link href="/sign-in">
-                <Button size="sm" variant="ghost">
+                <Button size="sm" variant="ghost" className="text-black hover:text-black/80">
                   <LogIn className="h-4 w-4 mr-2" />
                   Sign In
                 </Button>
               </Link>
               <Link href="/sign-up">
-                <Button size="sm">
+                <Button size="sm" className="bg-black text-white hover:bg-black/90">
                   <User className="h-4 w-4 mr-2" />
                   Sign Up
                 </Button>

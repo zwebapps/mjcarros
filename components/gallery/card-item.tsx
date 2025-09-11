@@ -30,7 +30,7 @@ const CardItem: React.FC<CardItemProps> = ({ data, onRemove }) => {
         <Image
           fill
           src={data.url}
-          alt=""
+          alt={data.alt || "Gallery image"}
           className="object-cover"
         />
       </div>

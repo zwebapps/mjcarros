@@ -26,7 +26,7 @@ const NewBillboard = () => {
     image: "",
   });
 
-  const baseUrl = "https://kemal-web-storage.s3.eu-north-1.amazonaws.com";
+  const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
 
   const { data } = useQuery({
     queryKey: ["billboard"],
@@ -38,8 +38,16 @@ const NewBillboard = () => {
   });
 
   useEffect(() => {
-    if (id) setImagePreview(`${baseUrl}/${data?.imageURL}`);
-  }, [id, data?.imageURL]);
+    if (id && data?.imageURL) {
+      const src = String(data.imageURL);
+      const url = src.startsWith("http")
+        ? src
+        : baseUrl
+        ? `${baseUrl}/${src.replace(/^\/+/, "")}`
+        : src;
+      setImagePreview(url);
+    }
+  }, [id, data?.imageURL, baseUrl]);
 
   const handleFileChange = (e: any) => {
     const selectedFile = e.target.files[0];

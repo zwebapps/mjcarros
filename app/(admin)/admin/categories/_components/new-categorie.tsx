@@ -101,15 +101,18 @@ const NewCategorie = () => {
     setIsLoading(true);
     try {
       if (categoryId) {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
         const res = await axios.put(
           `/api/categories/edit/${categoryId}`,
-          formData
+          formData,
+          { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
         );
         setIsLoading(false);
         toast.success("Category succesfully edited.");
         router.push("/admin/categories");
       } else {
-        const res = await axios.post("/api/categories", formData);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        const res = await axios.post("/api/categories", formData, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
         setIsLoading(false);
         toast.success("Category created.");
         router.push("/admin/categories");

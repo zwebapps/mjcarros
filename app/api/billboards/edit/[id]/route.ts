@@ -1,18 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const billboard = await db.billboard.findUnique({ where: { id: params.id } });
+    return NextResponse.json(billboard);
+  } catch (error) {
+    console.error("Error fetching billboard:", error);
+    return NextResponse.json({ error: "Error fetching billboard" }, { status: 500 });
+  }
+}
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check if user is admin (middleware sets these headers)
-    const userRole = request.headers.get('x-user-role');
+    // Check if user is admin (middleware headers) or verify JWT directly
+    let userRole = request.headers.get('x-user-role');
+    if (!userRole) {
+      const token = extractTokenFromHeader(request.headers.get('authorization') ?? undefined);
+      const payload = token ? verifyToken(token) : null;
+      userRole = payload?.role || null as any;
+    }
     if (userRole !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();

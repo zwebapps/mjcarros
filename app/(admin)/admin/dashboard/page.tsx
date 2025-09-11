@@ -15,7 +15,8 @@ const DashboardPage = () => {
         queryKey: ["Sales count"],
         queryFn: async () => {
           try {
-            const { data } = await axios.get("/api/orders");
+            const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+            const { data } = await axios.get("/api/orders", { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
             return data;
           } catch (error) {
             console.error("Error fetching orders:", error);

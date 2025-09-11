@@ -14,12 +14,12 @@ const TitleHeader = ({ title, description, count, url }: Props) => {
   return (
     <div className="flex border-b flex-col mb-4 pb-2 ">
       <div className="flex justify-between items-center">
-        <h1 className="font-bold text-2xl">
+        <h1 className="font-bold text-2xl text-black">
           {title} {count !== undefined ? `(${count})` : ""}
         </h1>
         {url && (
           <Link href={url}>
-            <Button size="sm" className="bg-green-600">
+            <Button size="sm" className="bg-black text-white hover:bg-black/90">
               <Plus className="h-4 w-4 mr-2" />
               Add New
             </Button>

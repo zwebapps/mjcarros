@@ -91,10 +91,10 @@ const HomePage = () => {
             <p className="text-xl mb-8 opacity-90">Intelligent search, trusted listings, seamless checkout.</p>
             <div className="flex justify-center space-x-4">
               <Link href="/shop">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">Browse Cars</Button>
+                <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-400 hover:to-amber-400">Browse Cars</Button>
               </Link>
               <Link href="/sign-up">
-                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white">Create Account</Button>
+                <Button size="lg" className="bg-black text-white hover:bg-black/90">Create Account</Button>
               </Link>
             </div>
           </div>
@@ -145,7 +145,7 @@ const HomePage = () => {
         
         <div className="text-center mt-12">
           <Link href="/shop">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+            <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-400 hover:to-amber-400">
               View All Vehicles
             </Button>
           </Link>
@@ -186,12 +186,12 @@ const HomePage = () => {
           </p>
           <div className="flex justify-center space-x-4">
             <Link href="/sign-up">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+              <Button size="lg" className="bg-black text-white hover:bg-black/90">
                 Get Started
               </Button>
             </Link>
             <Link href="/shop">
-              <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white">
+              <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-400 hover:to-amber-400">
                 Browse Inventory
               </Button>
             </Link>
