@@ -64,7 +64,7 @@ const NavbarSearch = () => {
     <div className="flex mx-auto relative">
       <Input
         size={35}
-        className="pr-12 outline-none rounded-xl max-md:text-white bg-transparent"
+        className="pr-12 outline-none rounded-xl bg-transparent text-black placeholder-black/60 border border-transparent focus:border-black focus-visible:ring-0 focus-visible:ring-offset-0"
         placeholder="Search for products (min 3 chars)..."
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={handleKeyDown}

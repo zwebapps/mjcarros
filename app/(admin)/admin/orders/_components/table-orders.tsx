@@ -26,7 +26,7 @@ type Order = {
 
 const TableOrders = () => {
   const [currentPage, setCurrentPage] = useState(0);
-  const productsPerPage = 5;
+  const productsPerPage = 25;
 
   const { error, data, isLoading } = useQuery({
     queryKey: ["orders"],
