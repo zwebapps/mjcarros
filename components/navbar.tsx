@@ -96,6 +96,17 @@ export function Navbar() {
               <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
             </span>
           </Link>
+          <Link
+            href="/contact"
+            className={`group text-sm font-medium transition-colors ${
+              isActive("/contact") ? "text-black" : "text-black/80 hover:text-black"
+            }`}
+          >
+            <span className="relative inline-block">
+              Contact
+              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
+            </span>
+          </Link>
           {user && (
             <Link
               href="/orders"

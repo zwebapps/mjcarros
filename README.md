@@ -171,3 +171,25 @@ For support and questions:
 ---
 
 **MJ Carros** - Where Luxury Meets Technology 🚗✨
+
+# Environment Setup
+
+Create a `.env.local` in the project root with the following placeholders for email and site info:
+
+```
+EMAIL_HOST=smtp.yourprovider.com
+EMAIL_PORT=587
+EMAIL_USER=your_smtp_username
+EMAIL_PASS=your_smtp_password
+EMAIL_FROM="MJ Carros <no-reply@mjcarros.com>"
+SUPPORT_EMAIL=support@mjcarros.com
+
+NEXT_PUBLIC_SITE_NAME=MJ Carros
+NEXT_PUBLIC_SITE_ADDRESS1=178 Expensive Avenue
+NEXT_PUBLIC_SITE_CITY=Philadelphia, 20100 PH
+NEXT_PUBLIC_SITE_PHONE=+1 (555) 000-0000
+NEXT_PUBLIC_SITE_EMAIL=info@mjcarros.com
+NEXT_PUBLIC_SITE_WEB=www.mjcarros.com
+```
+
+Email sending is optional; if SMTP is not configured, the app will skip sending but proceed successfully.

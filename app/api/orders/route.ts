@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import { sendMail } from "@/lib/mail";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,17 +18,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Admin: return all orders (with customer name)
+    // Admin: return all orders
     if (userRole === 'ADMIN') {
       const orders = await db.order.findMany({
         include: { orderItems: { include: { product: true } } },
         orderBy: { createdAt: 'desc' },
       });
-      const emails = Array.from(new Set(orders.map((o) => o.userEmail).filter(Boolean)));
-      const users = await db.user.findMany({ where: { email: { in: emails as string[] } }, select: { email: true, name: true } });
-      const emailToName = new Map(users.map((u) => [u.email, u.name]));
-      const enriched = orders.map((o: any) => ({ ...o, customerName: emailToName.get(o.userEmail || '') || '' }));
-      return NextResponse.json(enriched);
+      return NextResponse.json(orders);
     }
 
     // Authenticated user: return own orders
@@ -37,7 +34,6 @@ export async function GET(request: NextRequest) {
         include: { orderItems: { include: { product: true } } },
         orderBy: { createdAt: 'desc' },
       });
-      // For customer view, returning as-is is fine; optionally attach their own name
       return NextResponse.json(orders);
     }
 
@@ -94,6 +90,19 @@ export async function POST(request: NextRequest) {
         orderItems: { include: { product: true } },
       },
     });
+
+    // Send confirmation email to customer
+    const subject = `Your MJ Carros order ${newOrder.id}`;
+    const itemsHtml = newOrder.orderItems.map((i) => `<li>${i.productName}</li>`).join('');
+    const html = `
+      <div>
+        <h2>Thank you for your order!</h2>
+        <p>Order ID: ${newOrder.id}</p>
+        <ul>${itemsHtml}</ul>
+        <p>We will contact you shortly.</p>
+      </div>
+    `;
+    try { await sendMail(newOrder.userEmail, subject, html); } catch (e) { console.warn('sendMail failed', e); }
 
     return NextResponse.json(newOrder);
   } catch (error) {

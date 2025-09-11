@@ -9,9 +9,11 @@ export function middleware(request: NextRequest) {
     '/shop',
     '/product',
     '/featured',
+    '/contact',
     '/orders',
     '/api/auth/signin',
     '/api/auth/signup',
+    '/api/contact',
     '/sign-in',
     '/sign-up'
   ];
