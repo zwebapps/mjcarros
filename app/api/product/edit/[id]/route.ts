@@ -10,11 +10,6 @@ export async function GET(
   try {
     const product = await db.product.findUnique({
       where: { id: params.id },
-      include: {
-        productSizes: {
-          include: { size: true },
-        },
-      },
     });
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -99,24 +94,9 @@ export async function PUT(
       },
     });
 
-    // Update sizes (remove old then add new)
-    try {
-      const sizes: Array<{ sizeId: string; name?: string }> = JSON.parse(productSizesRaw || "[]");
-      await db.productSize.deleteMany({ where: { productId: params.id } });
-      if (Array.isArray(sizes) && sizes.length > 0) {
-        await db.productSize.createMany({
-          data: sizes.map((s) => ({ productId: params.id, sizeId: s.sizeId, name: s.name })),
-          skipDuplicates: true,
-        });
-      }
-    } catch (e) {
-      console.warn("Product sizes update skipped due to parsing error or empty list");
-    }
+    // sizes removed
 
-    const refreshed = await db.product.findUnique({
-      where: { id: params.id },
-      include: { productSizes: { include: { size: true } } },
-    });
+    const refreshed = await db.product.findUnique({ where: { id: params.id } });
 
     return NextResponse.json(refreshed || updated);
   } catch (error) {

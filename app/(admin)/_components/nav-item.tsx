@@ -38,11 +38,7 @@ const routes = [
     icon: <Tag className="h-4 w-4 mr-2" />,
     href: `/admin/categories`,
   },
-  {
-    label: "Sizes",
-    icon: <Maximize2 className="h-4 w-4 mr-2" />,
-    href: `/admin/sizes`,
-  },
+  // Sizes removed for cars
   {
     label: "Manage Users",
     icon: <Users className="h-4 w-4 mr-2" />,

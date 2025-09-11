@@ -59,11 +59,7 @@ const ProductItem = () => {
           <div className="lg:grid lg:grid-cols-[500px_minmax(400px,_1fr)_100px] lg:items-start lg:gap-x-8">
             <Gallery images={productQuery.data?.imageURLs} />
             <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
-              <Info
-                data={productQuery?.data}
-                categories={[]}
-                availableSizes={[]}
-              />
+              <Info data={productQuery?.data} />
             </div>
           </div>
 

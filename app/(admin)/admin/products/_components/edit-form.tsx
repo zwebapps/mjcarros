@@ -155,22 +155,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
 
     fetchCategories();
   }, []);
-  const [categorySizes, setCategorySizes] = useState([]);
-
-  useEffect(() => {
-    const fetchCategorySizes = async () => {
-      try {
-        const response = await axios.get(`/api/sizes/${dataForm.categoryId}`);
-        setCategorySizes(response.data);
-      } catch (error) {
-        console.error("Error fetching sizes for category:", error);
-      }
-    };
-
-    if (dataForm.categoryId) {
-      fetchCategorySizes();
-    }
-  }, [dataForm.categoryId]);
+  // sizes removed
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files as FileList;
@@ -192,7 +177,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     setIsLoading(true);
     const formData = new FormData(e.currentTarget);
     formData.append("isFeatured", checkbox.toString());
-    formData.append("productSizes", JSON.stringify(dataForm.productSizes));
+    // sizes removed
     await onSubmit(formData);
 
     setIsLoading(false);
@@ -223,18 +208,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     }
   };
 
-  const handleSizeClick = (sizeId: string, sizeName: string) => {
-    setDataForm((prevData: any) => {
-      const updatedProductSizes: { sizeId: string; name: string }[] =
-        prevData.productSizes || [];
-      const newSize = { sizeId, name: sizeName };
-      if (!updatedProductSizes.some((size) => size.sizeId === newSize.sizeId)) {
-        updatedProductSizes.push(newSize);
-      }
-
-      return { ...prevData, productSizes: updatedProductSizes };
-    });
-  };
+  // sizes removed
 
   return (
     <form
@@ -353,31 +327,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
           </select>
         </div>
       </div>
-      {categorySizes.length > 0 && (
-        <label htmlFor="size" className="pb-2">
-          Select sizes for this product
-        </label>
-      )}
-      <ul className="flex items-center gap-4 flex-wrap">
-        {categorySizes.map((size: any, index) => {
-          return (
-            <Button
-              type="button"
-              key={size.id}
-              onClick={() => handleSizeClick(size.id, size.name)}
-              className={
-                dataForm.productSizes?.some(
-                  (productSize: any) => productSize.sizeId === size.id
-                )
-                  ? "bg-green-500 text-white"
-                  : ""
-              }
-            >
-              {size.name}
-            </Button>
-          );
-        })}
-      </ul>
+      {/* sizes UI removed */}
       <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
         <div>
           <input

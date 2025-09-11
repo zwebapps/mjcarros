@@ -9,7 +9,6 @@ export interface Product {
   featured: boolean;
   imageURLs: string[];
   categoryId: string;
-  size?: string;
   createdAt?: string;
   updatedAt?: string;
   // Car attributes
@@ -40,11 +39,6 @@ export interface Category {
   billboardId: string;
 }
 
-export interface SelectedSize {
-  id: string;
-  name: string;
-}
-
 export interface RequestData {
   title: string;
   description: string;
@@ -52,7 +46,6 @@ export interface RequestData {
   files: File[];
   featured: boolean;
   category: string;
-  sizes: SelectedSize[];
   categoryId: string;
   discount?: number;
   // New optional attributes

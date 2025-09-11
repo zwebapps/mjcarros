@@ -6,10 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const product = await db.product.findUnique({
-      where: { id: params.id },
-      include: { productSizes: { include: { size: true } } },
-    });
+    const product = await db.product.findUnique({ where: { id: params.id } });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -40,11 +37,6 @@ export async function DELETE(
         { status: 403 }
       );
     }
-
-    // Delete product sizes first
-    await db.productSize.deleteMany({
-      where: { productId: params.id },
-    });
 
     // Delete the product
     await db.product.delete({

@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
     let finalPrice: number | undefined = undefined;
     let discount: number | undefined = undefined;
     let featured: boolean = false;
-    let productSizes: any[] | undefined = undefined;
     let imageURLs: string[] = [];
     let extras: any = {};
 
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
       finalPrice = parsed.finalPrice ? Number(parsed.finalPrice) : undefined;
       discount = parsed.discount ? Number(parsed.discount) : undefined;
       featured = !!parsed.featured;
-      productSizes = parsed.sizes?.map((s: any) => ({ sizeId: s.id, name: s.name })) || [];
+      // sizes removed
       // Car attributes
       extras = {
         modelName: parsed.modelName || "",
@@ -89,7 +88,7 @@ export async function POST(request: NextRequest) {
       imageURLs = [...preUrls, ...imageURLs];
     } else {
       const body = await request.json();
-      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, productSizes, ...extras } = body);
+      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, ...extras } = body);
     }
 
     if (!title || !description || !category || !categoryId || !price) {
@@ -111,17 +110,9 @@ export async function POST(request: NextRequest) {
         discount,
         featured: featured || false,
         ...extras,
-        productSizes: {
-          create: productSizes || [],
-        },
+        // sizes removed
       },
-      include: {
-        productSizes: {
-          include: {
-            size: true,
-          },
-        },
-      },
+      // no include
     });
 
     return NextResponse.json(newProduct);
