@@ -76,6 +76,17 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin guard with JWT fallback
+    let userRole = request.headers.get('x-user-role');
+    if (!userRole) {
+      const token = extractTokenFromHeader(request.headers.get('authorization') ?? undefined);
+      const payload = token ? verifyToken(token) : null;
+      userRole = payload?.role || null as any;
+    }
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     const deleted = await db.category.delete({ where: { id: params.id } });
     return NextResponse.json(deleted);
   } catch (error) {

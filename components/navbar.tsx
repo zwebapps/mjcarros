@@ -65,36 +65,48 @@ export function Navbar() {
         <div className="flex items-center space-x-4 lg:space-x-6">
           <Link
             href="/"
-            className={`text-sm font-medium transition-colors ${
+            className={`group text-sm font-medium transition-colors ${
               isActive("/") ? "text-black" : "text-black/80 hover:text-black"
             }`}
           >
-            Home
+            <span className="relative inline-block">
+              Home
+              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
+            </span>
           </Link>
           <Link
             href="/shop"
-            className={`text-sm font-medium transition-colors ${
+            className={`group text-sm font-medium transition-colors ${
               isActive("/shop") ? "text-black" : "text-black/80 hover:text-black"
             }`}
           >
-            Shop
+            <span className="relative inline-block">
+              Shop
+              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
+            </span>
           </Link>
           <Link
             href="/featured"
-            className={`text-sm font-medium transition-colors ${
+            className={`group text-sm font-medium transition-colors ${
               isActive("/featured") ? "text-black" : "text-black/80 hover:text-black"
             }`}
           >
-            Featured
+            <span className="relative inline-block">
+              Featured
+              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
+            </span>
           </Link>
           {user && (
             <Link
               href="/orders"
-              className={`text-sm font-medium transition-colors ${
+              className={`group text-sm font-medium transition-colors ${
                 isActive("/orders") ? "text-black" : "text-black/80 hover:text-black"
               }`}
             >
-              Orders
+              <span className="relative inline-block">
+                Orders
+                <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
+              </span>
             </Link>
           )}
         </div>
@@ -115,7 +127,10 @@ export function Navbar() {
               </span>
               {user.role === 'ADMIN' && (
                 <Link href="/admin">
-                  <Button size="sm" variant="outline" className="border-black text-black hover:bg-black hover:text-white">
+                  <Button
+                    size="sm"
+                    className="bg-black text-white hover:bg-white hover:text-black border border-black"
+                  >
                     Admin
                   </Button>
                 </Link>

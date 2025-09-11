@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
@@ -26,6 +27,16 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin guard with JWT fallback
+    let userRole = request.headers.get('x-user-role');
+    if (!userRole) {
+      const token = extractTokenFromHeader(request.headers.get('authorization') ?? undefined);
+      const payload = token ? verifyToken(token) : null;
+      userRole = payload?.role || null as any;
+    }
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
     const formData = await request.formData();
     const name = String(formData.get("name") || "");
     const price = Number(formData.get("price") || 0);

@@ -17,13 +17,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Admin: return all orders
+    // Admin: return all orders (with customer name)
     if (userRole === 'ADMIN') {
       const orders = await db.order.findMany({
         include: { orderItems: { include: { product: true } } },
         orderBy: { createdAt: 'desc' },
       });
-      return NextResponse.json(orders);
+      const emails = Array.from(new Set(orders.map((o) => o.userEmail).filter(Boolean)));
+      const users = await db.user.findMany({ where: { email: { in: emails as string[] } }, select: { email: true, name: true } });
+      const emailToName = new Map(users.map((u) => [u.email, u.name]));
+      const enriched = orders.map((o: any) => ({ ...o, customerName: emailToName.get(o.userEmail || '') || '' }));
+      return NextResponse.json(enriched);
     }
 
     // Authenticated user: return own orders
@@ -33,6 +37,7 @@ export async function GET(request: NextRequest) {
         include: { orderItems: { include: { product: true } } },
         orderBy: { createdAt: 'desc' },
       });
+      // For customer view, returning as-is is fine; optionally attach their own name
       return NextResponse.json(orders);
     }
 
@@ -58,11 +63,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Require phone and email
+    const emailValid = typeof userEmail === 'string' && /.+@.+\..+/.test(userEmail);
+    if (!phone || typeof phone !== 'string' || phone.trim().length < 5) {
+      return NextResponse.json(
+        { error: "Phone is required" },
+        { status: 400 }
+      );
+    }
+    if (!emailValid) {
+      return NextResponse.json(
+        { error: "Valid email is required" },
+        { status: 400 }
+      );
+    }
+
     const newOrder = await db.order.create({
       data: {
-        phone: phone || "",
-        address: address || "",
-        userEmail: userEmail || "",
+        phone: phone.trim(),
+        address: (address || "").trim(),
+        userEmail: userEmail.trim(),
         orderItems: {
           create: orderItems.map((item: any) => ({
             productId: item.productId,

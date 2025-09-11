@@ -18,6 +18,8 @@ type Order = {
   isPaid: boolean;
   phone: string;
   address: string;
+  userEmail?: string;
+  customerName?: string;
   createdAt: string;
   orderItems: OrderItem[];
 };
@@ -68,6 +70,9 @@ const TableOrders = () => {
                 Products
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Customer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Phone
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -86,6 +91,9 @@ const TableOrders = () => {
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {order.orderItems[0]?.productName || "N/A"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {order.customerName ? `${order.customerName} (${order.userEmail || ''})` : (order.userEmail || '—')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {order.phone}
