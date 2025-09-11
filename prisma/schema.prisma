@@ -134,3 +134,16 @@ model Order {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 }
+
+model ContactPage {
+  id        String   @id @default(cuid()) @map("_id")
+  heroTitle String   @default("Contact Us")
+  heroSubtitle String @default("We’d love to hear from you. Send us a message and we’ll respond promptly.")
+  address1  String   @default("178 Expensive Avenue")
+  cityLine  String   @default("Philadelphia, 20100 PH")
+  phone     String   @default("+1 (555) 000-0000")
+  email     String   @default("info@mjcarros.com")
+  web       String   @default("www.mjcarros.com")
+  hours     String   @default("Mon-Fri: 9-6; Sat: 10-4; Sun: Closed")
+  updatedAt DateTime @updatedAt
+}

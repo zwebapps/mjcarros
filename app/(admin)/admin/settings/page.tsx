@@ -5,6 +5,52 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { User, Mail, Shield, LogOut } from "lucide-react";
 
+function ContactCMSEditor() {
+  const [cms, setCms] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/contact/cms');
+        const data = await res.json();
+        setCms(data);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const onChange = (e: any) => setCms((v: any) => ({ ...v, [e.target.name]: e.target.value }));
+  const onSave = async () => {
+    setSaving(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      await fetch('/api/contact/cms', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(cms) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <p>Loading...</p>;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {['heroTitle','heroSubtitle','address1','cityLine','phone','email','web','hours'].map((key) => (
+        <div key={key} className="flex flex-col">
+          <label className="text-sm font-medium text-gray-700">{key}</label>
+          <input name={key} value={cms?.[key] || ''} onChange={onChange} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-0 focus:border-black" />
+        </div>
+      ))}
+      <div className="md:col-span-2">
+        <Button onClick={onSave} disabled={saving} className="bg-black text-white hover:bg-black/90">{saving ? 'Saving...' : 'Save'}</Button>
+      </div>
+    </div>
+  );
+}
+
 interface User {
   id: string;
   email: string;
@@ -54,6 +100,15 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Contact Page Content</CardTitle>
+            <CardDescription>Update the contact information visible on /contact</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ContactCMSEditor />
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
