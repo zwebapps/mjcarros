@@ -23,10 +23,12 @@ export async function GET(
     }
 
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595.28, 841.89]); // A4
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    let page = pdfDoc.addPage([595.28, 841.89]); // A4
+    const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const orange = rgb(0.98, 0.51, 0.27);
 
-    // Load logo
+    // Load logo (optional)
     let logoImage: any = null;
     try {
       const logoPath = path.join(process.cwd(), "public", "logo.png");
@@ -34,73 +36,284 @@ export async function GET(
       logoImage = await pdfDoc.embedPng(logoBytes);
     } catch {}
 
-    const formatCurrency = (n: number) => new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(n || 0);
+    // Try load primary product image
+    let carImage: any = null;
+    const primaryImageUrl = order.orderItems[0]?.product?.imageURLs?.[0];
+    if (primaryImageUrl) {
+      try {
+        const res = await fetch(primaryImageUrl);
+        if (res.ok) {
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("png")) carImage = await pdfDoc.embedPng(bytes);
+          else carImage = await pdfDoc.embedJpg(bytes);
+        }
+      } catch {}
+    }
 
-    let y = 800;
-    const drawText = (text: string, size = 12, x = 50) => {
-      page.drawText(text, { x, y, size, font, color: rgb(0, 0, 0) });
-      y -= size + 8;
+    const formatCurrency = (n: number) =>
+      new Intl.NumberFormat("en-IE", {
+        style: "currency",
+        currency: "EUR",
+      }).format(n || 0);
+
+    // Helpers
+    const draw = (
+      text: string,
+      x: number,
+      y: number,
+      size = 12,
+      isBold = false
+    ) => {
+      page.drawText(text, {
+        x,
+        y,
+        size,
+        font: isBold ? bold : regular,
+        color: rgb(0, 0, 0),
+      });
+    };
+    const line = (
+      x: number,
+      y: number,
+      w: number,
+      h = 1,
+      color = orange
+    ) => {
+      page.drawRectangle({ x, y, width: w, height: h, color });
+    };
+    const box = (x: number, y: number, w: number, h: number) => {
+      page.drawRectangle({
+        x,
+        y,
+        width: w,
+        height: h,
+        color: rgb(0.95, 0.95, 0.95),
+      });
+    };
+    const rightAlign = (
+      text: string,
+      rightX: number,
+      y: number,
+      size = 10,
+      isBold = false
+    ) => {
+      const font = isBold ? bold : regular;
+      const width = font.widthOfTextAtSize(text, size);
+      page.drawText(text, {
+        x: rightX - width,
+        y,
+        size,
+        font,
+        color: rgb(0, 0, 0),
+      });
     };
 
-    // Header
+    // Header band
+    line(0, 820, 595.28, 4, orange);
+
+    // Logo (placed before the title on the left)
+    let titleX = 30;
     if (logoImage) {
-      const logoWidth = 90;
-      const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
-      page.drawImage(logoImage, { x: 455, y: 780, width: logoWidth, height: logoHeight });
-    }
-    drawText("MJ Carros", 20);
-    drawText("Invoice", 16);
-
-    y -= 6;
-    drawText(`Order ID: ${order.id}`);
-    drawText(`Date: ${new Date(order.createdAt).toLocaleString()}`);
-    drawText(`Status: ${order.isPaid ? "Paid" : "Pending"}`);
-
-    y -= 12;
-    // Customer & Delivery details
-    drawText("Bill To:", 14);
-    drawText(order.userEmail || "N/A");
-    if (order.phone) drawText(`Phone: ${order.phone}`);
-    if (order.address) {
-      const lines = String(order.address).split(/\n|,\s*/).filter(Boolean);
-      lines.slice(0, 3).forEach((line) => drawText(line));
+      const logoW = 48;
+      const logoH = (logoImage.height / logoImage.width) * logoW;
+      page.drawImage(logoImage, { x: 30, y: 760, width: logoW, height: logoH });
+      titleX = 30 + logoW + 12; // add spacing after logo
     }
 
-    y -= 10;
-    // Items table header
-    const tableStartY = y;
-    const colX = { item: 50, qty: 360, unit: 420, total: 500 };
-    page.drawText("Item", { x: colX.item, y, size: 12, font });
-    page.drawText("Qty", { x: colX.qty, y, size: 12, font });
-    page.drawText("Unit", { x: colX.unit, y, size: 12, font });
-    page.drawText("Total", { x: colX.total, y, size: 12, font });
-    y -= 14;
+    // Title
+    draw("VEHICLE", titleX, 785, 26, true);
+    draw("PURCHASE ORDER", titleX, 766, 14, true);
+    draw(`# ${order.id.slice(0, 8)}`, titleX, 750, 12);
 
-    let grandTotal = 0;
-    order.orderItems.forEach((item) => {
-      const unit = (item.product?.finalPrice ?? item.product?.price ?? 0) as number;
+    // Car image (now placed BELOW header/title)
+    if (carImage) {
+      page.drawImage(carImage, { x: 400, y: 680, width: 160, height: 110 });
+    }
+
+    // Two-column info panels (start under car image)
+    const leftX = 30,
+      rightX = 325;
+    let infoY = 660;
+
+    draw("JOHN DOE", leftX, infoY, 10, true);
+    draw("COMPANY NAME", rightX, infoY, 10, true);
+
+    infoY -= 22;
+    box(leftX, infoY, 240, 16);
+    draw("Purchaser Name", leftX + 6, infoY + 4, 9);
+    box(rightX, infoY, 240, 16);
+    draw("MJ Carros", rightX + 6, infoY + 4, 9);
+
+    infoY -= 22;
+    box(leftX, infoY, 240, 16);
+    draw(
+      (order.address || "").split(/\n/)[0] || "Address",
+      leftX + 6,
+      infoY + 4,
+      9
+    );
+    box(rightX, infoY, 240, 16);
+    draw("www.mjcarros.com", rightX + 6, infoY + 4, 9);
+
+    infoY -= 22;
+    box(leftX, infoY, 240, 16);
+    draw(order.phone || "Phone", leftX + 6, infoY + 4, 9);
+    box(rightX, infoY, 240, 16);
+    draw("Sales", rightX + 6, infoY + 4, 9);
+
+    // Vehicle Information (moved lower to avoid overlaps with top panels)
+    line(30, 570, 535, 2, orange);
+    draw("VEHICLE INFORMATION", 200, 576, 12, true);
+
+    // Helpers for labels
+    const label = (text: string, x: number, y: number) => {
+      page.drawText(text, { x, y, size: 8.5, font: regular, color: rgb(0.45, 0.45, 0.45) });
+    };
+
+    const product = order.orderItems[0]?.product as any;
+    const makeVal = (product?.category || "").toString();
+    const yearVal = product?.year && product.year > 0 ? String(product.year) : "";
+    const colorVal = product?.color || "";
+    const modelVal = product?.modelName || product?.title || "";
+    const mileageVal = product?.mileage != null ? String(product.mileage) : "";
+    const fuelVal = product?.fuelType || "";
+    const vinVal = product?.id || "";
+    const deliveryVal = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "";
+
+    // Layout positions (lowered) and vertical spacing
+    const fieldH = 18; // height of value boxes
+    const rowGap = 36; // vertical gap between rows (larger to avoid overlap)
+    const r1 = 520; // first row baseline
+    const r2 = r1 - rowGap; // second row
+    const r3 = r2 - rowGap; // third row
+    const left = 30; const mid = 210; const right = 380;
+
+    // Row 1 labels
+    label("Make", left, r1 + fieldH + 2);
+    label("Year", mid, r1 + fieldH + 2);
+    label("Colour", right, r1 + fieldH + 2);
+    // Row 1 values
+    box(left, r1, 160, fieldH); draw(makeVal.toUpperCase(), left + 6, r1 + 4, 9);
+    box(mid, r1, 150, fieldH); draw(yearVal, mid + 6, r1 + 4, 9);
+    box(right, r1, 185, fieldH); draw(colorVal, right + 6, r1 + 4, 9);
+
+    // Row 2 labels
+    label("Model", left, r2 + fieldH + 2);
+    label("Mileage", mid, r2 + fieldH + 2);
+    label("Fuel Type", right, r2 + fieldH + 2);
+    // Row 2 values
+    box(left, r2, 160, fieldH); draw(modelVal, left + 6, r2 + 4, 9);
+    box(mid, r2, 150, fieldH); draw(mileageVal, mid + 6, r2 + 4, 9);
+    box(right, r2, 185, fieldH); draw(fuelVal, right + 6, r2 + 4, 9);
+
+    // Row 3 labels
+    label("Vehicle ID Number", left, r3 + fieldH + 2);
+    label("Delivery Date", mid, r3 + fieldH + 2);
+    // Row 3 values
+    box(left, r3, 160, fieldH); draw(vinVal, left + 6, r3 + 4, 9);
+    box(mid, r3, 150, fieldH); draw(deliveryVal, mid + 6, r3 + 4, 9);
+
+    // Vehicle Price (compute relative to info section bottom to avoid overlap)
+    const infoBottomY = r3; // bottom edge y of the last row boxes
+    const priceBandY = infoBottomY - 80; // increased gap below info section
+    line(30, priceBandY, 535, 2, orange);
+    draw("VEHICLE PRICE", 230, priceBandY + 6, 12, true);
+
+    // Items and amounts with wrapping and separators to avoid overlap (moved lower)
+    const wrapText = (text: string, maxWidth: number, size = 10) => {
+      const words = String(text || '').split(/\s+/);
+      const lines: string[] = [];
+      let current = '';
+      for (const w of words) {
+        const trial = current ? current + ' ' + w : w;
+        if (regular.widthOfTextAtSize(trial, size) <= maxWidth) current = trial;
+        else { if (current) lines.push(current); current = w; }
+      }
+      if (current) lines.push(current);
+      return lines;
+    };
+    let y = priceBandY - 30; // start items further below the price band
+    draw("VEHICLE AND ACCESSORIES", 30, y, 9, true);
+    rightAlign("AMOUNT", 565, y, 9, true);
+    y -= 18;
+
+    let subtotal = 0;
+    for (const item of order.orderItems) {
+      const unit =
+        (item.product?.finalPrice ?? item.product?.price ?? 0) as number;
       const qty = item.quantity ?? 1;
       const rowTotal = unit * qty;
-      grandTotal += rowTotal;
-      page.drawText(item.productName, { x: colX.item, y, size: 11, font });
-      page.drawText(String(qty), { x: colX.qty, y, size: 11, font });
-      page.drawText(formatCurrency(unit), { x: colX.unit, y, size: 11, font });
-      page.drawText(formatCurrency(rowTotal), { x: colX.total, y, size: 11, font });
-      y -= 14;
-    });
+      subtotal += rowTotal;
 
-    // Totals
-    y = Math.max(y, tableStartY - 14);
-    y -= 10;
-    page.drawText("Subtotal:", { x: colX.unit, y, size: 12, font });
-    page.drawText(formatCurrency(grandTotal), { x: colX.total, y, size: 12, font });
-    y -= 16;
-    page.drawText("Total:", { x: colX.unit, y, size: 14, font });
-    page.drawText(formatCurrency(grandTotal), { x: colX.total, y, size: 14, font });
+      const maxNameWidth = 520 - 30 - 80; // keep space for amount
+      const nameLines = wrapText(item.productName || 'Item', maxNameWidth, 10);
+      rightAlign(formatCurrency(rowTotal), 565, y, 10);
+      for (let i = 0; i < nameLines.length; i++) {
+        draw(nameLines[i], 30, y, 10);
+        y -= 14;
+      }
+      y -= 4; // gap
+      line(30, y + 2, 535, 1, rgb(0.9,0.9,0.9));
+      if (y < 200) {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        y = 800;
+        line(30, y, 535, 2, orange); y -= 6; draw("VEHICLE PRICE", 230, y, 12, true); y -= 14;
+        draw("VEHICLE AND ACCESSORIES", 30, y, 9, true); rightAlign("AMOUNT", 565, y, 9, true); y -= 18;
+      }
+    }
 
-    y -= 30;
-    drawText("Thank you for your purchase!", 12);
-    drawText("MJ Carros • www.mjcarros.com", 10);
+    const tax = 0;
+    const dealerFee = 0;
+    const totalSale = subtotal + tax + dealerFee;
+    const downPayment = 0;
+    const balanceDue = totalSale - downPayment;
+
+    // Extra gap before totals
+    y -= 20;
+    draw("TOTAL:", 430, y, 10, true);
+    rightAlign(formatCurrency(subtotal), 565, y, 10);
+    y -= 14;
+    draw("TAX:", 430, y, 10);
+    rightAlign(formatCurrency(tax), 565, y, 10);
+    y -= 14;
+    draw("DEALER FEE:", 430, y, 10);
+    rightAlign(formatCurrency(dealerFee), 565, y, 10);
+    y -= 14;
+    draw("TOTAL SALE PRICE:", 400, y, 10, true);
+    rightAlign(formatCurrency(totalSale), 565, y, 10, true);
+    y -= 18;
+    draw("TOTAL DOWN PAYMENT:", 380, y, 10);
+    rightAlign(formatCurrency(downPayment), 565, y, 10);
+    y -= 14;
+    draw("BALANCE DUE:", 430, y, 10, true);
+    rightAlign(formatCurrency(balanceDue), 565, y, 10, true);
+
+    // Signatures
+    line(30, 160, 180, 1, rgb(0.8, 0.8, 0.8));
+    draw("PURCHASER SIGNATURE", 30, 150, 9);
+    line(210, 160, 180, 1, rgb(0.8, 0.8, 0.8));
+    draw("AUTHORIZED PERSON SIGNATURE", 210, 150, 9);
+    line(390, 160, 175, 1, rgb(0.8, 0.8, 0.8));
+    draw("DATE", 390, 150, 9);
+
+    // Footer - company name and contact details
+    page.drawRectangle({ x: 0, y: 0, width: 595.28, height: 70, color: orange });
+    const white = rgb(1, 1, 1);
+    const siteName = (process.env.NEXT_PUBLIC_SITE_NAME || 'MJ Carros').toUpperCase();
+    const siteAddr1 = process.env.NEXT_PUBLIC_SITE_ADDRESS1 || '178 Expensive Avenue';
+    const siteCity = process.env.NEXT_PUBLIC_SITE_CITY || 'Philadelphia, 20100 PH';
+    const sitePhone = process.env.NEXT_PUBLIC_SITE_PHONE || '+1 (555) 000-0000';
+    const siteEmail = process.env.NEXT_PUBLIC_SITE_EMAIL || 'info@mjcarros.com';
+    const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || 'www.mjcarros.com';
+
+    // Right-aligned block in footer
+    const footerRightX = 580;
+    page.drawText(siteName, { x: footerRightX - bold.widthOfTextAtSize(siteName, 12), y: 48, size: 12, font: bold, color: white });
+    page.drawText(siteAddr1, { x: footerRightX - regular.widthOfTextAtSize(siteAddr1, 9), y: 34, size: 9, font: regular, color: white });
+    page.drawText(siteCity, { x: footerRightX - regular.widthOfTextAtSize(siteCity, 9), y: 22, size: 9, font: regular, color: white });
+    const contactLine = `${sitePhone}  •  ${siteEmail}  •  ${siteWeb}`;
+    page.drawText(contactLine, { x: footerRightX - regular.widthOfTextAtSize(contactLine, 9), y: 10, size: 9, font: regular, color: white });
 
     const pdfBytes = await pdfDoc.save();
     return new NextResponse(Buffer.from(pdfBytes), {
@@ -112,6 +325,9 @@ export async function GET(
     });
   } catch (error) {
     console.error("Invoice generation error:", error);
-    return NextResponse.json({ error: "Failed to generate invoice" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to generate invoice" },
+      { status: 500 }
+    );
   }
 }

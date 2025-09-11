@@ -52,46 +52,7 @@ export default function OrdersPage() {
   }, []);
 
   const handlePrint = (order: Order) => {
-    const win = window.open('', '_blank');
-    if (!win) return;
-    const dateStr = new Date(order.createdAt).toLocaleString();
-    const itemsHtml = order.orderItems.map((item) => `
-      <tr>
-        <td style="padding:8px;border:1px solid #e5e7eb;">${item.productName}</td>
-        <td style="padding:8px;border:1px solid #e5e7eb;text-align:center;">${item.quantity ?? 1}</td>
-      </tr>
-    `).join('');
-    win.document.write(`
-      <html>
-        <head>
-          <title>Invoice #${order.id}</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <style>
-            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding:24px; }
-            h1 { font-size:20px; margin:0 0 8px; }
-            .muted{ color:#6b7280; }
-            table { border-collapse: collapse; width:100%; margin-top:12px; }
-          </style>
-        </head>
-        <body>
-          <h1>MJ Carros - Invoice</h1>
-          <div class="muted">Order ID: ${order.id}</div>
-          <div class="muted">Created: ${dateStr}</div>
-          <div class="muted">Status: ${order.isPaid ? 'Paid' : 'Pending'}</div>
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align:left;padding:8px;border:1px solid #e5e7eb;">Product</th>
-                <th style="text-align:center;padding:8px;border:1px solid #e5e7eb;">Qty</th>
-              </tr>
-            </thead>
-            <tbody>${itemsHtml}</tbody>
-          </table>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    win.document.close();
+    window.open(`/api/orders/${order.id}/invoice`, "_blank");
   };
 
   if (isLoading) {

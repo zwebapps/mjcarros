@@ -11,6 +11,7 @@ type OrderItem = {
   id: string;
   orderId: string;
   productName: string;
+  quantity?: number;
 };
 
 type Order = {
@@ -45,6 +46,10 @@ const TableOrders = () => {
 
   const handlePageClick = (selectedPage: { selected: number }) => {
     setCurrentPage(selectedPage.selected);
+  };
+
+  const handlePrint = (order: Order) => {
+    window.open(`/api/orders/${order.id}/invoice`, "_blank");
   };
 
   if (isLoading) {
@@ -84,6 +89,9 @@ const TableOrders = () => {
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date
               </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Invoice
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -112,6 +120,11 @@ const TableOrders = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   {formatDate(order.createdAt)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  <button onClick={() => handlePrint(order)} className="text-indigo-600 hover:text-indigo-500 underline">
+                    Invoice (PDF)
+                  </button>
                 </td>
               </tr>
             ))}
