@@ -80,14 +80,27 @@ mjcarros-ecommerce/
    npx prisma db push
    ```
 
-6. **Start the development server**
+6. **Create admin user and initial data**
+   ```bash
+   # Linux/Mac
+   ./setup-admin.sh
+   
+   # Windows
+   setup-admin.bat
+   
+   # Or manually
+   node scripts/setup-admin.js
+   ```
+
+7. **Start the development server**
    ```bash
    npm run dev
    ```
 
-7. **Visit your application**
+8. **Visit your application**
    - Frontend: http://localhost:3000
    - Admin Panel: http://localhost:3000/admin
+   - Login with the credentials shown in the setup output
 
 ## 🔧 Configuration
 
@@ -143,6 +156,9 @@ The project includes both development and production Docker configurations:
 # Start development environment
 docker compose up -d
 
+# Create admin user and initial data
+docker compose run --rm setup-admin
+
 # Access the application
 # Frontend: http://localhost:8080
 # MongoDB: localhost:27018
@@ -152,6 +168,9 @@ docker compose up -d
 ```bash
 # Start production environment
 docker compose -f docker-compose.prod.yml up -d
+
+# Create admin user and initial data
+docker compose -f docker-compose.prod.yml run --rm setup-admin
 
 # Access the application
 # Frontend: http://localhost:8080
