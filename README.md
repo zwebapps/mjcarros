@@ -134,7 +134,54 @@ For image uploads, configure your AWS S3 bucket:
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### Docker (Recommended for Production)
+
+The project includes both development and production Docker configurations:
+
+#### Development
+```bash
+# Start development environment
+docker compose up -d
+
+# Access the application
+# Frontend: http://localhost:8080
+# MongoDB: localhost:27018
+```
+
+#### Production
+```bash
+# Start production environment
+docker compose -f docker-compose.prod.yml up -d
+
+# Access the application
+# Frontend: http://localhost:8080
+# MongoDB: localhost:27018
+```
+
+#### S3 MongoDB Backup (Optional)
+```bash
+# Backup MongoDB to S3
+docker compose run --rm s3-backup
+
+# Restore from S3 (automatic on startup if S3_MONGO_BUCKET is set)
+# Just start the services normally
+```
+
+#### Docker Environment Variables
+Add these to your `.env` file for S3 backup functionality:
+```env
+# AWS S3 Configuration
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_DEFAULT_REGION=your_region
+S3_MONGO_BUCKET=your-bucket-name/mongo
+
+# MongoDB Configuration
+MONGO_ROOT_USERNAME=admin
+MONGO_ROOT_PASSWORD=your_secure_password
+```
+
+### Vercel (Alternative)
 1. Connect your GitHub repository
 2. Set environment variables in Vercel dashboard
 3. Deploy automatically on push
