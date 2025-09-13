@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
+import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,9 +88,35 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        orderItems: { include: { product: true } },
+        orderItems: { 
+          include: { 
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                make: true,
+                model: true,
+                year: true,
+                colour: true,
+                mileage: true,
+                fuelType: true,
+                vin: true,
+                deliveryDate: true,
+                images: true
+              }
+            }
+          } 
+        },
+        user: true
       },
     });
+
+    // Log order creation to console
+    logOrderCreation(newOrder);
+
+    // Backup order to S3
+    await backupOrderToS3(newOrder);
 
     // Send confirmation email to customer
     const subject = `Your MJ Carros order ${newOrder.id}`;

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
+import { sendMail } from "@/lib/mail";
 
 const baseUrl = (process.env.PAYPAL_ENV || 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
@@ -61,15 +63,107 @@ export async function POST(req: NextRequest) {
 
     if (eventType === 'PAYMENT.CAPTURE.COMPLETED' || eventType === 'CHECKOUT.ORDER.APPROVED' || eventType === 'CHECKOUT.ORDER.COMPLETED') {
       const payerEmail: string | undefined = event?.resource?.payer?.email_address || event?.resource?.payment_source?.paypal?.email_address;
+      const amount = event?.resource?.amount?.value || event?.resource?.purchase_units?.[0]?.amount?.value;
+      const currency = event?.resource?.amount?.currency_code || event?.resource?.purchase_units?.[0]?.amount?.currency_code;
+      
+      console.log(`💳 PayPal payment completed: ${eventType}`);
+      console.log(`👤 Payer Email: ${payerEmail}`);
+      console.log(`💰 Amount: ${amount} ${currency}`);
+      
       try {
         if (payerEmail) {
-          const order = await db.order.findFirst({ where: { userEmail: payerEmail, isPaid: false }, orderBy: { createdAt: 'desc' } });
+          const order = await db.order.findFirst({ 
+            where: { userEmail: payerEmail, isPaid: false }, 
+            orderBy: { createdAt: 'desc' },
+            include: {
+              orderItems: { 
+                include: { 
+                  product: {
+                    select: {
+                      id: true,
+                      name: true,
+                      price: true,
+                      make: true,
+                      model: true,
+                      year: true,
+                      colour: true,
+                      mileage: true,
+                      fuelType: true,
+                      vin: true,
+                      deliveryDate: true,
+                      images: true
+                    }
+                  }
+                } 
+              },
+              user: true
+            }
+          });
+          
           if (order) {
-            await db.order.update({ where: { id: order.id }, data: { isPaid: true } });
+            const updatedOrder = await db.order.update({ 
+              where: { id: order.id }, 
+              data: { isPaid: true },
+              include: {
+                orderItems: { 
+                  include: { 
+                    product: {
+                      select: {
+                        id: true,
+                        name: true,
+                        price: true,
+                        make: true,
+                        model: true,
+                        year: true,
+                        colour: true,
+                        mileage: true,
+                        fuelType: true,
+                        vin: true,
+                        deliveryDate: true,
+                        images: true
+                      }
+                    }
+                  } 
+                },
+                user: true
+              }
+            });
+
+            // Log payment completion
+            console.log(`✅ Order ${order.id} payment confirmed via PayPal`);
+            console.log(`👤 Customer: ${updatedOrder.userName} (${updatedOrder.userEmail})`);
+            console.log(`💰 Amount: $${amount} ${currency}`);
+            console.log(`💳 Payment Method: PayPal`);
+
+            // Backup updated order to S3
+            await backupOrderToS3(updatedOrder);
+
+            // Send payment confirmation email
+            const subject = `Payment Confirmed - Order ${order.id}`;
+            const html = `
+              <div>
+                <h2>🎉 Payment Confirmed!</h2>
+                <p>Your payment has been successfully processed.</p>
+                <p><strong>Order ID:</strong> ${order.id}</p>
+                <p><strong>Payment Method:</strong> PayPal</p>
+                <p><strong>Amount:</strong> $${amount} ${currency}</p>
+                <p>We will process your order and contact you shortly.</p>
+              </div>
+            `;
+            
+            try {
+              await sendMail(updatedOrder.userEmail, subject, html);
+              console.log(`📧 Payment confirmation email sent to: ${updatedOrder.userEmail}`);
+            } catch (emailError) {
+              console.warn('Failed to send payment confirmation email:', emailError);
+            }
+          } else {
+            console.log(`⚠️ No unpaid order found for PayPal payer: ${payerEmail}`);
           }
         }
       } catch (e) {
-        // swallow in dev
+        console.error("❌ PayPal webhook error:", e);
+        return new NextResponse("Webhook processing failed", { status: 500 });
       }
     }
 

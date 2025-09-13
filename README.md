@@ -194,10 +194,19 @@ AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
 AWS_DEFAULT_REGION=your_region
 S3_MONGO_BUCKET=your-bucket-name/mongo
+S3_ORDERS_BUCKET=your-bucket-name/orders
 
 # MongoDB Configuration
 MONGO_ROOT_USERNAME=admin
 MONGO_ROOT_PASSWORD=your_secure_password
+
+# Gmail SMTP Configuration (Optional)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-gmail@gmail.com
+EMAIL_PASS=your-app-password
+EMAIL_FROM="MJ Carros <your-gmail@gmail.com>"
+SUPPORT_EMAIL=your-gmail@gmail.com
 ```
 
 ### Vercel (Alternative)

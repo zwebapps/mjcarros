@@ -2,6 +2,8 @@ import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
+import { sendMail } from "@/lib/mail";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -24,17 +26,80 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed") {
     try {
-      await db.order.update({
-        where: { id: session?.metadata?.orderId || "" },
+      const orderId = session?.metadata?.orderId;
+      if (!orderId) {
+        console.error("❌ Stripe webhook: No order ID in session metadata");
+        return new NextResponse("No order ID", { status: 400 });
+      }
+
+      console.log(`💳 Stripe payment completed for order: ${orderId}`);
+
+      // Update order with payment details
+      const updatedOrder = await db.order.update({
+        where: { id: orderId },
         data: {
           isPaid: true,
           address: session?.customer_details?.address?.line1 || "",
           phone: session?.customer_details?.phone || "",
-          userEmail: session?.metadata?.email || "",
+          userEmail: session?.metadata?.email || session?.customer_details?.email || "",
+        },
+        include: {
+          orderItems: { 
+            include: { 
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  price: true,
+                  make: true,
+                  model: true,
+                  year: true,
+                  colour: true,
+                  mileage: true,
+                  fuelType: true,
+                  vin: true,
+                  deliveryDate: true,
+                  images: true
+                }
+              }
+            } 
+          },
+          user: true
         },
       });
+
+      // Log payment completion
+      console.log(`✅ Order ${orderId} payment confirmed via Stripe`);
+      console.log(`👤 Customer: ${updatedOrder.userName} (${updatedOrder.userEmail})`);
+      console.log(`💰 Amount: $${session?.amount_total ? (session.amount_total / 100).toFixed(2) : 'N/A'}`);
+      console.log(`💳 Payment Method: Stripe`);
+
+      // Backup updated order to S3
+      await backupOrderToS3(updatedOrder);
+
+      // Send payment confirmation email
+      const subject = `Payment Confirmed - Order ${orderId}`;
+      const html = `
+        <div>
+          <h2>🎉 Payment Confirmed!</h2>
+          <p>Your payment has been successfully processed.</p>
+          <p><strong>Order ID:</strong> ${orderId}</p>
+          <p><strong>Payment Method:</strong> Stripe</p>
+          <p><strong>Amount:</strong> $${session?.amount_total ? (session.amount_total / 100).toFixed(2) : 'N/A'}</p>
+          <p>We will process your order and contact you shortly.</p>
+        </div>
+      `;
+      
+      try {
+        await sendMail(updatedOrder.userEmail, subject, html);
+        console.log(`📧 Payment confirmation email sent to: ${updatedOrder.userEmail}`);
+      } catch (emailError) {
+        console.warn('Failed to send payment confirmation email:', emailError);
+      }
+
     } catch (e) {
-      // ignore in dev
+      console.error("❌ Stripe webhook error:", e);
+      return new NextResponse("Webhook processing failed", { status: 500 });
     }
   }
 

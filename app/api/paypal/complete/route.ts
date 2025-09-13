@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
+import { sendMail } from "@/lib/mail";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,8 +22,58 @@ export async function POST(req: NextRequest) {
           })),
         },
       },
-      include: { orderItems: true },
+      include: { 
+        orderItems: { 
+          include: { 
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                make: true,
+                model: true,
+                year: true,
+                colour: true,
+                mileage: true,
+                fuelType: true,
+                vin: true,
+                deliveryDate: true,
+                images: true
+              }
+            }
+          } 
+        },
+        user: true
+      },
     });
+
+    // Log order creation
+    logOrderCreation(order);
+
+    // Backup order to S3
+    await backupOrderToS3(order);
+
+    // Send order confirmation email
+    const subject = `Order Confirmed - ${order.id}`;
+    const itemsHtml = order.orderItems.map((i) => `<li>${i.productName}</li>`).join('');
+    const html = `
+      <div>
+        <h2>🎉 Order Confirmed!</h2>
+        <p>Your order has been successfully placed and paid via PayPal.</p>
+        <p><strong>Order ID:</strong> ${order.id}</p>
+        <p><strong>Payment Method:</strong> PayPal</p>
+        <p><strong>Items:</strong></p>
+        <ul>${itemsHtml}</ul>
+        <p>We will process your order and contact you shortly.</p>
+      </div>
+    `;
+    
+    try {
+      await sendMail(order.userEmail, subject, html);
+      console.log(`📧 Order confirmation email sent to: ${order.userEmail}`);
+    } catch (emailError) {
+      console.warn('Failed to send order confirmation email:', emailError);
+    }
 
     return NextResponse.json({ ok: true, orderId: order.id });
   } catch (error) {
