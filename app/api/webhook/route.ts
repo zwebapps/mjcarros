@@ -33,7 +33,9 @@ export async function POST(req: Request) {
       }
 
       console.log(`💳 Stripe payment completed for order: ${orderId}`);
-
+      if (!db) {
+        return new NextResponse("Database not found", { status: 500 });
+      }
       // Update order with payment details
       const updatedOrder = await db.order.update({
         where: { id: orderId },
@@ -49,28 +51,24 @@ export async function POST(req: Request) {
               product: {
                 select: {
                   id: true,
-                  name: true,
+                  title: true,
                   price: true,
-                  make: true,
-                  model: true,
+                  modelName: true,
                   year: true,
-                  colour: true,
+                  color: true,
                   mileage: true,
                   fuelType: true,
-                  vin: true,
-                  deliveryDate: true,
-                  images: true
+                  imageURLs: true
                 }
               }
             } 
-          },
-          user: true
+          }
         },
       });
 
       // Log payment completion
       console.log(`✅ Order ${orderId} payment confirmed via Stripe`);
-      console.log(`👤 Customer: ${updatedOrder.userName} (${updatedOrder.userEmail})`);
+      console.log(`👤 Customer: ${updatedOrder.userEmail}`);
       console.log(`💰 Amount: $${session?.amount_total ? (session.amount_total / 100).toFixed(2) : 'N/A'}`);
       console.log(`💳 Payment Method: Stripe`);
 

@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
         userRole = payload.role;
       }
     }
-
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     // Admin: return all orders
     if (userRole === 'ADMIN') {
       const orders = await db.order.findMany({
@@ -74,7 +76,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const newOrder = await db.order.create({
       data: {
         phone: phone.trim(),
@@ -93,22 +97,18 @@ export async function POST(request: NextRequest) {
             product: {
               select: {
                 id: true,
-                name: true,
+                title: true,
                 price: true,
-                make: true,
-                model: true,
+                modelName: true,
                 year: true,
-                colour: true,
+                color: true,
                 mileage: true,
                 fuelType: true,
-                vin: true,
-                deliveryDate: true,
-                images: true
+                imageURLs: true
               }
             }
           } 
-        },
-        user: true
+        }
       },
     });
 

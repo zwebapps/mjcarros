@@ -18,6 +18,9 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
   try {
+    if (!db) {
+      return [];
+    }
     const dbProducts = await db.product.findMany({
       include: { productSizes: { include: { size: true } } },
     });

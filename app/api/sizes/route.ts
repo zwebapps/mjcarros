@@ -5,6 +5,9 @@ export async function POST(req: Request) {
   const { categoryId, sizes } = await req.json();
 
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const category = await db.category.findUnique({
       where: { id: categoryId },
     });
@@ -15,6 +18,9 @@ export async function POST(req: Request) {
 
     const createdSizes = await Promise.all(
       sizes.map(async (size: any) => {
+        if (!db) {
+          return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+        }
         return db.size.create({
           data: { name: size },
         });
@@ -28,6 +34,9 @@ export async function POST(req: Request) {
 
     const createdCategorySizes = await Promise.all(
       categorySizeCreateManyInput.map(async (input) => {
+        if (!db) {
+          return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+        }
         return db.categorySize.create({
           data: input,
         });
@@ -46,6 +55,9 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const sizes = await db.size.findMany();
     return NextResponse.json(sizes);
   } catch (error) {

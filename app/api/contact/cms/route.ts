@@ -4,6 +4,9 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 export async function GET() {
   // Return single ContactPage (create default if missing)
+  if (!db) {
+    return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+  }
   const existing = await db.contactPage.findFirst();
   if (!existing) {
     const created = await db.contactPage.create({ data: {} });
@@ -25,6 +28,9 @@ export async function PUT(request: NextRequest) {
   }
 
   const body = await request.json();
+  if (!db) {
+    return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+  }
   const existing = await db.contactPage.findFirst();
   const updated = existing
     ? await db.contactPage.update({ where: { id: existing.id }, data: body })

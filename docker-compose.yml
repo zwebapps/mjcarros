@@ -1,26 +1,6 @@
-version: '3'
+version: '3.9'
 
 services:
-  s3-restore:
-    image: amazon/aws-cli:2.15.0
-    env_file:
-      - .env
-    environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - S3_MONGO_BUCKET=${S3_MONGO_BUCKET}
-    command: >
-      sh -c 'if [ -n "$S3_MONGO_BUCKET" ]; then
-                echo "Restoring Mongo volume from s3://$S3_MONGO_BUCKET";
-                aws s3 sync s3://$S3_MONGO_BUCKET /data;
-              else
-                echo "S3_MONGO_BUCKET not set, skipping restore";
-              fi'
-    volumes:
-      - mongodb_data:/data
-    restart: 'no'
-
   mongodb:
     image: mongo:latest
     container_name: mongodb
@@ -29,69 +9,33 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGO_DATABASE}
     ports:
-      - "27018:27017"
-    networks:
-      - mongo_network
+      - "${MONGO_PORT}:27017"
+    command: ["--replSet", "rs0", "--auth", "--keyFile", "/etc/mongo-keyfile"]
     volumes:
       - mongodb_data:/data/db
-    depends_on:
-      s3-restore:
-        condition: service_completed_successfully
+    networks:
+      - mongo_network
 
   nextjs:
     container_name: nextjs
     build:
       context: .
+      dockerfile: Dockerfile
     ports:
-      - "8080:3000"
-    depends_on:
-      - mongodb
+      - "${NEXTJS_PORT}:3000"
     env_file:
       - .env
     environment:
-      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/
+      - NODE_ENV=${NODE_ENV}
+      - MONGO_URI=${MONGO_URI}
+    depends_on:
+      - mongodb
+    networks:
+      - mongo_network
     volumes:
       - ./public/uploads:/app/public/uploads:rw
-    networks:
-      - mongo_network
-
-  setup-admin:
-    container_name: setup-admin
-    build:
-      context: .
-    depends_on:
-      - mongodb
-    env_file:
-      - .env
-    environment:
-      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/
-    command: ["./setup-admin-docker.sh"]
-    networks:
-      - mongo_network
-    restart: "no"
-
-  s3-backup:
-    image: amazon/aws-cli:2.15.0
-    env_file:
-      - .env
-    environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - S3_MONGO_BUCKET=${S3_MONGO_BUCKET}
-    command: >
-      sh -c 'if [ -n "$S3_MONGO_BUCKET" ]; then
-                echo "Backing up Mongo volume to s3://$S3_MONGO_BUCKET";
-                aws s3 sync /data s3://$S3_MONGO_BUCKET;
-              else
-                echo "S3_MONGO_BUCKET not set, skipping backup";
-              fi'
-    volumes:
-      - mongodb_data:/data
-    networks:
-      - mongo_network
-    restart: 'no'
 
 networks:
   mongo_network:

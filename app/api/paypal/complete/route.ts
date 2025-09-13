@@ -11,6 +11,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Items are required" }, { status: 400 });
     }
 
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const order = await db.order.create({
       data: {
         isPaid: true,
@@ -28,22 +31,18 @@ export async function POST(req: NextRequest) {
             product: {
               select: {
                 id: true,
-                name: true,
+                title: true,
                 price: true,
-                make: true,
-                model: true,
+                modelName: true,
                 year: true,
-                colour: true,
+                color: true,
                 mileage: true,
                 fuelType: true,
-                vin: true,
-                deliveryDate: true,
-                images: true
+                imageURLs: true
               }
             }
           } 
-        },
-        user: true
+        }
       },
     });
 

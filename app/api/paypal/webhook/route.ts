@@ -72,6 +72,9 @@ export async function POST(req: NextRequest) {
       
       try {
         if (payerEmail) {
+          if (!db) {
+            return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+          }
           const order = await db.order.findFirst({ 
             where: { userEmail: payerEmail, isPaid: false }, 
             orderBy: { createdAt: 'desc' },
@@ -81,22 +84,18 @@ export async function POST(req: NextRequest) {
                   product: {
                     select: {
                       id: true,
-                      name: true,
+                      title: true,
                       price: true,
-                      make: true,
-                      model: true,
+                      modelName: true,
                       year: true,
-                      colour: true,
+                      color: true,
                       mileage: true,
                       fuelType: true,
-                      vin: true,
-                      deliveryDate: true,
-                      images: true
+                      imageURLs: true
                     }
                   }
                 } 
-              },
-              user: true
+              }
             }
           });
           
@@ -110,28 +109,24 @@ export async function POST(req: NextRequest) {
                     product: {
                       select: {
                         id: true,
-                        name: true,
+                        title: true,
                         price: true,
-                        make: true,
-                        model: true,
+                        modelName: true,
                         year: true,
-                        colour: true,
+                        color: true,
                         mileage: true,
                         fuelType: true,
-                        vin: true,
-                        deliveryDate: true,
-                        images: true
+                        imageURLs: true
                       }
                     }
                   } 
-                },
-                user: true
+                }
               }
             });
 
             // Log payment completion
             console.log(`✅ Order ${order.id} payment confirmed via PayPal`);
-            console.log(`👤 Customer: ${updatedOrder.userName} (${updatedOrder.userEmail})`);
+            console.log(`👤 Customer: ${updatedOrder.userEmail}`);
             console.log(`💰 Amount: $${amount} ${currency}`);
             console.log(`💳 Payment Method: PayPal`);
 

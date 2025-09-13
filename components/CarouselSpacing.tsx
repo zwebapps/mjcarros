@@ -40,10 +40,10 @@ export function CarouselSpacing(data: CategoryProps) {
             className="max-sm:basis-3/4 md:basis-1/2 lg:basis-1/3"
           >
             <Link href={`/shop/${category.category}`}>
-              <CardItem
-                billboard={category.billboardId}
-                category={category.category}
-              />
+              <div className="p-4 border rounded-lg">
+                <h3 className="text-lg font-semibold">{category.category}</h3>
+                <p className="text-sm text-gray-600">Category ID: {category.billboardId}</p>
+              </div>
             </Link>
           </CarouselItem>
         ))}

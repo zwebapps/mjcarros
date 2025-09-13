@@ -14,20 +14,16 @@ interface OrderWithDetails extends Order {
   orderItems: (OrderItem & {
     product: {
       id: string;
-      name: string;
+      title: string;
       price: number;
-      make: string;
-      model: string;
+      modelName: string;
       year: number;
-      colour: string;
+      color: string;
       mileage: number;
       fuelType: string;
-      vin: string;
-      deliveryDate: Date | null;
-      images: string[];
+      imageURLs: string[];
     };
   })[];
-  user: User;
   // Computed fields
   totalPrice: number;
   userName: string;
@@ -46,7 +42,6 @@ function computeTotalPrice(order: any): number {
 // Helper function to get user name
 function getUserName(order: any): string {
   if (order.userName) return order.userName;
-  if (order.user?.name) return order.user.name;
   return order.userEmail || 'Unknown Customer';
 }
 
@@ -86,28 +81,22 @@ export async function backupOrderToS3(order: any): Promise<void> {
         updatedAt: order.updatedAt
       },
       customer: {
-        id: order.user.id,
-        name: order.user.name,
-        email: order.user.email,
-        role: order.user.role,
-        createdAt: order.user.createdAt
+        email: order.userEmail,
+        name: userName
       },
       items: order.orderItems.map((item: any) => ({
         id: item.id,
         quantity: item.quantity,
         product: {
           id: item.product.id,
-          name: item.product.name,
+          title: item.product.title,
           price: item.product.price,
-          make: item.product.make,
-          model: item.product.model,
+          modelName: item.product.modelName,
           year: item.product.year,
-          colour: item.product.colour,
+          color: item.product.color,
           mileage: item.product.mileage,
           fuelType: item.product.fuelType,
-          vin: item.product.vin,
-          deliveryDate: item.product.deliveryDate,
-          images: item.product.images
+          imageURLs: item.product.imageURLs
         }
       })),
       summary: {
@@ -164,12 +153,11 @@ export function logOrderCreation(order: any): void {
   console.log('\n📋 Order Items:');
   
   order.orderItems.forEach((item: any, index: number) => {
-    console.log(`   ${index + 1}. ${item.product.name}`);
-    console.log(`      Make: ${item.product.make}`);
-    console.log(`      Model: ${item.product.model}`);
+    console.log(`   ${index + 1}. ${item.product.title}`);
+    console.log(`      Model: ${item.product.modelName}`);
     console.log(`      Year: ${item.product.year}`);
-    console.log(`      Colour: ${item.product.colour}`);
-    console.log(`      Mileage: ${item.product.mileage.toLocaleString()} km`);
+    console.log(`      Color: ${item.product.color}`);
+    console.log(`      Mileage: ${item.product.mileage?.toLocaleString() || 'N/A'} km`);
     console.log(`      Price: $${item.product.price}`);
     console.log(`      Quantity: ${item.quantity}`);
     console.log('');

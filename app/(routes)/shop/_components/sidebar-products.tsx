@@ -4,6 +4,9 @@ import PriceInput from "./price-input";
 import { Product as UIProduct } from "@/types";
 
 const SidebarProducts = async () => {
+  if (!db) {
+    return [];
+  }
   const [dbCategories, dbProducts] = await Promise.all([
     db.category.findMany(),
     db.product.findMany({ include: { productSizes: { include: { size: true } } } }),

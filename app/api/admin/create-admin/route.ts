@@ -31,7 +31,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     // Check if user already exists
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -118,6 +123,12 @@ export async function POST(request: NextRequest) {
 // Get admin setup status
 export async function GET() {
   try {
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const adminCount = await db.user.count({
       where: { role: 'ADMIN' }
     });

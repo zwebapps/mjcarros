@@ -64,10 +64,12 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
       created: [] as any[]
     };
-
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     // Get all categories for validation
     const categories = await db.category.findMany();
-    const categoryMap = new Map(categories.map(cat => [cat.name.toLowerCase(), cat.id]));
+    const categoryMap = new Map(categories.map(cat => [cat.category.toLowerCase(), cat.id]));
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i] as any;
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
         const categoryId = categoryMap.get(categoryName);
         
         if (!categoryId) {
-          results.errors.push(`Row ${rowNumber}: Category "${row.category}" not found. Available categories: ${categories.map(c => c.name).join(', ')}`);
+          results.errors.push(`Row ${rowNumber}: Category "${row.category}" not found. Available categories: ${categories.map(c => c.category).join(', ')}`);
           continue;
         }
 
@@ -112,34 +114,32 @@ export async function POST(request: NextRequest) {
           results.errors.push(`Row ${rowNumber}: Invalid mileage "${row.mileage}". Must be a non-negative number.`);
           continue;
         }
-
+        if (!db) {
+          return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+        }
         // Create product
         const product = await db.product.create({
           data: {
-            name: row.name.toString().trim(),
-            price: price,
-            categoryId: categoryId,
-            make: row.make.toString().trim(),
-            year: year,
-            colour: row.colour.toString().trim(),
-            model: row.model.toString().trim(),
-            mileage: mileage,
-            fuelType: row.fuelType.toString().trim(),
-            vin: row.vin?.toString().trim() || '',
-            deliveryDate: row.deliveryDate ? new Date(row.deliveryDate) : null,
+            title: row.name.toString().trim(),
             description: row.description?.toString().trim() || '',
-            isFeatured: row.isFeatured === 'true' || row.isFeatured === true,
-            isArchived: row.isArchived === 'true' || row.isArchived === true,
-            images: row.images ? row.images.toString().split(',').map((img: string) => img.trim()).filter(Boolean) : []
+            imageURLs: row.images ? row.images.toString().split(',').map((img: string) => img.trim()).filter(Boolean) : [],
+            category: row.category.toString().trim(),
+            categoryId: categoryId,
+            price: price,
+            featured: row.isFeatured === 'true' || row.isFeatured === true,
+            modelName: row.make?.toString().trim() || '',
+            year: year,
+            color: row.colour?.toString().trim() || '',
+            mileage: mileage,
+            fuelType: row.fuelType?.toString().trim() || ''
           }
         });
 
         results.success++;
         results.created.push({
           id: product.id,
-          name: product.name,
-          make: product.make,
-          model: product.model,
+          title: product.title,
+          modelName: product.modelName,
           year: product.year
         });
 

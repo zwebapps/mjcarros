@@ -7,6 +7,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const category = await db.category.findUnique({ where: { id: params.id } });
     return NextResponse.json(category);
   } catch (error) {
@@ -41,6 +47,12 @@ export async function PUT(
       );
     }
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const updatedCategory = await db.category.update({
       where: { id: params.id },
       data: {
@@ -87,6 +99,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const deleted = await db.category.delete({ where: { id: params.id } });
     return NextResponse.json(deleted);
   } catch (error) {

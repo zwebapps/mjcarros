@@ -9,6 +9,9 @@ export async function GET(
   { params }: { params: { orderId: string } }
 ) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const order = await db.order.findUnique({
       where: { id: params.orderId },
       include: {

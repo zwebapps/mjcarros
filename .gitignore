@@ -39,3 +39,7 @@ next-env.d.ts
 # Environment variables
 .env.local
 .env.local.*
+.env.build
+.gitignore
+.gitignore
+.env.docker

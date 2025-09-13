@@ -7,6 +7,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const billboard = await db.billboard.findUnique({ where: { id: params.id } });
     return NextResponse.json(billboard);
   } catch (error) {
@@ -41,6 +47,12 @@ export async function PUT(
       );
     }
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const updatedBillboard = await db.billboard.update({
       where: { id: params.id },
       data: {
@@ -64,6 +76,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const deleted = await db.billboard.delete({ where: { id: params.id } });
     return NextResponse.json(deleted);
   } catch (error) {

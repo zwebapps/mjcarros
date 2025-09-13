@@ -8,6 +8,9 @@ export async function GET(
   const { id } = params;
 
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const product = await db.product.findMany({
       where: {
         category: id,

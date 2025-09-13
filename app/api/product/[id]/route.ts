@@ -7,6 +7,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const product = await db.product.findUnique({ where: { id: params.id } });
 
     if (!product) {
@@ -40,7 +43,9 @@ export async function DELETE(
     if (userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
-
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     // Delete the product
     await db.product.delete({
       where: { id: params.id },

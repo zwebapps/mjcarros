@@ -1,18 +1,23 @@
 import { type Metadata } from "next";
-import { PrismaClient } from "@prisma/client";
-import { notFound } from "next/navigation";
+import { db } from "@/lib/db"; // Use your global Prisma client
 import { siteConfig } from "@/config/site";
 import ProductDetail from "./_components/product-detail";
-
-const prisma = new PrismaClient();
 
 export async function generateMetadata({
   params,
 }: {
   params: { productId: string };
 }): Promise<Metadata> {
+  // If db is not initialized (e.g., during build), return default metadata
+  if (!db) {
+    return {
+      title: "Product | MJ Carros",
+      description: "Product details",
+    };
+  }
+
   try {
-    const product = await prisma.product.findUnique({
+    const product = await db.product.findUnique({
       where: { id: params.productId },
     });
 

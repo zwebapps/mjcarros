@@ -6,6 +6,9 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const products = await db.product.findMany();
     return NextResponse.json(products);
   } catch (error) {
@@ -98,6 +101,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const newProduct = await db.product.create({
       data: {
         title,

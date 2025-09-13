@@ -67,6 +67,9 @@ const banners = [
 
 // Build categories dynamically from products
 async function getCategoriesWithCounts() {
+  if (!db) {
+    return [];
+  }
   const products = await db.product.findMany({ select: { category: true, imageURLs: true } });
   const map = new Map<string, { count: number; image?: string }>();
   for (const p of products) {

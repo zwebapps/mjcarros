@@ -9,6 +9,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const product = await db.product.findUnique({
       where: { id: params.id },
     });
@@ -59,6 +62,9 @@ export async function PUT(
 
     let categoryIdUpdate: string | undefined = undefined;
     if (category) {
+      if (!db) {
+        return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+      }
       const cat = await db.category.findFirst({ where: { category } });
       if (cat) categoryIdUpdate = cat.id;
     }
@@ -68,6 +74,9 @@ export async function PUT(
     const region = process.env.NEXT_PUBLIC_AWS_S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
     const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || (bucket && region ? `https://${bucket}.s3.${region}.amazonaws.com` : '')).replace(/\/$/, '');
     // Load existing product to append gallery images
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const existing = await db.product.findUnique({ where: { id: params.id } });
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
@@ -121,6 +130,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    }
     const deleted = await db.product.delete({ where: { id: params.id } });
     return NextResponse.json(deleted);
   } catch (error) {

@@ -1,20 +1,23 @@
+# Base stage
 FROM node:18-bullseye AS base
 WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
-
-# Build the app
+ENV SKIP_DB_BUILD=true
+# Build the app without connecting to DB
+# (skip getStaticProps database queries)
+ENV NEXT_PUBLIC_SKIP_DB_BUILD=true
 RUN npm run build
 
-# Production stage
+# Runner stage
 FROM node:18-bullseye AS runner
 WORKDIR /app
 
@@ -28,6 +31,7 @@ COPY --from=base /app/public ./public
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/package.json ./package.json
 COPY --from=base /app/prisma ./prisma
+COPY --from=base /app/scripts ./scripts
 
 EXPOSE 3000
 

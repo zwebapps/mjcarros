@@ -21,6 +21,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json(

@@ -9,7 +9,7 @@ import { Menu } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import Sidebar from "./Sidebar";
 
-const MobileSidebar = ({ children }: { children: React.ReactNode }) => {
+const MobileSidebar = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.get("q");
@@ -47,7 +47,7 @@ const MobileSidebar = ({ children }: { children: React.ReactNode }) => {
           side="left"
           className="p-2 pt-10 bg-neutral-800 text-white"
         >
-          {children}
+          <Sidebar />
         </SheetContent>
       </Sheet>
     </>

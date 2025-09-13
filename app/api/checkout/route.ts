@@ -19,7 +19,9 @@ export async function POST(req: NextRequest) {
     }
 
     const origin = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
-
+    if (!db) {
+      return new NextResponse("Database not found", { status: 500 });
+    }
     // Create a pending order
     const order = await db.order.create({
       data: {

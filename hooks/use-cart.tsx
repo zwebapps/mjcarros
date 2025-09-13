@@ -25,7 +25,7 @@ const useCart = create(
         const currentItems = get().items;
 
         const existingItem = currentItems.findIndex(
-          (item) => item.id === data.id && item.size === data.size
+          (item) => item.id === data.id
         );
 
         if (existingItem !== -1) {
@@ -60,7 +60,7 @@ const useCart = create(
       removeItem: (data: Product) => {
         const currentItems = get().items;
         const existingItemIndex = currentItems.findIndex(
-          (item) => item.id === data.id && item.size === data.size
+          (item) => item.id === data.id
         );
 
         if (existingItemIndex !== -1) {
@@ -82,7 +82,7 @@ const useCart = create(
       removeAll: (data: Product) => {
         const currentItems = get().items;
         const remainingItems = currentItems.filter(
-          (item) => !(item.id === data.id && item.size === data.size)
+          (item) => item.id !== data.id
         );
         set({ items: remainingItems });
         toast.success("Item removed from cart.");

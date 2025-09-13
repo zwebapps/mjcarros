@@ -4,6 +4,12 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const billboards = await db.billboard.findMany({
       orderBy: { createdAt: "desc" },
     });
@@ -37,6 +43,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not found' },
+        { status: 500 }
+      );
+    }
     const newBillboard = await db.billboard.create({
       data: {
         billboard,

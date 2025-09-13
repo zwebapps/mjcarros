@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
     if (metaOrderId && metaOrderId !== orderId) {
       return new NextResponse("Order mismatch", { status: 409 });
     }
+    if (!db) {
+      return new NextResponse("Database not found", { status: 500 });
+    }
 
     // Update order as paid and store available customer details
     const updated = await db.order.update({

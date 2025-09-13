@@ -31,7 +31,7 @@ export const verifyToken = (token: string): JWTPayload | null => {
   }
 };
 
-export const extractTokenFromHeader = (authHeader: string | undefined): string | null => {
+export const extractTokenFromHeader = (authHeader: string | null | undefined): string | null => {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }

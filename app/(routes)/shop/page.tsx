@@ -14,6 +14,9 @@ const ShopPage = async ({
   searchParams: { [key: string]: string | string[] | undefined };
 }) => {
   try {
+    if (!db) {
+      return [];
+    }
     const dbProducts = await db.product.findMany({
       include: {
         productSizes: {
