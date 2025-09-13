@@ -23,7 +23,10 @@ export const Summary = () => {
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
-      try { setUser(JSON.parse(userData)); } catch {}
+      try { 
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch {}
     }
     setIsLoading(false);
   }, []);
@@ -33,6 +36,13 @@ export const Summary = () => {
     const itemTotal = item.totalPrice ?? unit * (item.quantity ?? 1);
     return total + itemTotal;
   }, 0);
+
+  const getCustomerEmail = () => {
+    if (user?.email) {
+      return user.email;
+    }
+    return 'guest@example.com';
+  };
 
   const onCheckout = async () => {
     try {
@@ -47,7 +57,7 @@ export const Summary = () => {
             quantity: item.quantity ?? 1,
             imageURLs: item.imageURLs,
           })),
-          email: user?.email || 'guest@example.com',
+          email: user?.email || '', // Only send email if user is logged in
         }),
       });
       const data = await response.json();
@@ -90,8 +100,13 @@ export const Summary = () => {
         </div>
       </div>
 
+
       {/* Stripe */}
-      <Button onClick={onCheckout} disabled={cart.items.length === 0} className="w-full mt-6">
+      <Button 
+        onClick={onCheckout} 
+        disabled={cart.items.length === 0} 
+        className="w-full mt-6"
+      >
         Checkout with Stripe
       </Button>
 
@@ -117,7 +132,7 @@ export const Summary = () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       items: cart.items.map((item) => ({ id: item.id, title: item.title })),
-                      email: user?.email || 'guest@example.com',
+                      email: user?.email || '', // Only send email if user is logged in
                     }),
                   });
                   
@@ -126,9 +141,8 @@ export const Summary = () => {
                     cart.removeAllCart();
                     toast.success('Payment successful via PayPal!');
                     
-                    // Redirect to guest orders page with email pre-filled
-                    const email = user?.email || 'guest@example.com';
-                    router.push(`/orders/guest?email=${encodeURIComponent(email)}`);
+                    // Redirect to guest orders page
+                    router.push('/orders/guest');
                   } else {
                     throw new Error('Failed to record order');
                   }

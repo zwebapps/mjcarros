@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
+import { generateOrderConfirmationEmail } from "@/lib/email-templates";
+import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
+import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -48,19 +51,7 @@ export async function POST(req: Request) {
         include: {
           orderItems: { 
             include: { 
-              product: {
-                select: {
-                  id: true,
-                  title: true,
-                  price: true,
-                  modelName: true,
-                  year: true,
-                  color: true,
-                  mileage: true,
-                  fuelType: true,
-                  imageURLs: true
-                }
-              }
+              product: true
             } 
           }
         },
@@ -75,24 +66,35 @@ export async function POST(req: Request) {
       // Backup updated order to S3
       await backupOrderToS3(updatedOrder);
 
-      // Send payment confirmation email
-      const subject = `Payment Confirmed - Order ${orderId}`;
-      const html = `
-        <div>
-          <h2>🎉 Payment Confirmed!</h2>
-          <p>Your payment has been successfully processed.</p>
-          <p><strong>Order ID:</strong> ${orderId}</p>
-          <p><strong>Payment Method:</strong> Stripe</p>
-          <p><strong>Amount:</strong> $${session?.amount_total ? (session.amount_total / 100).toFixed(2) : 'N/A'}</p>
-          <p>We will process your order and contact you shortly.</p>
-        </div>
-      `;
+      // Generate professional email and PDF voucher
+      const { subject, html } = generateOrderConfirmationEmail(updatedOrder, 'Stripe');
+      const pdfVoucher = await generatePDFVoucher(updatedOrder);
+      
+      // Upload voucher to S3
+      const voucherUrl = await uploadOrderVoucherToS3(updatedOrder);
+      
+      // Create PDF voucher attachment
+      const attachments = [
+        {
+          filename: `voucher-${updatedOrder.id}.pdf`,
+          content: pdfVoucher,
+          contentType: 'application/pdf'
+        }
+      ];
       
       try {
-        await sendMail(updatedOrder.userEmail, subject, html);
-        console.log(`📧 Payment confirmation email sent to: ${updatedOrder.userEmail}`);
+        if (updatedOrder.userEmail && updatedOrder.userEmail.trim()) {
+          await sendMail(updatedOrder.userEmail, subject, html, attachments);
+          console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${updatedOrder.userEmail}`);
+          if (voucherUrl) {
+            console.log(`☁️ Voucher also available at: ${voucherUrl}`);
+          }
+        } else {
+          console.log('⚠️ No email address provided - skipping email notification');
+          console.log(`☁️ Voucher available at: ${voucherUrl}`);
+        }
       } catch (emailError) {
-        console.warn('Failed to send payment confirmation email:', emailError);
+        console.warn('Failed to send order confirmation email:', emailError);
       }
 
     } catch (e) {

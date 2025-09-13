@@ -39,20 +39,8 @@ export async function GET(
       logoImage = await pdfDoc.embedPng(logoBytes);
     } catch {}
 
-    // Try load primary product image
+    // Skip loading product images to avoid caching issues
     let carImage: any = null;
-    const primaryImageUrl = order.orderItems[0]?.product?.imageURLs?.[0];
-    if (primaryImageUrl) {
-      try {
-        const res = await fetch(primaryImageUrl);
-        if (res.ok) {
-          const bytes = new Uint8Array(await res.arrayBuffer());
-          const ct = res.headers.get("content-type") || "";
-          if (ct.includes("png")) carImage = await pdfDoc.embedPng(bytes);
-          else carImage = await pdfDoc.embedJpg(bytes);
-        }
-      } catch {}
-    }
 
     const formatCurrency = (n: number) =>
       new Intl.NumberFormat("en-IE", {
@@ -129,10 +117,7 @@ export async function GET(
     draw("PURCHASE ORDER", titleX, 766, 14, true);
     draw(`# ${order.id.slice(0, 8)}`, titleX, 750, 12);
 
-    // Car image (now placed BELOW header/title)
-    if (carImage) {
-      page.drawImage(carImage, { x: 400, y: 680, width: 160, height: 110 });
-    }
+    // Car image removed to avoid caching issues
 
     // Two-column info panels (start under car image)
     const leftX = 30,

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/lib/db";
 import { sendMail } from "@/lib/mail";
+import { generateOrderConfirmationEmail } from "@/lib/email-templates";
+import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
+import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);
@@ -46,23 +49,42 @@ export async function POST(req: NextRequest) {
           `${session.customer_details.address.line1 || ""} ${session.customer_details.address.line2 || ""} ${session.customer_details.address.city || ""} ${session.customer_details.address.state || ""} ${session.customer_details.address.postal_code || ""} ${session.customer_details.address.country || ""}`.trim() : "",
         userEmail: (session.customer_details?.email || (session.metadata && (session.metadata as any).email) || ""),
       },
+      include: { 
+        orderItems: { 
+          include: { 
+            product: true
+          } 
+        }
+      },
     });
 
-    // Send payment confirmation email
-    const subject = `Payment Confirmed - Order ${updated.id}`;
-    const html = `
-      <div>
-        <h2>🎉 Payment Confirmed!</h2>
-        <p>Your payment has been successfully processed.</p>
-        <p><strong>Order ID:</strong> ${updated.id}</p>
-        <p><strong>Payment Method:</strong> Stripe</p>
-        <p>We will process your order and contact you shortly.</p>
-      </div>
-    `;
+    // Generate professional email and PDF voucher
+    const { subject, html } = generateOrderConfirmationEmail(updated, 'Stripe');
+    const pdfVoucher = await generatePDFVoucher(updated);
+    
+    // Upload voucher to S3
+    const voucherUrl = await uploadOrderVoucherToS3(updated);
+    
+    // Create PDF voucher attachment
+    const attachments = [
+      {
+        filename: `voucher-${updated.id}.pdf`,
+        content: pdfVoucher,
+        contentType: 'application/pdf'
+      }
+    ];
     
     try {
-      await sendMail(updated.userEmail, subject, html);
-      console.log(`📧 Payment confirmation email sent to: ${updated.userEmail}`);
+      if (updated.userEmail && updated.userEmail.trim()) {
+        await sendMail(updated.userEmail, subject, html, attachments);
+        console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${updated.userEmail}`);
+        if (voucherUrl) {
+          console.log(`☁️ Voucher also available at: ${voucherUrl}`);
+        }
+      } else {
+        console.log('⚠️ No email address provided - skipping email notification');
+        console.log(`☁️ Voucher available at: ${voucherUrl}`);
+      }
     } catch (emailError) {
       console.warn('Failed to send payment confirmation email:', emailError);
     }

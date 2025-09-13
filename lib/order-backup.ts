@@ -117,9 +117,9 @@ export async function backupOrderToS3(order: any): Promise<void> {
       ContentType: 'application/json',
       Metadata: {
         orderId: order.id,
-        customerEmail: order.userEmail,
+        customerEmail: order.userEmail || '',
         orderDate: order.createdAt.toISOString(),
-        totalPrice: order.totalPrice.toString()
+        totalPrice: totalPrice.toString()
       }
     });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { generateOrderNumber } from "@/lib/order-number-generator";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
@@ -79,8 +80,13 @@ export async function POST(request: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
+    
+    // Generate order number
+    const orderNumber = await generateOrderNumber();
+    
     const newOrder = await db.order.create({
       data: {
+        orderNumber: orderNumber,
         phone: phone.trim(),
         address: (address || "").trim(),
         userEmail: userEmail.trim(),

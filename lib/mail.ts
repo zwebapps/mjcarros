@@ -12,8 +12,14 @@ export const transporter = hasEmailConfig
   ? nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } })
   : null;
 
-export async function sendMail(to: string, subject: string, html: string) {
+export async function sendMail(to: string, subject: string, html: string, attachments?: any[]) {
   if (!transporter) return { skipped: true } as const;
-  await transporter.sendMail({ from: fromAddress, to, subject, html });
+  await transporter.sendMail({ 
+    from: fromAddress, 
+    to, 
+    subject, 
+    html,
+    attachments: attachments || []
+  });
   return { ok: true } as const;
 }

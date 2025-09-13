@@ -126,6 +126,7 @@ model OrderItem {
 
 model Order {
   id         String      @id @default(cuid()) @map("_id")
+  orderNumber Int        @unique
   orderItems OrderItem[]
   isPaid     Boolean     @default(false)
   phone      String      @default("")

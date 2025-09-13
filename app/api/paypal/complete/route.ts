@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
+import { generateOrderConfirmationEmail } from "@/lib/email-templates";
+import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
+import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
+import { generateOrderNumber } from "@/lib/order-number-generator";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,8 +18,12 @@ export async function POST(req: NextRequest) {
     if (!db) {
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
+    // Generate order number
+    const orderNumber = await generateOrderNumber();
+    
     const order = await db.order.create({
       data: {
+        orderNumber: orderNumber,
         isPaid: true,
         userEmail: email || "",
         orderItems: {
@@ -28,19 +36,7 @@ export async function POST(req: NextRequest) {
       include: { 
         orderItems: { 
           include: { 
-            product: {
-              select: {
-                id: true,
-                title: true,
-                price: true,
-                modelName: true,
-                year: true,
-                color: true,
-                mileage: true,
-                fuelType: true,
-                imageURLs: true
-              }
-            }
+            product: true
           } 
         }
       },
@@ -52,24 +48,33 @@ export async function POST(req: NextRequest) {
     // Backup order to S3
     await backupOrderToS3(order);
 
-    // Send order confirmation email
-    const subject = `Order Confirmed - ${order.id}`;
-    const itemsHtml = order.orderItems.map((i) => `<li>${i.productName}</li>`).join('');
-    const html = `
-      <div>
-        <h2>🎉 Order Confirmed!</h2>
-        <p>Your order has been successfully placed and paid via PayPal.</p>
-        <p><strong>Order ID:</strong> ${order.id}</p>
-        <p><strong>Payment Method:</strong> PayPal</p>
-        <p><strong>Items:</strong></p>
-        <ul>${itemsHtml}</ul>
-        <p>We will process your order and contact you shortly.</p>
-      </div>
-    `;
+    // Generate professional email and PDF voucher
+    const { subject, html } = generateOrderConfirmationEmail(order, 'PayPal');
+    const pdfVoucher = await generatePDFVoucher(order);
+    
+    // Upload voucher to S3
+    const voucherUrl = await uploadOrderVoucherToS3(order);
+    
+    // Create PDF voucher attachment
+    const attachments = [
+      {
+        filename: `voucher-${order.id}.pdf`,
+        content: pdfVoucher,
+        contentType: 'application/pdf'
+      }
+    ];
     
     try {
-      await sendMail(order.userEmail, subject, html);
-      console.log(`📧 Order confirmation email sent to: ${order.userEmail}`);
+      if (order.userEmail && order.userEmail.trim()) {
+        await sendMail(order.userEmail, subject, html, attachments);
+        console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${order.userEmail}`);
+        if (voucherUrl) {
+          console.log(`☁️ Voucher also available at: ${voucherUrl}`);
+        }
+      } else {
+        console.log('⚠️ No email address provided - skipping email notification');
+        console.log(`☁️ Voucher available at: ${voucherUrl}`);
+      }
     } catch (emailError) {
       console.warn('Failed to send order confirmation email:', emailError);
     }

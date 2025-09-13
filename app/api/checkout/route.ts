@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/lib/db";
+import { generateOrderNumber } from "@/lib/order-number-generator";
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);
@@ -22,9 +23,13 @@ export async function POST(req: NextRequest) {
     if (!db) {
       return new NextResponse("Database not found", { status: 500 });
     }
+    // Generate order number
+    const orderNumber = await generateOrderNumber();
+    
     // Create a pending order
     const order = await db.order.create({
       data: {
+        orderNumber: orderNumber,
         isPaid: false,
         userEmail: email || "",
         orderItems: {
