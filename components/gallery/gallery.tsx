@@ -29,6 +29,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
                 alt="Product Image"
                 className="object-cover object-center opacity-0 duration-300 transition-opacity"
                 unoptimized
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 onLoad={(
                   event: React.SyntheticEvent<HTMLImageElement, Event>
                 ) => event.currentTarget.classList.remove("opacity-0")}

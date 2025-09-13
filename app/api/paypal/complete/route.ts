@@ -74,7 +74,11 @@ export async function POST(req: NextRequest) {
       console.warn('Failed to send order confirmation email:', emailError);
     }
 
-    return NextResponse.json({ ok: true, orderId: order.id });
+    return NextResponse.json({ 
+      ok: true, 
+      orderId: order.id, 
+      email: order.userEmail 
+    });
   } catch (error) {
     console.error("[PAYPAL_COMPLETE_ERROR]", error);
     return NextResponse.json({ error: "Failed to record order" }, { status: 500 });

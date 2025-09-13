@@ -27,6 +27,7 @@ const CartItem: React.FC<CartItemProps> = ({ data }) => {
           src={data.imageURLs[0] || "/placeholder-image.jpg"}
           alt=""
           className="object-cover object-center"
+          sizes="(max-width: 640px) 96px, 192px"
         />
       </div>
       <div className="relative ml-4 flex flex-1 flex-col justify-between sm:ml-6">

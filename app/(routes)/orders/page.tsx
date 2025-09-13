@@ -74,10 +74,26 @@ export default function OrdersPage() {
   }
 
   if (!orders || orders.length === 0) {
+    const token = localStorage.getItem("authToken");
     return (
       <div className="px-4 py-8">
         <h1 className="text-2xl font-bold">My Orders</h1>
-        <p className="mt-4 text-gray-600">You have no orders yet.</p>
+        {!token ? (
+          <div className="mt-4">
+            <p className="text-gray-600 mb-4">You need to be logged in to view your orders.</p>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">Don't have an account? You can still view your orders by email:</p>
+              <a 
+                href="/orders/guest" 
+                className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+              >
+                Look Up Orders by Email
+              </a>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 text-gray-600">You have no orders yet.</p>
+        )}
       </div>
     );
   }
@@ -95,7 +111,7 @@ export default function OrdersPage() {
                 {/* Left large image */}
                 <div className="relative h-28 w-40 rounded overflow-hidden bg-gray-100 flex-shrink-0">
                   {primaryImage ? (
-                    <Image src={primaryImage} alt={order.orderItems[0]?.productName || 'Order'} fill className="object-cover" />
+                    <Image src={primaryImage} alt={order.orderItems[0]?.productName || 'Order'} fill className="object-cover" sizes="160px" />
                   ) : (
                     <div className="h-full w-full bg-gray-200" />
                   )}
@@ -123,7 +139,7 @@ export default function OrdersPage() {
                           <div className="flex items-center gap-3 min-w-0">
                             {image ? (
                               <div className="relative h-10 w-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                                <Image src={image} alt={item.productName} fill className="object-cover" />
+                                <Image src={image} alt={item.productName} fill className="object-cover" sizes="40px" />
                               </div>
                             ) : (
                               <div className="h-10 w-10 rounded bg-gray-200" />

@@ -32,6 +32,7 @@ const CardItem: React.FC<CardItemProps> = ({ data, onRemove }) => {
           src={data.url}
           alt={data.alt || "Gallery image"}
           className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       </div>
       <div className="flex items-center gap-x-2">

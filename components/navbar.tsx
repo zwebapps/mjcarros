@@ -107,19 +107,17 @@ export function Navbar() {
               <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
             </span>
           </Link>
-          {user && (
-            <Link
-              href="/orders"
-              className={`group text-sm font-medium transition-colors ${
-                isActive("/orders") ? "text-black" : "text-black/80 hover:text-black"
-              }`}
-            >
-              <span className="relative inline-block">
-                Orders
-                <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
-              </span>
-            </Link>
-          )}
+          <Link
+            href={user ? "/orders" : "/orders/guest"}
+            className={`group text-sm font-medium transition-colors ${
+              isActive("/orders") ? "text-black" : "text-black/80 hover:text-black"
+            }`}
+          >
+            <span className="relative inline-block">
+              {user ? "Orders" : "Track Orders"}
+              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
+            </span>
+          </Link>
         </div>
         <div className="ml-auto flex items-center space-x-4">
           <NavbarSearch />

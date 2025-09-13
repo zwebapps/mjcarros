@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 interface UploadResult {
   success: number;
@@ -36,7 +37,7 @@ export default function BulkUpload() {
       ];
       
       if (!validTypes.includes(selectedFile.type)) {
-        alert('Please select a valid Excel file (.xlsx, .xls) or CSV file');
+        toast.error('Please select a valid Excel file (.xlsx, .xls) or CSV file');
         return;
       }
       
@@ -48,7 +49,7 @@ export default function BulkUpload() {
   const handleDownloadTemplate = async () => {
     setDownloading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/products/bulk-upload', {
         method: 'GET',
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -65,11 +66,12 @@ export default function BulkUpload() {
       a.download = 'car-upload-template.xlsx';
       document.body.appendChild(a);
       a.click();
+      toast.success('Template downloaded successfully!');
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
       console.error('Download error:', error);
-      alert('Failed to download template');
+      toast.error('Failed to download template');
     } finally {
       setDownloading(false);
     }
@@ -77,35 +79,40 @@ export default function BulkUpload() {
 
   const handleUpload = async () => {
     if (!file) {
-      alert('Please select a file first');
+      toast.error('Please select a file first');
       return;
     }
 
     setUploading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const formData = new FormData();
       formData.append('file', file);
 
+      const headers = {
+        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      };
+
       const response = await axios.post('/api/products/bulk-upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        }
+        headers
       });
 
       setResult(response.data.results);
       
       if (response.data.results.success > 0) {
+        toast.success(`Successfully uploaded ${response.data.results.success} products!`);
         // Refresh the page to show new products
         setTimeout(() => {
           window.location.reload();
         }, 2000);
+      } else {
+        toast.error('No products were uploaded. Please check your file format.');
       }
     } catch (error: any) {
       console.error('Upload error:', error);
       const errorMessage = error.response?.data?.error || 'Upload failed';
-      alert(`Upload failed: ${errorMessage}`);
+      toast.error(`Upload failed: ${errorMessage}`);
     } finally {
       setUploading(false);
     }

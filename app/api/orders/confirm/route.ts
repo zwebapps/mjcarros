@@ -47,7 +47,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ ok: true, orderId: updated.id });
+    return NextResponse.json({ 
+      ok: true, 
+      orderId: updated.id, 
+      email: updated.userEmail 
+    });
   } catch (err) {
     console.error("[ORDERS_CONFIRM_ERROR]", err);
     return new NextResponse("Internal error", { status: 500 });

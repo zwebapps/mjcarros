@@ -44,7 +44,19 @@ const CartPage = () => {
             cart.removeAllCart();
             sessionStorage.setItem(flagKey, "1");
             setStatus("success");
-            const t = setTimeout(() => router.push("/orders"), 2000);
+            
+            // Get the order data to extract email
+            const orderData = await res.json();
+            const email = orderData?.email || orderData?.userEmail;
+            
+            // Redirect to guest orders page with email pre-filled
+            const t = setTimeout(() => {
+              if (email) {
+                router.push(`/orders/guest?email=${encodeURIComponent(email)}`);
+              } else {
+                router.push("/orders/guest");
+              }
+            }, 2000);
             return () => clearTimeout(t);
           } else {
             setStatus("canceled");
@@ -81,7 +93,8 @@ const CartPage = () => {
           )}
           {status === "success" && (
             <div className="mt-4 rounded bg-green-50 border border-green-200 text-green-800 px-4 py-3">
-              Payment successful. Your order is confirmed. Redirecting to orders...
+              <div className="font-semibold">🎉 Payment successful! Your order is confirmed.</div>
+              <div className="text-sm mt-1">Redirecting to your order details...</div>
             </div>
           )}
           {status === "canceled" && (

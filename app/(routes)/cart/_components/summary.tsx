@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import useCart from "@/hooks/use-cart";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import toast from 'react-hot-toast';
 
 interface User {
   id: string;
@@ -34,11 +35,10 @@ export const Summary = () => {
   }, 0);
 
   const onCheckout = async () => {
-    if (!user) { router.push('/sign-in'); return; }
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cart.items.map((item) => ({
             id: item.id,
@@ -47,16 +47,20 @@ export const Summary = () => {
             quantity: item.quantity ?? 1,
             imageURLs: item.imageURLs,
           })),
-          email: user?.email,
+          email: user?.email || 'guest@example.com',
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(typeof data === 'string' ? data : data?.error || 'Checkout failed');
-      if (data?.url) { window.location.href = data.url; return; }
+      if (data?.url) { 
+        toast.success('Redirecting to payment...');
+        window.location.href = data.url; 
+        return; 
+      }
       router.push('/');
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Checkout failed. Please verify payment configuration.');
+      toast.error('Checkout failed. Please verify payment configuration.');
     }
   };
 
@@ -88,7 +92,7 @@ export const Summary = () => {
 
       {/* Stripe */}
       <Button onClick={onCheckout} disabled={cart.items.length === 0} className="w-full mt-6">
-        {user ? 'Checkout with Stripe' : 'Sign in to checkout'}
+        Checkout with Stripe
       </Button>
 
       {/* PayPal */}
@@ -108,24 +112,34 @@ export const Summary = () => {
               onApprove={async (data, actions) => {
                 await actions.order?.capture();
                 try {
-                  await fetch('/api/paypal/complete', {
+                  const response = await fetch('/api/paypal/complete', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       items: cart.items.map((item) => ({ id: item.id, title: item.title })),
-                      email: user?.email,
+                      email: user?.email || 'guest@example.com',
                     }),
                   });
+                  
+                  if (response.ok) {
+                    const orderData = await response.json();
+                    cart.removeAllCart();
+                    toast.success('Payment successful via PayPal!');
+                    
+                    // Redirect to guest orders page with email pre-filled
+                    const email = user?.email || 'guest@example.com';
+                    router.push(`/orders/guest?email=${encodeURIComponent(email)}`);
+                  } else {
+                    throw new Error('Failed to record order');
+                  }
                 } catch (e) {
                   console.error('Record order error', e);
+                  toast.error('Payment successful but failed to record order. Please contact support.');
                 }
-                cart.removeAllCart();
-                alert('Payment successful via PayPal');
-                router.push('/orders');
               }}
               onError={(err) => {
                 console.error('PayPal error', err);
-                alert('PayPal payment failed.');
+                toast.error('PayPal payment failed. Please try again.');
               }}
               disabled={cart.items.length === 0}
             />

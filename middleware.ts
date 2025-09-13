@@ -14,6 +14,11 @@ export function middleware(request: NextRequest) {
     '/api/auth/signin',
     '/api/auth/signup',
     '/api/contact',
+    '/api/checkout',
+    '/api/webhook',
+    '/api/paypal',
+    '/api/orders/confirm',
+    '/api/orders/guest',
     '/sign-in',
     '/sign-up'
   ];
@@ -26,8 +31,8 @@ export function middleware(request: NextRequest) {
   const adminRoutes = [
     '/admin',
     '/api/categories',
-    '/api/products',
     '/api/product',
+    '/api/products',
     '/api/billboards'
   ];
 

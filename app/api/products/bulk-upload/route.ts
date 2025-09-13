@@ -25,14 +25,14 @@ export async function POST(request: NextRequest) {
   try {
     // Check admin authorization
     const userRole = request.headers.get('x-user-role');
-    let isAdmin = userRole === 'admin';
+    let isAdmin = userRole === 'ADMIN';
 
     // JWT fallback if middleware headers are missing
     if (!isAdmin) {
       const token = extractTokenFromHeader(request);
       if (token) {
         const decoded = verifyToken(token);
-        isAdmin = decoded?.role === 'admin';
+        isAdmin = decoded?.role === 'ADMIN';
       }
     }
 
