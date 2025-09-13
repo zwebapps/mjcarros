@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/lib/db";
+import { sendMail } from "@/lib/mail";
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);
@@ -46,6 +47,25 @@ export async function POST(req: NextRequest) {
         userEmail: (session.customer_details?.email || (session.metadata && (session.metadata as any).email) || ""),
       },
     });
+
+    // Send payment confirmation email
+    const subject = `Payment Confirmed - Order ${updated.id}`;
+    const html = `
+      <div>
+        <h2>🎉 Payment Confirmed!</h2>
+        <p>Your payment has been successfully processed.</p>
+        <p><strong>Order ID:</strong> ${updated.id}</p>
+        <p><strong>Payment Method:</strong> Stripe</p>
+        <p>We will process your order and contact you shortly.</p>
+      </div>
+    `;
+    
+    try {
+      await sendMail(updated.userEmail, subject, html);
+      console.log(`📧 Payment confirmation email sent to: ${updated.userEmail}`);
+    } catch (emailError) {
+      console.warn('Failed to send payment confirmation email:', emailError);
+    }
 
     return NextResponse.json({ 
       ok: true, 
