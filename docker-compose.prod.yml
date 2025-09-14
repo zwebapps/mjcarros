@@ -7,14 +7,14 @@ services:
     env_file:
       - .env
     environment:
-      - MONGO_INITDB_ROOT_USERNAME:${MONGO_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD:${MONGO_ROOT_PASSWORD}
-      - MONGO_INITDB_DATABASE:${MONGO_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
     ports:
       - "${MONGO_PORT}:27017"
     volumes:
       - mongodb_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./mongodb-init/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     networks:
       - mongo_network
 
@@ -28,8 +28,8 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV:${NODE_ENV}
-      - MONGO_URI:${MONGO_URI}
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
     depends_on:
       - mongodb
     networks:
@@ -37,10 +37,9 @@ services:
     volumes:
       - ./public/uploads:/app/public/uploads:rw
 
+volumes:
+  mongodb_data:
+
 networks:
   mongo_network:
     driver: bridge
-
-volumes:
-  mongodb_data:
-    driver: local
