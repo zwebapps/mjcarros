@@ -1,4 +1,4 @@
-// MongoDB initialization script for replica set
+// MongoDB initialization script for replica set with authentication
 print('Starting MongoDB initialization...');
 
 // Wait for MongoDB to be ready
@@ -18,6 +18,15 @@ sleep(3000);
 // Switch to mjcarros database
 db = db.getSiblingDB('mjcarros');
 
+// Create a user for the mjcarros database
+db.createUser({
+  user: "mjcarros",
+  pwd: "786Password",
+  roles: [
+    { role: "readWrite", db: "mjcarros" }
+  ]
+});
+
 // Create collections
 db.createCollection('users');
 db.createCollection('products');
@@ -28,5 +37,5 @@ db.createCollection('orders');
 print('MongoDB replica set initialized successfully!');
 print('Replica Set: rs0');
 print('Database: mjcarros');
+print('User created: mjcarros with readWrite permissions');
 print('Collections created: users, products, categories, billboards, orders');
-print('Note: Running without authentication for now');
