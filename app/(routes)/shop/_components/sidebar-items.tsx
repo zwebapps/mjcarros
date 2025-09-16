@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChangeEvent } from "react";
 
 interface CategoryWithCount {
+  _id?: string;
   id: string;
   category: string;
   count?: number;
@@ -39,7 +40,7 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) =
         >
           <option value="/shop">All ({totalCount ?? 0})</option>
           {categories?.map((category) => (
-            <option key={category.id} value={`/shop/${category.category}`}>
+            <option key={category._id || category.id} value={`/shop/${category.category}`}>
               {category.category.charAt(0).toUpperCase() + category.category.slice(1)} ({category.count ?? 0})
             </option>
           ))}
@@ -58,7 +59,7 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) =
           </p>
         </Link>
         {categories?.map((category) => (
-          <Link key={category.id} href={`/shop/${category.category}`}>
+          <Link key={category._id || category.id} href={`/shop/${category.category}`}>
             <p
               className={`text-sm font-medium transition-colors ${
                 pathName === `/shop/${category.category}`

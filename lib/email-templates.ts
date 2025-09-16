@@ -1,10 +1,35 @@
-import { Order, OrderItem, Product } from "@prisma/client";
 import { getDisplayOrderNumber } from "./order-number-generator";
 
-export interface OrderWithItems extends Order {
-  orderItems: (OrderItem & {
-    product: Product;
-  })[];
+export interface OrderWithItems {
+  _id: string;
+  id: string;
+  orderNumber: number;
+  isPaid: boolean;
+  userEmail: string;
+  phone: string;
+  address: string;
+  paymentMethod: string;
+  createdAt: Date;
+  updatedAt: Date;
+  orderItems: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    product?: {
+      _id: string;
+      title: string;
+      description: string;
+      price: number;
+      category: string;
+      modelName: string;
+      year: number;
+      mileage: number;
+      fuelType: string;
+      color: string;
+      imageURLs: string[];
+    };
+  }[];
 }
 
 export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMethod: 'Stripe' | 'PayPal'): { subject: string; html: string } {

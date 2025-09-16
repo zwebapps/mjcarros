@@ -1,10 +1,36 @@
-import { Order, OrderItem, Product } from "@prisma/client";
 import { getDisplayOrderNumber } from "./order-number-generator";
 
-export interface OrderWithItems extends Order {
-  orderItems: (OrderItem & {
-    product: Product;
-  })[];
+export interface OrderWithItems {
+  _id: string;
+  id: string;
+  orderNumber: number;
+  isPaid: boolean;
+  userEmail: string;
+  phone: string;
+  address: string;
+  paymentMethod: string;
+  createdAt: Date;
+  updatedAt: Date;
+  orderItems: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    product: {
+      _id: string;
+      title: string;
+      description: string;
+      price: number;
+      category: string;
+      modelName: string;
+      year: number;
+      mileage: number;
+      fuelType: string;
+      color: string;
+      condition: string;
+      imageURLs: string[];
+    };
+  }[];
 }
 
 export function generateVoucherHTML(order: OrderWithItems): string {
@@ -19,7 +45,7 @@ export function generateVoucherHTML(order: OrderWithItems): string {
     return sum + (price * item.quantity);
   }, 0);
 
-  const voucherNumber = `VCH-${order.id}-${Date.now()}`;
+  const voucherNumber = `VCH-${order._id || order.id}-${Date.now()}`;
 
   return `
     <!DOCTYPE html>
@@ -27,7 +53,7 @@ export function generateVoucherHTML(order: OrderWithItems): string {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Vehicle Purchase Order — ${order.id}</title>
+        <title>Vehicle Purchase Order — ${order._id || order.id}</title>
         <style>
           @page {
             size: A4;
@@ -331,6 +357,17 @@ export function generateVoucherHTML(order: OrderWithItems): string {
               </div>
             </div>
           </section>
+
+          <!-- Vehicle Image Section -->
+          ${order.orderItems.map((item, index) => {
+            const carImage = item.product?.imageURLs?.[0];
+            return carImage ? `
+              <section class="vehicle-image-section" style="text-align: center; margin: 20px 0;">
+                <h2 style="color: #f59e0b; margin-bottom: 15px; text-transform: uppercase;">Vehicle Image</h2>
+                <img src="${carImage}" alt="${item.productName}" style="max-width: 100%; max-height: 300px; border: 2px solid #f59e0b; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+              </section>
+            ` : '';
+          }).join('')}
 
           <section class="vehicle-details">
             ${order.orderItems.map((item, index) => `

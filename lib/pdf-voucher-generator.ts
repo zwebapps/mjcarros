@@ -1,11 +1,37 @@
 import puppeteer from 'puppeteer';
-import { Order, OrderItem, Product } from "@prisma/client";
 import { generateVoucherHTML } from './voucher-generator';
 
-export interface OrderWithItems extends Order {
-  orderItems: (OrderItem & {
-    product: Product;
-  })[];
+export interface OrderWithItems {
+  _id: string;
+  id: string;
+  orderNumber: number;
+  isPaid: boolean;
+  userEmail: string;
+  phone: string;
+  address: string;
+  paymentMethod: string;
+  createdAt: Date;
+  updatedAt: Date;
+  orderItems: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    product: {
+      _id: string;
+      title: string;
+      description: string;
+      price: number;
+      category: string;
+      modelName: string;
+      year: number;
+      mileage: number;
+      fuelType: string;
+      color: string;
+      condition: string;
+      imageURLs: string[];
+    };
+  }[];
 }
 
 export async function generatePDFVoucher(order: OrderWithItems): Promise<Buffer> {
@@ -17,11 +43,21 @@ export async function generatePDFVoucher(order: OrderWithItems): Promise<Buffer>
   try {
     const page = await browser.newPage();
     
-    // Disable image loading to avoid large image caching issues
+    // Allow car images but block other images to avoid caching issues
     await page.setRequestInterception(true);
     page.on('request', (req) => {
       if (req.resourceType() === 'image') {
-        req.abort();
+        // Allow car images from the product imageURLs
+        const url = req.url();
+        const isCarImage = order.orderItems.some(item => 
+          item.product?.imageURLs?.some(imgUrl => url.includes(imgUrl.split('/').pop() || ''))
+        );
+        
+        if (isCarImage) {
+          req.continue();
+        } else {
+          req.abort();
+        }
       } else {
         req.continue();
       }

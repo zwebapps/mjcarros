@@ -95,7 +95,7 @@ const NewSize = () => {
           >
             <option value="">Select a category</option>
             {availableCategories?.map((category: any) => (
-              <option key={category.id} value={category.id}>
+              <option key={category._id || category.id} value={category._id || category.id}>
                 {category.category}
               </option>
             ))}

@@ -29,22 +29,28 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
         console.log('Response status:', response.status);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch product');
+          console.error('Response not ok:', response.status, response.statusText);
+          throw new Error(`Failed to fetch product: ${response.status}`);
         }
         
         const data = await response.json();
         console.log('API response:', data);
         
+        if (!data.product) {
+          console.error('No product in response:', data);
+          throw new Error('No product data received');
+        }
+        
         // Transform the database product to match the Product interface
         const transformedProduct: Product = {
-          id: data.product.id,
+          id: data.product._id?.toString(),
           title: data.product.title,
           description: data.product.description,
           price: data.product.price,
           finalPrice: data.product.finalPrice || undefined,
           discount: data.product.discount || undefined,
           featured: data.product.featured,
-          imageURLs: data.product.imageURLs,
+          imageURLs: data.product.imageURLs || [],
           category: data.product.category,
           categoryId: data.product.categoryId,
           createdAt: data.product.createdAt,
@@ -52,15 +58,15 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
         };
 
         // Transform related products
-        const transformedRelatedProducts: Product[] = data.relatedProducts.map((dbProduct: any) => ({
-          id: dbProduct.id,
+        const transformedRelatedProducts: Product[] = (data.relatedProducts || []).map((dbProduct: any) => ({
+          id: dbProduct._id?.toString(),
           title: dbProduct.title,
           description: dbProduct.description,
           price: dbProduct.price,
           finalPrice: dbProduct.finalPrice || undefined,
           discount: dbProduct.discount || undefined,
           featured: dbProduct.featured,
-          imageURLs: dbProduct.imageURLs,
+          imageURLs: dbProduct.imageURLs || [],
           category: dbProduct.category,
           categoryId: dbProduct.categoryId,
           createdAt: dbProduct.createdAt,
@@ -89,7 +95,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
     console.log('Rendering loading state');
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Spinner />
+        <div className="text-center">
+          <Spinner />
+          <p className="mt-4 text-gray-600">Loading product details...</p>
+          <p className="text-sm text-gray-500">Product ID: {productId}</p>
+        </div>
       </div>
     );
   }

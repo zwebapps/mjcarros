@@ -7,7 +7,7 @@ export async function GET() {
   if (!db) {
     return NextResponse.json({ error: 'Database not found' }, { status: 500 });
   }
-  const existing = await db.contactPage.findFirst();
+  const existing = await db.contactPage.findFirst({});
   if (!existing) {
     const created = await db.contactPage.create({ data: {} });
     return NextResponse.json(created);
@@ -31,10 +31,19 @@ export async function PUT(request: NextRequest) {
   if (!db) {
     return NextResponse.json({ error: 'Database not found' }, { status: 500 });
   }
-  const existing = await db.contactPage.findFirst();
-  const updated = existing
-    ? await db.contactPage.update({ where: { id: existing.id }, data: body })
-    : await db.contactPage.create({ data: body });
+  
+  const existing = await db.contactPage.findFirst({});
+  let updated;
+  if (existing) {
+    updated = await db.contactPage.update({
+      where: { _id: existing._id },
+      data: body,
+    });
+  } else {
+    updated = await db.contactPage.create({
+      data: body,
+    });
+  }
   return NextResponse.json(updated);
 }
 

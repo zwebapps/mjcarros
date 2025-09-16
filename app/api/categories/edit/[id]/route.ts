@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, findOne } from "@/lib/db";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import { ObjectId } from "mongodb";
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function GET(
         { status: 500 }
       );
     }
-    const category = await db.category.findUnique({ where: { id: params.id } });
+    const category = await findOne('category', { id: params.id  });
     return NextResponse.json(category);
   } catch (error) {
     console.error("Error fetching category:", error);
@@ -54,7 +55,7 @@ export async function PUT(
       );
     }
     const updatedCategory = await db.category.update({
-      where: { id: params.id },
+      where: { _id: new ObjectId(params.id ) },
       data: {
         billboard,
         billboardId,
@@ -105,7 +106,7 @@ export async function DELETE(
         { status: 500 }
       );
     }
-    const deleted = await db.category.delete({ where: { id: params.id } });
+    const deleted = await db.category.delete({ where: { _id: new ObjectId(params.id ) } });
     return NextResponse.json(deleted);
   } catch (error) {
     console.error("Error deleting category:", error);

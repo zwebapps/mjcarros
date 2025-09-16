@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { ObjectId } from "mongodb";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
 
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Database not found' }, { status: 500 });
           }
           const order = await db.order.findFirst({ 
-            where: { userEmail: payerEmail, isPaid: false }, 
+            where: { userEmail: payerEmail, isPaid: false  }, 
             orderBy: { createdAt: 'desc' },
             include: {
               orderItems: { 
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
           
           if (order) {
             const updatedOrder = await db.order.update({ 
-              where: { id: order.id }, 
+              where: { _id: new ObjectId(order._id || order.id) }, 
               data: { isPaid: true },
               include: {
                 orderItems: { 
@@ -125,8 +126,8 @@ export async function POST(req: NextRequest) {
             });
 
             // Log payment completion
-            console.log(`✅ Order ${order.id} payment confirmed via PayPal`);
-            console.log(`👤 Customer: ${updatedOrder.userEmail}`);
+            console.log(`✅ Order ${order._id || order.id} payment confirmed via PayPal`);
+            console.log(`👤 Customer: ${(updatedOrder as any).userEmail}`);
             console.log(`💰 Amount: $${amount} ${currency}`);
             console.log(`💳 Payment Method: PayPal`);
 
@@ -134,12 +135,12 @@ export async function POST(req: NextRequest) {
             await backupOrderToS3(updatedOrder);
 
             // Send payment confirmation email
-            const subject = `Payment Confirmed - Order ${order.id}`;
+            const subject = `Payment Confirmed - Order ${order._id || order.id}`;
             const html = `
               <div>
                 <h2>🎉 Payment Confirmed!</h2>
                 <p>Your payment has been successfully processed.</p>
-                <p><strong>Order ID:</strong> ${order.id}</p>
+                <p><strong>Order ID:</strong> ${order._id || order.id}</p>
                 <p><strong>Payment Method:</strong> PayPal</p>
                 <p><strong>Amount:</strong> $${amount} ${currency}</p>
                 <p>We will process your order and contact you shortly.</p>
@@ -147,8 +148,8 @@ export async function POST(req: NextRequest) {
             `;
             
             try {
-              await sendMail(updatedOrder.userEmail, subject, html);
-              console.log(`📧 Payment confirmation email sent to: ${updatedOrder.userEmail}`);
+              await sendMail((updatedOrder as any).userEmail, subject, html);
+              console.log(`📧 Payment confirmation email sent to: ${(updatedOrder as any).userEmail}`);
             } catch (emailError) {
               console.warn('Failed to send payment confirmation email:', emailError);
             }

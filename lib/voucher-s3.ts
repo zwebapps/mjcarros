@@ -1,10 +1,36 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { Order, OrderItem, Product } from '@prisma/client';
 
-export interface OrderWithItems extends Order {
-  orderItems: (OrderItem & {
-    product: Product;
-  })[];
+export interface OrderWithItems {
+  _id: string;
+  id: string;
+  orderNumber: number;
+  isPaid: boolean;
+  userEmail: string;
+  phone: string;
+  address: string;
+  paymentMethod: string;
+  createdAt: Date;
+  updatedAt: Date;
+  orderItems: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    product: {
+      _id: string;
+      title: string;
+      description: string;
+      price: number;
+      category: string;
+      modelName: string;
+      year: number;
+      mileage: number;
+      fuelType: string;
+      color: string;
+      condition: string;
+      imageURLs: string[];
+    };
+  }[];
 }
 
 // Initialize S3 client
@@ -26,8 +52,8 @@ export async function uploadVoucherToS3(order: OrderWithItems, voucherBuffer: Bu
 
     const bucketName = process.env.S3_ORDERS_BUCKET;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const voucherFileName = `vouchers/${order.id}/voucher-${timestamp}.pdf`;
-    const voucherNumber = `VCH-${order.id}-${Date.now()}`;
+    const voucherFileName = `vouchers/${order._id || order.id}/voucher-${timestamp}.pdf`;
+    const voucherNumber = `VCH-${order._id || order.id}-${Date.now()}`;
 
     // Upload voucher PDF to S3
     const voucherCommand = new PutObjectCommand({
@@ -36,7 +62,7 @@ export async function uploadVoucherToS3(order: OrderWithItems, voucherBuffer: Bu
       Body: voucherBuffer,
       ContentType: 'application/pdf',
       Metadata: {
-        orderId: order.id,
+        orderId: order._id || order.id,
         customerEmail: order.userEmail || '',
         voucherNumber: voucherNumber,
         orderDate: order.createdAt.toISOString(),
@@ -50,7 +76,7 @@ export async function uploadVoucherToS3(order: OrderWithItems, voucherBuffer: Bu
 
     console.log(`✅ PDF Voucher uploaded to S3: ${voucherUrl}`);
     console.log(`📄 Voucher Number: ${voucherNumber}`);
-    console.log(`📦 Order ID: ${order.id}`);
+    console.log(`📦 Order ID: ${order._id || order.id}`);
     console.log(`👤 Customer: ${order.userEmail}`);
 
     return voucherUrl;
@@ -91,7 +117,7 @@ function generateVoucherHTML(order: OrderWithItems): string {
     return sum + (item.product?.price || 0);
   }, 0);
 
-  const voucherNumber = `VCH-${order.id}-${Date.now()}`;
+  const voucherNumber = `VCH-${order._id || order.id}-${Date.now()}`;
   const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -166,7 +192,7 @@ function generateVoucherHTML(order: OrderWithItems): string {
             </div>
             <div class="info-item">
               <span class="info-label">Order ID</span>
-              <span class="info-value">#${order.id}</span>
+              <span class="info-value">#${order._id || order.id}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Purchase Date</span>

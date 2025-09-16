@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, findOne } from "@/lib/db";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import { ObjectId } from "mongodb";
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
     const product = await db.product.findUnique({
-      where: { id: params.id },
+      where: { _id: new ObjectId(params.id ) },
     });
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -77,7 +78,7 @@ export async function PUT(
     if (!db) {
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
-    const existing = await db.product.findUnique({ where: { id: params.id } });
+    const existing = await findOne('product', { id: params.id  });
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
     for (const file of newFiles) {
@@ -93,7 +94,7 @@ export async function PUT(
 
     // Update main product fields
     const updated = await db.product.update({
-      where: { id: params.id },
+      where: { _id: new ObjectId(params.id ) },
       data: {
         title: name || undefined,
         price: price || undefined,
@@ -116,7 +117,7 @@ export async function PUT(
 
     // sizes removed
 
-    const refreshed = await db.product.findUnique({ where: { id: params.id } });
+    const refreshed = await findOne('product', { id: params.id  });
 
     return NextResponse.json(refreshed || updated);
   } catch (error) {
@@ -133,7 +134,7 @@ export async function DELETE(
     if (!db) {
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
-    const deleted = await db.product.delete({ where: { id: params.id } });
+    const deleted = await db.product.delete({ where: { _id: new ObjectId(params.id ) } });
     return NextResponse.json(deleted);
   } catch (error) {
     console.error("Error deleting product:", error);

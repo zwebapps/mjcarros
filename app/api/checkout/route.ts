@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { db } from "@/lib/db";
+import { MongoClient } from "mongodb";
 import { generateOrderNumber } from "@/lib/order-number-generator";
+
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);
 
 export async function POST(req: NextRequest) {
+  let client;
+  
   try {
     if (!stripeSecret || !stripe) {
       return new NextResponse("Stripe is not configured", { status: 500 });
@@ -20,26 +24,40 @@ export async function POST(req: NextRequest) {
     }
 
     const origin = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
-    if (!db) {
-      return new NextResponse("Database not found", { status: 500 });
-    }
+
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const ordersCollection = db.collection('orders');
+
     // Generate order number
     const orderNumber = await generateOrderNumber();
     
     // Create a pending order
-    const order = await db.order.create({
-      data: {
+    const orderData = {
         orderNumber: orderNumber,
         isPaid: false,
         userEmail: email || "",
-        orderItems: {
-          create: items.map((item: any) => ({
-            productId: item.id,
-            productName: item.title,
-          })),
-        },
-      },
-    });
+        orderItems: items.map((item: any) => ({
+          productId: item._id || item.id,
+          productName: item.title,
+          quantity: 1,
+          price: item.price
+        })),
+        phone: "",
+        address: "",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+    const result = await ordersCollection.insertOne(orderData);
+    const order = { ...orderData, _id: result.insertedId };
 
     const lineItems = items.map((item: any) => {
       const price = Math.round(Number(item.price) * 100);
@@ -65,14 +83,18 @@ export async function POST(req: NextRequest) {
       line_items: lineItems,
       mode: "payment",
       // Include Stripe's {CHECKOUT_SESSION_ID} token so we can verify server-side without webhooks
-      success_url: `${origin}/cart?success=1&orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}/cart?success=1&orderId=${order._id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart?canceled=1`,
-      metadata: { email: email || "", orderId: order.id },
+      metadata: { email: email || "", orderId: String(order._id) },
     });
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (error) {
     console.log("[CHECKOUT_ERROR]", error);
     return new NextResponse("Internal error", { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

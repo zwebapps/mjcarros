@@ -17,6 +17,7 @@ export type createData = {
   title: string;
   description: string;
   price: number;
+  _id?: string;
   id: string;
   imageURLs: string[];
   category: string;
@@ -74,7 +75,7 @@ const EditProduct = () => {
   return (
     <div className="flex flex-col gap-4 justify-center items-center max-md:justify-start">
       <div className="self-end pr-4">
-        <Link href={`/product/${data.id}`} target="_blank">
+        <Link href={`/product/${data._id || data.id}`} target="_blank">
           <Button variant="outline">View product</Button>
         </Link>
       </div>

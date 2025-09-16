@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, findOne } from "@/lib/db";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import { ObjectId } from "mongodb";
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function GET(
         { status: 500 }
       );
     }
-    const billboard = await db.billboard.findUnique({ where: { id: params.id } });
+    const billboard = await findOne('billboard', { id: params.id  });
     return NextResponse.json(billboard);
   } catch (error) {
     console.error("Error fetching billboard:", error);
@@ -54,7 +55,7 @@ export async function PUT(
       );
     }
     const updatedBillboard = await db.billboard.update({
-      where: { id: params.id },
+      where: { _id: new ObjectId(params.id ) },
       data: {
         billboard,
         imageURL,
@@ -82,7 +83,7 @@ export async function DELETE(
         { status: 500 }
       );
     }
-    const deleted = await db.billboard.delete({ where: { id: params.id } });
+    const deleted = await db.billboard.delete({ where: { _id: new ObjectId(params.id ) } });
     return NextResponse.json(deleted);
   } catch (error) {
     console.error("Error deleting billboard:", error);

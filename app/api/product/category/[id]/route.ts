@@ -12,9 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
     const product = await db.product.findMany({
-      where: {
-        category: id,
-      },
+      where: { category: id },
     });
 
     return NextResponse.json(product);

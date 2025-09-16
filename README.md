@@ -74,10 +74,9 @@ mjcarros-ecommerce/
    - Set up S3 bucket if using image uploads
    - Configure Stripe keys if using payments
 
-5. **Set up the database**
+5. **Start MongoDB container**
    ```bash
-   npx prisma generate
-   npx prisma db push
+   docker compose -f docker-compose.prod.yml up mongodb -d
    ```
 
 6. **Create admin user and initial data**

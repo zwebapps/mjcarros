@@ -45,7 +45,7 @@ const ProductItem = () => {
   }
 
   const filteredData: Product[] = relatedQuery?.data?.filter(
-    (item: Product) => item.category === productQuery?.data?.category && productQuery.data.id !== item.id
+    (item: Product) => item.category === productQuery?.data?.category && (productQuery.data._id || productQuery.data.id) !== (item._id || item.id)
   );
 
   return (
@@ -70,7 +70,7 @@ const ProductItem = () => {
            }
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredData?.map((item: Product) => {
-                return <ProductCard key={item.id} data={item} />;
+                return <ProductCard key={item._id || item.id} data={item} />;
               })}
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, insertOne } from "@/lib/db";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
@@ -21,26 +21,16 @@ export async function POST(req: NextRequest) {
     // Generate order number
     const orderNumber = await generateOrderNumber();
     
-    const order = await db.order.create({
-      data: {
+    const order = await insertOne('order', {
         orderNumber: orderNumber,
         isPaid: true,
         userEmail: email || "",
-        orderItems: {
-          create: items.map((item: any) => ({
-            productId: item.id,
-            productName: item.title,
-          })),
-        },
-      },
-      include: { 
-        orderItems: { 
-          include: { 
-            product: true
-          } 
-        }
-      },
-    });
+        orderItems: items.map((item: any) => ({
+          productId: item._id || item.id,
+          productName: item.title,
+        })),
+      }
+    );
 
     // Log order creation
     logOrderCreation(order);
@@ -58,7 +48,7 @@ export async function POST(req: NextRequest) {
     // Create PDF voucher attachment
     const attachments = [
       {
-        filename: `voucher-${order.id}.pdf`,
+        filename: `voucher-${order._id || order.id}.pdf`,
         content: pdfVoucher,
         contentType: 'application/pdf'
       }
@@ -81,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ 
       ok: true, 
-      orderId: order.id, 
+      orderId: order._id || order.id, 
       email: order.userEmail 
     });
   } catch (error) {

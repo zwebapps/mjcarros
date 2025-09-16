@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ui/product-card";
-import { db } from "@/lib/db";
 
 // Real products from database - these will actually work when clicked
 const featuredProducts = [
@@ -67,26 +66,49 @@ const banners = [
 
 // Build categories dynamically from products
 async function getCategoriesWithCounts() {
-  if (!db) {
-    return [];
-  }
-  const products = await db.product.findMany({ select: { category: true, imageURLs: true } });
-  const map = new Map<string, { count: number; image?: string }>();
-  for (const p of products) {
-    const key = (p.category || "").trim();
-    const current = map.get(key) || { count: 0, image: undefined };
-    current.count += 1;
-    if (!current.image && Array.isArray(p.imageURLs) && p.imageURLs.length > 0) {
-      current.image = p.imageURLs[0];
+  let client;
+  
+  try {
+    const { MongoClient } = await import('mongodb');
+    const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+    
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    const products = await productsCollection.find({}).sort({ category: 1 }).toArray();
+    
+    const map = new Map<string, { count: number; image?: string }>();
+    for (const p of products) {
+      const key = (p.category || "").trim();
+      const current = map.get(key) || { count: 0, image: undefined };
+      current.count += 1;
+      if (!current.image && Array.isArray(p.imageURLs) && p.imageURLs.length > 0) {
+        current.image = p.imageURLs[0];
+      }
+      map.set(key, current);
     }
-    map.set(key, current);
+    
+    // Convert to array and provide fallback images
+    const fallback = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200&h=150&fit=crop";
+    return Array.from(map.entries())
+      .map(([name, { count, image }]) => ({ name, count, image: image || fallback }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
-  // Convert to array and provide fallback images
-  const fallback = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200&h=150&fit=crop";
-  return Array.from(map.entries())
-    .map(([name, { count, image }]) => ({ name, count, image: image || fallback }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8);
 }
 
 const HomePage = async () => {

@@ -17,6 +17,7 @@ type createData = {
   description: string;
   price: number;
   featured: boolean;
+  _id?: string;
   id: string;
   imageURLs: string[];
   category: string;
@@ -102,7 +103,7 @@ export default function ProductTable() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentProducts?.map((product) => (
-              <tr key={product.id} className="hover:bg-gray-50">
+              <tr key={product._id || product.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex-shrink-0 h-10 w-10">
                     <img
@@ -131,13 +132,13 @@ export default function ProductTable() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   <div className="flex items-center justify-center space-x-2">
                     <button
-                      onClick={() => deleteTask(product.id)}
+                      onClick={() => deleteTask(product._id || product.id)}
                       className="text-red-600 hover:text-red-800 p-1"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                     <Link 
-                      href={`/admin/products/${product.id}`}
+                      href={`/admin/products/${product._id || product.id}`}
                       className="text-blue-600 hover:text-blue-800 p-1"
                     >
                       <Edit className="h-4 w-4" />

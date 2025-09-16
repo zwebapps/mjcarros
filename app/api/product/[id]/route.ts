@@ -1,30 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import { ObjectId } from "mongodb";
+
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let client;
+  
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const product = await db.product.findUnique({ where: { id: params.id } });
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    // Find the product by _id
+    const product = await productsCollection.findOne({ _id: new ObjectId(params.id) });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const relatedProducts = await db.product.findMany({
-      where: { category: product.category, id: { not: product.id } },
-      take: 4,
-    });
+    // Find related products (same category, excluding current product)
+    const relatedProducts = await productsCollection
+      .find({ 
+        category: product.category, 
+        _id: { $ne: new ObjectId(params.id) } 
+      })
+      .limit(4)
+      .toArray();
 
-    return NextResponse.json({ product, relatedProducts });
+    // Transform the product to include id field for compatibility
+    const transformedProduct = {
+      ...product,
+      id: product._id.toString()
+    };
+
+    // Transform related products
+    const transformedRelatedProducts = relatedProducts.map(relatedProduct => ({
+      ...relatedProduct,
+      id: relatedProduct._id.toString()
+    }));
+
+    return NextResponse.json({ 
+      product: transformedProduct, 
+      relatedProducts: transformedRelatedProducts 
+    });
   } catch (error) {
     console.error("Error fetching product:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
@@ -32,6 +68,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let client;
+  
   try {
     // Admin guard with JWT fallback
     let userRole = request.headers.get('x-user-role');
@@ -43,13 +81,23 @@ export async function DELETE(
     if (userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    // Delete the product
-    await db.product.delete({
-      where: { id: params.id },
+
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    // Delete the product
+    const result = await productsCollection.deleteOne({ _id: new ObjectId(params.id) });
+    
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
 
     return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {
@@ -58,5 +106,9 @@ export async function DELETE(
       { error: "Error deleting product" },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

@@ -11,6 +11,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 
 type Category = {
+  _id?: string;
   id: string;
   name: string;
   billboard: string;
@@ -86,7 +87,7 @@ const TableCategories = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentProducts?.map((category) => (
-                <tr key={category.id} className="hover:bg-gray-50">
+                <tr key={category._id || category.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {category.category}
                   </td>
@@ -99,13 +100,13 @@ const TableCategories = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                     <div className="flex items-center justify-center space-x-2">
                       <button
-                        onClick={() => deleteTask(category.id)}
+                        onClick={() => deleteTask(category._id || category.id)}
                         className="text-red-600 hover:text-red-800 p-1"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                       <Link 
-                        href={`/admin/categories/edit/${category.id}`}
+                        href={`/admin/categories/edit/${category._id || category.id}`}
                         className="text-blue-600 hover:text-blue-800 p-1"
                       >
                         <Edit className="h-4 w-4" />

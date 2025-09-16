@@ -1,4 +1,5 @@
 export interface Product {
+  _id?: string;
   id: string;
   category: string;
   description: string;
@@ -28,12 +29,14 @@ export interface Image {
 }
 
 export interface Billboard {
+  _id?: string;
   id: string;
   label: string;
   imageURL: string;
 }
 
 export interface Category {
+  _id?: string;
   id: string;
   category: string;
   billboardId: string;

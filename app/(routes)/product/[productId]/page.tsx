@@ -1,25 +1,30 @@
 import { type Metadata } from "next";
-import { db } from "@/lib/db"; // Use your global Prisma client
+import { MongoClient } from "mongodb";
 import { siteConfig } from "@/config/site";
 import ProductDetail from "./_components/product-detail";
+
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
 export async function generateMetadata({
   params,
 }: {
   params: { productId: string };
 }): Promise<Metadata> {
-  // If db is not initialized (e.g., during build), return default metadata
-  if (!db) {
-    return {
-      title: "Product | MJ Carros",
-      description: "Product details",
-    };
-  }
-
+  let client;
+  
   try {
-    const product = await db.product.findUnique({
-      where: { id: params.productId },
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    const { ObjectId } = await import('mongodb');
+    const product = await productsCollection.findOne({ _id: new ObjectId(params.productId) });
 
     if (!product) {
       return {
@@ -30,13 +35,17 @@ export async function generateMetadata({
 
     return {
       title: `${product.title} | ${siteConfig.name}`,
-      description: product.description,
+      description: product.description || "Product details",
     };
   } catch (error) {
     return {
       title: "Product | MJ Carros",
       description: "Product details",
     };
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 

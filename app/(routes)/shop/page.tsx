@@ -1,5 +1,4 @@
 import ProductCard from "@/components/ui/product-card";
-import { db } from "@/lib/db";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 
@@ -14,32 +13,30 @@ const ShopPage = async ({
   searchParams: { [key: string]: string | string[] | undefined };
 }) => {
   try {
-    if (!db) {
-      return [];
-    }
-    const dbProducts = await db.product.findMany({
-      include: {
-        productSizes: {
-          include: {
-            size: true,
-          },
-        },
-      },
+    // Fetch products from API
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/product`, {
+      cache: 'no-store' // Ensure fresh data
     });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products: ${response.status}`);
+    }
+    
+    const dbProducts = await response.json();
 
-    const products: Product[] = dbProducts.map((dbProduct) => ({
-      id: dbProduct.id,
+    const products: Product[] = dbProducts.map((dbProduct: any) => ({
+      id: dbProduct._id?.toString(),
       title: dbProduct.title,
       description: dbProduct.description,
       price: dbProduct.price,
       finalPrice: dbProduct.finalPrice || undefined,
       discount: dbProduct.discount || undefined,
       featured: dbProduct.featured,
-      imageURLs: dbProduct.imageURLs,
+      imageURLs: dbProduct.imageURLs || [],
       category: dbProduct.category,
       categoryId: dbProduct.categoryId,
-      createdAt: dbProduct.createdAt.toISOString(),
-      updatedAt: dbProduct.updatedAt.toISOString(),
+      createdAt: dbProduct.createdAt ? new Date(dbProduct.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: dbProduct.updatedAt ? new Date(dbProduct.updatedAt).toISOString() : new Date().toISOString(),
     }));
 
     if (!products || products.length === 0) {

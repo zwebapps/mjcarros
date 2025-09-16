@@ -13,6 +13,7 @@ type initialState = {
 };
 
 type Billboard = {
+  _id?: string;
   id: string;
   billboard: string;
   imageURL: string;
@@ -169,9 +170,9 @@ const NewCategorie = () => {
                 billboards?.map((board) => {
                   return (
                     <option
-                      key={board.id}
+                      key={board._id || board.id}
                       value={board.billboard}
-                      data-billboard-id={board.id}
+                      data-billboard-id={board._id || board.id}
                     >
                       {board.billboard}
                     </option>

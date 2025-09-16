@@ -9,12 +9,14 @@ interface OrderItemProduct {
 
 interface OrderItem {
   id: string;
+  productId: string;
   productName: string;
   quantity?: number;
   product?: OrderItemProduct | null;
 }
 
 interface Order {
+  _id?: string;
   id: string;
   isPaid: boolean;
   createdAt: string;
@@ -52,7 +54,7 @@ export default function OrdersPage() {
   }, []);
 
   const handlePrint = (order: Order) => {
-    window.open(`/api/orders/${order.id}/invoice`, "_blank");
+    window.open(`/api/orders/${order._id || order.id}/invoice`, "_blank");
   };
 
   if (isLoading) {
@@ -106,7 +108,7 @@ export default function OrdersPage() {
           const primaryImage = order.orderItems[0]?.product?.imageURLs?.[0] || '';
           const dateStr = new Date(order.createdAt).toLocaleString();
           return (
-            <div key={order.id} className="border rounded p-4">
+            <div key={order._id || order.id} className="border rounded p-4">
               <div className="flex items-start gap-4">
                 {/* Left large image */}
                 <div className="relative h-28 w-40 rounded overflow-hidden bg-gray-100 flex-shrink-0">
@@ -120,7 +122,7 @@ export default function OrdersPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold truncate">Order #{order.id.slice(-6)}</p>
+                      <p className="font-semibold truncate">Order #{(order._id || order.id).toString().slice(-6)}</p>
                       <p className="text-sm text-gray-500">{dateStr}</p>
                     </div>
                     <div className={`text-sm font-medium ${order.isPaid ? 'text-green-600' : 'text-yellow-600'}`}>
@@ -135,7 +137,7 @@ export default function OrdersPage() {
                       const qty = item.quantity ?? 1;
                       const soldOut = qty === 0;
                       return (
-                        <li key={item.id} className="py-3 flex items-center justify-between gap-3">
+                        <li key={item.productId} className="py-3 flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             {image ? (
                               <div className="relative h-10 w-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">

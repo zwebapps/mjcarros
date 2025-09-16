@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { MongoClient } from "mongodb";
 import { generateOrderNumber } from "@/lib/order-number-generator";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
+import { getMongoDbUri } from '@/lib/mongodb-connection';
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function GET(request: NextRequest) {
+  let client;
+  
   try {
     let userEmail = request.headers.get('x-user-email');
     let userRole = request.headers.get('x-user-role');
@@ -19,26 +24,35 @@ export async function GET(request: NextRequest) {
         userRole = payload.role;
       }
     }
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
+
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const ordersCollection = db.collection('orders');
     // Admin: return all orders
     if (userRole === 'ADMIN') {
-      const orders = await db.order.findMany({
-        include: { orderItems: { include: { product: true } } },
-        orderBy: { createdAt: 'desc' },
-      });
-      return NextResponse.json(orders);
+      const orders = await ordersCollection.find({}).sort({ createdAt: -1 }).toArray();
+      const ordersWithId = orders.map(order => ({
+        ...order,
+        id: order._id.toString() // Add id field for compatibility
+      }));
+      return NextResponse.json(ordersWithId);
     }
 
     // Authenticated user: return own orders
     if (userEmail) {
-      const orders = await db.order.findMany({
-        where: { userEmail },
-        include: { orderItems: { include: { product: true } } },
-        orderBy: { createdAt: 'desc' },
-      });
-      return NextResponse.json(orders);
+      const orders = await ordersCollection.find({ userEmail }).sort({ createdAt: -1 }).toArray();
+      const ordersWithId = orders.map(order => ({
+        ...order,
+        id: order._id.toString() // Add id field for compatibility
+      }));
+      return NextResponse.json(ordersWithId);
     }
 
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -48,10 +62,16 @@ export async function GET(request: NextRequest) {
       { error: "Error fetching orders" },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
 export async function POST(request: NextRequest) {
+  let client;
+  
   try {
     const body = await request.json();
     const { orderItems, phone, address, userEmail } = body;
@@ -77,46 +97,44 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
+
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const ordersCollection = db.collection('orders');
     
     // Generate order number
     const orderNumber = await generateOrderNumber();
     
-    const newOrder = await db.order.create({
-      data: {
+    const orderData = {
         orderNumber: orderNumber,
         phone: phone.trim(),
         address: (address || "").trim(),
         userEmail: userEmail.trim(),
-        orderItems: {
-          create: orderItems.map((item: any) => ({
-            productId: item.productId,
-            productName: item.productName,
-          })),
-        },
-      },
-      include: {
-        orderItems: { 
-          include: { 
-            product: {
-              select: {
-                id: true,
-                title: true,
-                price: true,
-                modelName: true,
-                year: true,
-                color: true,
-                mileage: true,
-                fuelType: true,
-                imageURLs: true
-              }
-            }
-          } 
-        }
-      },
-    });
+        orderItems: orderItems.map((item: any) => ({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity || 1,
+          price: item.price || 0
+        })),
+        isPaid: false,
+        paymentMethod: 'Stripe',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+    const result = await ordersCollection.insertOne(orderData);
+    const newOrder = { 
+      ...orderData, 
+      _id: result.insertedId,
+      id: result.insertedId.toString() // Add id field for compatibility
+    };
 
     // Log order creation to console
     logOrderCreation(newOrder);
@@ -125,12 +143,12 @@ export async function POST(request: NextRequest) {
     await backupOrderToS3(newOrder);
 
     // Send confirmation email to customer
-    const subject = `Your MJ Carros order ${newOrder.id}`;
+    const subject = `Your MJ Carros order ${newOrder._id}`;
     const itemsHtml = newOrder.orderItems.map((i) => `<li>${i.productName}</li>`).join('');
     const html = `
       <div>
         <h2>Thank you for your order!</h2>
-        <p>Order ID: ${newOrder.id}</p>
+        <p>Order ID: ${newOrder._id}</p>
         <ul>${itemsHtml}</ul>
         <p>We will contact you shortly.</p>
       </div>
@@ -144,5 +162,9 @@ export async function POST(request: NextRequest) {
       { error: "Error creating order" },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

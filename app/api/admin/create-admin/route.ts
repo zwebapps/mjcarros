@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, findMany, findOne, countDocuments } from '@/lib/db';
 import { hashPassword, generateToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -47,9 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if any admin users exist (for first admin creation)
-    const existingAdmins = await db.user.findMany({
-      where: { role: 'ADMIN' }
-    });
+    const existingAdmins = await findMany('users', { role: 'ADMIN' });
 
     // If no admins exist, allow creation without additional verification
     // If admins exist, require admin role verification
@@ -68,9 +66,7 @@ export async function POST(request: NextRequest) {
         const jwt = require('jsonwebtoken');
         const payload = jwt.verify(token, process.env.JWT_SECRET!) as any;
         
-        const adminUser = await db.user.findUnique({
-          where: { id: payload.userId }
-        });
+        const adminUser = await findOne('user', { id: payload.userId  });
 
         if (!adminUser || adminUser.role !== 'ADMIN') {
           return NextResponse.json(
@@ -130,11 +126,11 @@ export async function GET() {
       );
     }
     const adminCount = await db.user.count({
-      where: { role: 'ADMIN' }
+      role: 'ADMIN'
     });
 
-    const categoryCount = await db.category.count();
-    const billboardCount = await db.billboard.count();
+    const categoryCount = await countDocuments('category');
+    const billboardCount = await countDocuments('billboard');
 
     return NextResponse.json({
       hasAdmins: adminCount > 0,

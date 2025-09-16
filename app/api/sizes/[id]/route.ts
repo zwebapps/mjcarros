@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: "Category not found" });
     }
 
-    const sizesForCategory = category.categorySizes.map((cs) => cs.size);
+    const sizesForCategory = category.categorySizes.map((cs: any) => cs.size);
 
     return NextResponse.json(sizesForCategory);
   } catch (error) {

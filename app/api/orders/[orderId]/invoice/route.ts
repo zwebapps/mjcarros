@@ -1,29 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { MongoClient } from "mongodb";
+import { ObjectId } from "mongodb";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { readFile } from "fs/promises";
 import path from "path";
+
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { orderId: string } }
 ) {
+  let client;
+  
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    // Check if orderId is valid
+    if (!params.orderId || params.orderId === 'undefined') {
+      return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
     }
-    const order = await db.order.findUnique({
-      where: { id: params.orderId },
-      include: {
-        orderItems: {
-          include: { product: true },
-        },
-      },
+
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const ordersCollection = db.collection('orders');
+    const productsCollection = db.collection('products');
+    
+    // Find the order
+    const order = await ordersCollection.findOne({ _id: new ObjectId(params.orderId) });
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+
+    // Fetch products for order items
+    const orderItemsWithProducts = await Promise.all(
+      (order.orderItems || []).map(async (item: any) => {
+        const product = await productsCollection.findOne({ _id: new ObjectId(item.productId) });
+        return {
+          ...item,
+          product: product
+        };
+      })
+    );
+
+    // Add products to order
+    const orderWithProducts = {
+      ...order,
+      orderItems: orderItemsWithProducts,
+      address: order.address || "",
+      phone: order.phone || "",
+      createdAt: order.createdAt || new Date()
+    };
 
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage([595.28, 841.89]); // A4
@@ -39,8 +71,22 @@ export async function GET(
       logoImage = await pdfDoc.embedPng(logoBytes);
     } catch {}
 
-    // Skip loading product images to avoid caching issues
+    // Load car image from the first product
     let carImage: any = null;
+    try {
+      const firstProduct = orderWithProducts.orderItems[0]?.product;
+      if (firstProduct?.imageURLs?.[0]) {
+        const imageUrl = firstProduct.imageURLs[0];
+        const response = await fetch(imageUrl);
+        if (response.ok) {
+          const imageBuffer = await response.arrayBuffer();
+          const imageBytes = new Uint8Array(imageBuffer);
+          carImage = await pdfDoc.embedPng(imageBytes);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load car image:', error);
+    }
 
     const formatCurrency = (n: number) =>
       new Intl.NumberFormat("en-IE", {
@@ -115,9 +161,21 @@ export async function GET(
     // Title
     draw("VEHICLE", titleX, 785, 26, true);
     draw("PURCHASE ORDER", titleX, 766, 14, true);
-    draw(`# ${order.id.slice(0, 8)}`, titleX, 750, 12);
+    draw(`# ${(orderWithProducts._id || '').toString().slice(0, 8)}`, titleX, 750, 12);
 
-    // Car image removed to avoid caching issues
+    // Car image (if available)
+    if (carImage) {
+      const carImageW = 120;
+      const carImageH = (carImage.height / carImage.width) * carImageW;
+      const carImageX = 595.28 - carImageW - 30; // Right side
+      const carImageY = 750 - carImageH;
+      page.drawImage(carImage, { 
+        x: carImageX, 
+        y: carImageY, 
+        width: carImageW, 
+        height: carImageH 
+      });
+    }
 
     // Two-column info panels (start under car image)
     const leftX = 30,
@@ -136,7 +194,7 @@ export async function GET(
     infoY -= 22;
     box(leftX, infoY, 240, 16);
     draw(
-      (order.address || "").split(/\n/)[0] || "Address",
+      (orderWithProducts.address || "").split(/\n/)[0] || "Address",
       leftX + 6,
       infoY + 4,
       9
@@ -146,7 +204,7 @@ export async function GET(
 
     infoY -= 22;
     box(leftX, infoY, 240, 16);
-    draw(order.phone || "Phone", leftX + 6, infoY + 4, 9);
+    draw(orderWithProducts.phone || "Phone", leftX + 6, infoY + 4, 9);
     box(rightX, infoY, 240, 16);
     draw("Sales", rightX + 6, infoY + 4, 9);
 
@@ -159,15 +217,15 @@ export async function GET(
       page.drawText(text, { x, y, size: 8.5, font: regular, color: rgb(0.45, 0.45, 0.45) });
     };
 
-    const product = order.orderItems[0]?.product as any;
+    const product = orderWithProducts.orderItems[0]?.product as any;
     const makeVal = (product?.category || "").toString();
     const yearVal = product?.year && product.year > 0 ? String(product.year) : "";
     const colorVal = product?.color || "";
     const modelVal = product?.modelName || product?.title || "";
     const mileageVal = product?.mileage != null ? String(product.mileage) : "";
     const fuelVal = product?.fuelType || "";
-    const vinVal = product?.id || "";
-    const deliveryVal = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "";
+    const vinVal = product?.id || product?._id?.toString() || "";
+    const deliveryVal = orderWithProducts.createdAt ? new Date(orderWithProducts.createdAt).toLocaleDateString() : "";
 
     // Layout positions (lowered) and vertical spacing
     const fieldH = 18; // height of value boxes
@@ -227,7 +285,7 @@ export async function GET(
     y -= 18;
 
     let subtotal = 0;
-    for (const item of order.orderItems) {
+    for (const item of orderWithProducts.orderItems) {
       const unit =
         (item.product?.finalPrice ?? item.product?.price ?? 0) as number;
       const qty = item.quantity ?? 1;
@@ -308,7 +366,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=invoice-${order.id}.pdf`,
+        "Content-Disposition": `inline; filename=invoice-${orderWithProducts._id}.pdf`,
       },
     });
   } catch (error) {
@@ -317,5 +375,9 @@ export async function GET(
       { error: "Failed to generate invoice" },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

@@ -1,23 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { MongoClient } from "mongodb";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+
 export async function GET(request: NextRequest) {
+  let client;
+  
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const products = await db.product.findMany();
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    const products = await productsCollection.find({}).toArray();
     return NextResponse.json(products);
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json({ error: "Error fetching products" }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
 export async function POST(request: NextRequest) {
+  let client;
+  
   try {
     // Check if user is admin (middleware sets these headers). Fallback to self-verification.
     let userRole = request.headers.get('x-user-role');
@@ -101,25 +118,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const newProduct = await db.product.create({
-      data: {
-        title,
-        description,
-        imageURLs,
-        category,
-        categoryId,
-        price,
-        finalPrice,
-        discount,
-        featured: featured || false,
-        ...extras,
-        // sizes removed
-      },
-      // no include
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    const productData = {
+      title,
+      description,
+      imageURLs,
+      category,
+      categoryId,
+      price,
+      finalPrice,
+      discount,
+      featured: featured || false,
+      ...extras,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await productsCollection.insertOne(productData);
+    const newProduct = { ...productData, _id: result.insertedId };
 
     return NextResponse.json(newProduct);
   } catch (error) {
@@ -128,5 +154,9 @@ export async function POST(request: NextRequest) {
       { error: "Error creating product" },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

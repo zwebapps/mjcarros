@@ -11,6 +11,7 @@ import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 
 type Category = {
+  _id?: string;
   id: string;
   name: string;
   billboard: string;

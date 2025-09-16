@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
-import { comparePassword, generateToken } from '@/lib/auth';
-import { getMongoDbUri } from '@/lib/mongodb-connection';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
-const MONGODB_URI = getMongoDbUri();
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
 export async function POST(request: NextRequest) {
   let client;
   
   try {
-    console.log('🔐 Signin request received');
+    console.log('🔐 Simple signin request received');
     
     const { email, password } = await request.json();
     console.log('📧 Email:', email);
 
     // Validate input
     if (!email || !password) {
-      console.log('❌ Missing email or password');
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -37,12 +37,10 @@ export async function POST(request: NextRequest) {
     const usersCollection = db.collection('users');
     
     // Find user
-    console.log('🔍 Looking for user...');
     const user = await usersCollection.findOne({ email });
     console.log('👤 User found:', !!user);
 
     if (!user) {
-      console.log('❌ User not found');
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -50,12 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    console.log('🔐 Verifying password...');
-    const isValidPassword = await comparePassword(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     console.log('🔐 Password valid:', isValidPassword);
 
     if (!isValidPassword) {
-      console.log('❌ Invalid password');
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -63,18 +59,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate token
-    console.log('🎫 Generating token...');
-    const token = generateToken({
+    const token = jwt.sign({
       userId: user._id?.toString() || '',
       email: user.email,
       role: user.role
-    });
-    console.log('✅ Token generated');
+    }, JWT_SECRET, { expiresIn: '7d' });
 
     // Return user data (without password) and token
     const { password: _, ...userWithoutPassword } = user;
     
-    console.log('✅ Signin successful');
     return NextResponse.json({
       user: userWithoutPassword,
       token

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { MongoClient } from 'mongodb';
 import { hashPassword, generateToken } from '@/lib/auth';
+import { getMongoDbUri } from '@/lib/mongodb-connection';
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function POST(request: NextRequest) {
+  let client;
+  
   try {
     const { email, password, name, role = 'USER' } = await request.json();
 
@@ -21,13 +26,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!db) {
-      return NextResponse.json(
-        { error: 'Database not found' },
-        { status: 500 }
-      );
-    }
-    const existingUser = await db.user.findUnique({ where: { email } });
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const usersCollection = db.collection('users');
+    
+    const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
         { error: 'User with this email already exists' },
@@ -37,16 +47,28 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password);
 
-    const user = await db.user.create({
-      data: { email, password: hashedPassword, name, role: role as any }
-    });
+    const userData = { 
+      email, 
+      password: hashedPassword, 
+      name, 
+      role: role as any,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+    const result = await usersCollection.insertOne(userData);
+    const user = { ...userData, _id: result.insertedId };
+
+    const token = generateToken({ userId: user._id.toString(), email: user.email, role: user.role });
 
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json({ user: userWithoutPassword, token });
   } catch (error) {
     console.error('Signup error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

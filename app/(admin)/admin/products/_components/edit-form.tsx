@@ -15,6 +15,7 @@ type EditFormProps = {
 };
 
 type Category = {
+  _id?: string;
   id: string;
   name: string;
   billboard: string;

@@ -1,5 +1,6 @@
-import { db } from "@/lib/db";
+import { db, insertOne, findMany } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
 
 export async function POST(req: Request) {
   const { categoryId, sizes } = await req.json();
@@ -9,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
     const category = await db.category.findUnique({
-      where: { id: categoryId },
+      where: { _id: new ObjectId(categoryId ) },
     });
 
     if (!category) {
@@ -37,9 +38,8 @@ export async function POST(req: Request) {
         if (!db) {
           return NextResponse.json({ error: 'Database not found' }, { status: 500 });
         }
-        return db.categorySize.create({
-          data: input,
-        });
+        return insertOne('categorySize', input,
+        );
       })
     );
 
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     if (!db) {
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
-    const sizes = await db.size.findMany();
+    const sizes = await findMany('size');
     return NextResponse.json(sizes);
   } catch (error) {
     return NextResponse.json({ error: "Error getting sizes.", status: 500 });

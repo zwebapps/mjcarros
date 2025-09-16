@@ -1,26 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+
 export async function GET(request: NextRequest) {
+  let client;
+  
   try {
-    if (!db) {
-      return NextResponse.json(
-        { error: 'Database not found' },
-        { status: 500 }
-      );
-    }
-    const billboards = await db.billboard.findMany({
-      orderBy: { createdAt: "desc" },
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const billboardsCollection = db.collection('billboards');
+    
+    const billboards = await billboardsCollection.find({}).sort({ createdAt: -1 }).toArray();
     return NextResponse.json(billboards);
   } catch (error) {
     console.error("Error fetching billboards:", error);
     return NextResponse.json({ error: "Error fetching billboards" }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
 export async function POST(request: NextRequest) {
+  let client;
+  
   try {
     // Check if user is admin (middleware headers) or verify JWT directly
     let userRole = request.headers.get('x-user-role');
@@ -43,18 +55,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!db) {
-      return NextResponse.json(
-        { error: 'Database not found' },
-        { status: 500 }
-      );
-    }
-    const newBillboard = await db.billboard.create({
-      data: {
-        billboard,
-        imageURL,
-      },
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const billboardsCollection = db.collection('billboards');
+    
+    const billboardData = {
+      billboard,
+      imageURL,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await billboardsCollection.insertOne(billboardData);
+    const newBillboard = { ...billboardData, _id: result.insertedId };
 
     return NextResponse.json(newBillboard);
   } catch (error) {
@@ -63,5 +83,9 @@ export async function POST(request: NextRequest) {
       { error: "Error creating billboard" },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

@@ -1,44 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { MongoClient } from 'mongodb';
 import * as XLSX from 'xlsx';
-import jwt from 'jsonwebtoken';
+import { extractTokenFromHeader, verifyToken } from '@/lib/auth';
+import { getMongoDbUri } from '@/lib/mongodb-connection';
 
-// JWT verification helper
-function extractTokenFromHeader(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return null;
-}
-
-function verifyToken(token: string): { userId: string; role: string } | null {
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    return { userId: decoded.userId, role: decoded.role };
-  } catch (error) {
-    return null;
-  }
-}
+const MONGODB_URI = getMongoDbUri();
 
 export async function POST(request: NextRequest) {
+  let client;
+  
   try {
-    // Check admin authorization
-    const userRole = request.headers.get('x-user-role');
-    let isAdmin = userRole === 'ADMIN';
-
-    // JWT fallback if middleware headers are missing
-    if (!isAdmin) {
-      const token = extractTokenFromHeader(request);
-      if (token) {
-        const decoded = verifyToken(token);
-        isAdmin = decoded?.role === 'ADMIN';
-      }
+    // Check admin authorization using JWT token
+    const authHeader = request.headers.get('authorization');
+    const token = extractTokenFromHeader(authHeader);
+    if (!token) {
+      console.log('❌ No token provided for bulk upload');
+      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
     }
 
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      console.log('❌ Invalid token for bulk upload');
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
+
+    if (decoded.role !== 'ADMIN') {
+      console.log('❌ User is not admin for bulk upload:', decoded.role);
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
+    }
+
+    console.log('✅ Admin authorization verified for bulk upload');
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -64,12 +55,20 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
       created: [] as any[]
     };
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const categoriesCollection = db.collection('categories');
+    
     // Get all categories for validation
-    const categories = await db.category.findMany();
-    const categoryMap = new Map(categories.map(cat => [cat.category.toLowerCase(), cat.id]));
+    const categories = await categoriesCollection.find({}).toArray();
+    const categoryMap = new Map(categories.map(cat => [cat.category.toLowerCase(), cat._id.toString()]));
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i] as any;
@@ -114,12 +113,10 @@ export async function POST(request: NextRequest) {
           results.errors.push(`Row ${rowNumber}: Invalid mileage "${row.mileage}". Must be a non-negative number.`);
           continue;
         }
-        if (!db) {
-          return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-        }
+        const productsCollection = db.collection('products');
+        
         // Create product
-        const product = await db.product.create({
-          data: {
+        const productData = {
             title: row.name.toString().trim(),
             description: row.description?.toString().trim() || '',
             imageURLs: row.images ? row.images.toString().split(',').map((img: string) => img.trim()).filter(Boolean) : [],
@@ -131,13 +128,17 @@ export async function POST(request: NextRequest) {
             year: year,
             color: row.colour?.toString().trim() || '',
             mileage: mileage,
-            fuelType: row.fuelType?.toString().trim() || ''
-          }
-        });
+            fuelType: row.fuelType?.toString().trim() || '',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+
+        const result = await productsCollection.insertOne(productData);
+        const product = { ...productData, _id: result.insertedId };
 
         results.success++;
         results.created.push({
-          id: product.id,
+          id: product._id,
           title: product.title,
           modelName: product.modelName,
           year: product.year
@@ -159,6 +160,10 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 

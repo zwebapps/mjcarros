@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface Product {
+  _id?: string;
   id: string;
   title: string;
   price: number;
@@ -25,7 +26,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
   const hasDiscount = product.discount && product.discount > 0;
   
   return (
-    <Link href={`/product/${product.id}`}>
+    <Link href={`/product/${product._id || product.id}`}>
       <div className="bg-white group cursor-pointer rounded-lg border border-gray-200 hover:shadow-xl transition-all duration-300 hover:border-gray-300 h-full flex flex-col overflow-hidden">
         {/* Edge-to-edge image */}
         <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">

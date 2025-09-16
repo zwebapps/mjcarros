@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { ObjectId } from "mongodb";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       }
       // Update order with payment details
       const updatedOrder = await db.order.update({
-        where: { id: orderId },
+        where: { _id: new ObjectId(orderId ) },
         data: {
           isPaid: true,
           address: session?.customer_details?.address?.line1 || "",
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
 
       // Log payment completion
       console.log(`✅ Order ${orderId} payment confirmed via Stripe`);
-      console.log(`👤 Customer: ${updatedOrder.userEmail}`);
+      console.log(`👤 Customer: ${(updatedOrder as any).userEmail}`);
       console.log(`💰 Amount: $${session?.amount_total ? (session.amount_total / 100).toFixed(2) : 'N/A'}`);
       console.log(`💳 Payment Method: Stripe`);
 
@@ -67,25 +68,25 @@ export async function POST(req: Request) {
       await backupOrderToS3(updatedOrder);
 
       // Generate professional email and PDF voucher
-      const { subject, html } = generateOrderConfirmationEmail(updatedOrder, 'Stripe');
-      const pdfVoucher = await generatePDFVoucher(updatedOrder);
+      const { subject, html } = generateOrderConfirmationEmail(updatedOrder as any, 'Stripe');
+      const pdfVoucher = await generatePDFVoucher(updatedOrder as any);
       
       // Upload voucher to S3
-      const voucherUrl = await uploadOrderVoucherToS3(updatedOrder);
+      const voucherUrl = await uploadOrderVoucherToS3(updatedOrder as any);
       
       // Create PDF voucher attachment
       const attachments = [
         {
-          filename: `voucher-${updatedOrder.id}.pdf`,
+          filename: `voucher-${(updatedOrder as any).id || orderId}.pdf`,
           content: pdfVoucher,
           contentType: 'application/pdf'
         }
       ];
       
       try {
-        if (updatedOrder.userEmail && updatedOrder.userEmail.trim()) {
-          await sendMail(updatedOrder.userEmail, subject, html, attachments);
-          console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${updatedOrder.userEmail}`);
+        if ((updatedOrder as any).userEmail && (updatedOrder as any).userEmail.trim()) {
+          await sendMail((updatedOrder as any).userEmail, subject, html, attachments);
+          console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${(updatedOrder as any).userEmail}`);
           if (voucherUrl) {
             console.log(`☁️ Voucher also available at: ${voucherUrl}`);
           }

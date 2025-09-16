@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import { db } from "@/lib/db";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import ProductCard from "@/components/ui/product-card";
@@ -18,15 +17,12 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
   try {
-    if (!db) {
-      return [];
-    }
-    const dbProducts = await db.product.findMany({
-      include: { productSizes: { include: { size: true } } },
-    });
+    // For now, return empty array since we removed the db import
+    // This page will need to be updated to use MongoDB directly
+    const dbProducts: any[] = [];
 
     const products: Product[] = dbProducts.map((dbProduct) => ({
-      id: dbProduct.id,
+      id: dbProduct._id?.toString(),
       title: dbProduct.title,
       description: dbProduct.description,
       price: dbProduct.price,

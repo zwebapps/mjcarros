@@ -1,24 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+
 export async function GET(request: NextRequest) {
+  let client;
+  
   try {
-    if (!db) {
-      return NextResponse.json(
-        { error: 'Database not found' },
-        { status: 500 }
-      );
-    }
-    const categories = await db.category.findMany({ orderBy: { createdAt: 'desc' } });
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const categoriesCollection = db.collection('categories');
+    
+    const categories = await categoriesCollection.find({}).sort({ createdAt: -1 }).toArray();
     return NextResponse.json(categories);
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json({ error: "Error fetching categories" }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
 export async function POST(request: NextRequest) {
+  let client;
+  
   try {
     // Check if user is admin (middleware sets headers); fallback to verifying JWT
     let userRole = request.headers.get('x-user-role');
@@ -41,29 +55,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!db) {
-      return NextResponse.json(
-        { error: 'Database not found' },
-        { status: 500 }
-      );
-    }
-    const newCategory = await db.category.create({
-      data: {
-        billboard,
-        billboardId,
-        category,
-        categorySizes: {
-          create: categorySizes || [],
-        },
-      },
-      include: {
-        categorySizes: {
-          include: {
-            size: true,
-          },
-        },
-      },
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const categoriesCollection = db.collection('categories');
+    
+    const categoryData = {
+      billboard,
+      billboardId,
+      category,
+      categorySizes: categorySizes || [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await categoriesCollection.insertOne(categoryData);
+    const newCategory = { ...categoryData, _id: result.insertedId };
 
     return NextResponse.json(newCategory);
   } catch (error) {
@@ -72,5 +85,9 @@ export async function POST(request: NextRequest) {
       { error: "Error creating category" },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

@@ -1,5 +1,4 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { Order, OrderItem, User } from '@prisma/client';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -10,8 +9,22 @@ const s3Client = new S3Client({
   },
 });
 
-interface OrderWithDetails extends Order {
-  orderItems: (OrderItem & {
+interface OrderWithDetails {
+  _id: string;
+  id: string;
+  orderNumber: number;
+  isPaid: boolean;
+  userEmail: string;
+  phone: string;
+  address: string;
+  paymentMethod: string;
+  createdAt: Date;
+  updatedAt: Date;
+  orderItems: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
     product: {
       id: string;
       title: string;
@@ -23,7 +36,7 @@ interface OrderWithDetails extends Order {
       fuelType: string;
       imageURLs: string[];
     };
-  })[];
+  }[];
   // Computed fields
   totalPrice: number;
   userName: string;
@@ -55,7 +68,8 @@ export async function backupOrderToS3(order: any): Promise<void> {
 
     const bucketName = process.env.S3_ORDERS_BUCKET;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `orders/${order.id}/order-${timestamp}.json`;
+    const orderId = order._id || order.id;
+    const fileName = `orders/${orderId}/order-${timestamp}.json`;
 
     // Compute missing fields
     const totalPrice = computeTotalPrice(order);
@@ -65,12 +79,12 @@ export async function backupOrderToS3(order: any): Promise<void> {
     const orderBackup = {
       backupInfo: {
         timestamp: new Date().toISOString(),
-        orderId: order.id,
+        orderId: order._id || order.id,
         backupType: 'order_creation',
         version: '1.0'
       },
       order: {
-        id: order.id,
+        id: order._id || order.id,
         phone: order.phone,
         address: order.address,
         isPaid: order.isPaid,
@@ -116,7 +130,7 @@ export async function backupOrderToS3(order: any): Promise<void> {
       Body: JSON.stringify(orderBackup, null, 2),
       ContentType: 'application/json',
       Metadata: {
-        orderId: order.id,
+        orderId: order._id || order.id,
         customerEmail: order.userEmail || '',
         orderDate: order.createdAt.toISOString(),
         totalPrice: totalPrice.toString()
@@ -126,7 +140,7 @@ export async function backupOrderToS3(order: any): Promise<void> {
     await s3Client.send(command);
 
     console.log(`✅ Order backup successful: s3://${bucketName}/${fileName}`);
-    console.log(`📦 Order ID: ${order.id}`);
+    console.log(`📦 Order ID: ${order._id || order.id}`);
     console.log(`👤 Customer: ${userName} (${order.userEmail})`);
     console.log(`💰 Total: $${totalPrice}`);
     console.log(`📋 Items: ${order.orderItems.length} products`);
@@ -143,7 +157,7 @@ export function logOrderCreation(order: any): void {
   
   console.log('\n🎉 NEW ORDER CREATED');
   console.log('==================');
-  console.log(`📦 Order ID: ${order.id}`);
+  console.log(`📦 Order ID: ${order._id || order.id}`);
   console.log(`👤 Customer: ${userName} (${order.userEmail})`);
   console.log(`📞 Phone: ${order.phone}`);
   console.log(`📍 Address: ${order.address}`);
@@ -153,13 +167,10 @@ export function logOrderCreation(order: any): void {
   console.log('\n📋 Order Items:');
   
   order.orderItems.forEach((item: any, index: number) => {
-    console.log(`   ${index + 1}. ${item.product.title}`);
-    console.log(`      Model: ${item.product.modelName}`);
-    console.log(`      Year: ${item.product.year}`);
-    console.log(`      Color: ${item.product.color}`);
-    console.log(`      Mileage: ${item.product.mileage?.toLocaleString() || 'N/A'} km`);
-    console.log(`      Price: $${item.product.price}`);
-    console.log(`      Quantity: ${item.quantity}`);
+    console.log(`   ${index + 1}. ${item.productName || 'Unknown Product'}`);
+    console.log(`      Product ID: ${item.productId}`);
+    console.log(`      Price: $${item.price || 0}`);
+    console.log(`      Quantity: ${item.quantity || 1}`);
     console.log('');
   });
   

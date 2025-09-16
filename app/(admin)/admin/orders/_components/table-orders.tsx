@@ -15,7 +15,7 @@ type OrderItem = {
 };
 
 type Order = {
-  id: string;
+  _id: string;
   isPaid: boolean;
   phone: string;
   address: string;
@@ -49,7 +49,7 @@ const TableOrders = () => {
   };
 
   const handlePrint = (order: Order) => {
-    window.open(`/api/orders/${order.id}/invoice`, "_blank");
+    window.open(`/api/orders/${order._id || order._id}/invoice`, "_blank");
   };
 
   if (isLoading) {
@@ -96,7 +96,7 @@ const TableOrders = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentProducts?.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50">
+              <tr key={order._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {order.orderItems[0]?.productName || "N/A"}
                 </td>
