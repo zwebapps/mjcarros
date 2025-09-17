@@ -148,7 +148,15 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       try {
         const resCategory = await axios.get("/api/categories");
         const data = resCategory.data;
-        setCategories(data);
+        
+        // Ensure each category has a unique identifier
+        const categoriesWithUniqueIds = data.map((category: any, index: number) => ({
+          ...category,
+          id: category._id?.toString() || category.id || `category-${index}`,
+          _id: category._id,
+        }));
+        
+        setCategories(categoriesWithUniqueIds);
       } catch (error) {
         console.log("Error getting categories", error);
       }
@@ -271,8 +279,8 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         value={dataForm.category}
         onChange={(e) => setDataForm({ ...dataForm, category: e.target.value })}
       >
-        {categories.map((category) => (
-          <option key={category.id} value={category.category}>
+        {categories.map((category, index) => (
+          <option key={category._id || category.id || `category-${index}`} value={category.category}>
             {category.category}
           </option>
         ))}
@@ -293,7 +301,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         </div>
         <div>
           <label htmlFor="color">Color</label>
-          <Input id="color" type="color" value={dataForm.color || '#000000'} onChange={(e) => setDataForm({ ...dataForm, color: e.target.value })} />
+          <Input id="color" type="text" placeholder="e.g., Black Sapphire, Pearl White" value={dataForm.color || ''} onChange={(e) => setDataForm({ ...dataForm, color: e.target.value })} />
         </div>
         <div>
           <label htmlFor="fuelType">Fuel Type</label>
@@ -364,7 +372,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
               : `/${cleaned}`;
           return (
             <img
-              key={index}
+              key={`preview-${index}-${preview.slice(-10)}`} // More unique key
               src={imagePath}
               alt={`Preview ${index}`}
               width={100}

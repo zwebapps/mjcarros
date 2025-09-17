@@ -26,33 +26,51 @@ const UserTable = () => {
   const { error, data, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      // For now, we'll use mock data since we don't have a users API endpoint yet
-      // In a real app, you'd call: const res = await axios.get("/api/users");
-      return [
-        {
-          id: "1",
-          name: "Super Admin",
-          email: "superadmin@mjcarros.com",
-          role: "ADMIN",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "2",
-          name: "Regular User",
-          email: "user@mjcarros.com",
-          role: "USER",
-          createdAt: new Date().toISOString()
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        console.log('🔐 Frontend: Token available:', !!token);
+        
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        console.log('📡 Frontend: Calling /api/clerk/users...');
+        const res = await axios.get("/api/clerk/users", { headers });
+        
+        console.log('✅ Frontend: API response received:', res.status, res.data);
+        
+        if (res.data && Array.isArray(res.data)) {
+          const formattedUsers = res.data.map((user: any) => ({
+            id: user.id,
+            name: user.firstName || user.username,
+            email: user.emailAddresses[0].emailAddress,
+            role: user.unsafeMetadata.isAdmin ? "ADMIN" : "USER",
+            createdAt: user.createdAt
+          })) as User[];
+          
+          console.log('✅ Frontend: Formatted users:', formattedUsers);
+          return formattedUsers;
         }
-      ] as User[];
+        
+        console.log('⚠️ Frontend: No valid data received, returning empty array');
+        return [];
+      } catch (error) {
+        console.error('❌ Frontend: Failed to fetch users:', error);
+        console.error('❌ Frontend: Error details:', error.response?.data);
+        // Return empty array instead of mock data if API fails
+        return [];
+      }
     },
   });
 
   const deleteUser = async (id: string) => {
     try {
-      // In a real app, you'd call: const res = await axios.delete(`/api/users/${id}`);
-      toast.success("User deleted");
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      await axios.delete(`/api/clerk/users/${id}`, { headers });
+      toast.success("User deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["users"] });
     } catch (error) {
+      console.error('Delete user error:', error);
       toast.error("Something went wrong");
     }
   };

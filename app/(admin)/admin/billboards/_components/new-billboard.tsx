@@ -90,12 +90,15 @@ const NewBillboard = () => {
 
     setIsLoading(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
       if (id) {
-        const res = await axios.put(`/api/billboards/edit/${id}`, formData);
-        toast.success("Product edit successfully");
+        const res = await axios.put(`/api/billboards/edit/${id}`, formData, { headers });
+        toast.success("Billboard edit successfully");
         router.push("/admin/billboards");
       } else {
-        const res = await axios.post("/api/billboards", formData);
+        const res = await axios.post("/api/billboards", formData, { headers });
         setIsLoading(false);
         toast.success("Billboard created.");
         router.push("/admin/billboards");
@@ -156,7 +159,7 @@ const NewBillboard = () => {
           className="mt-4 px-7 bg-green-600"
           variant="default"
         >
-          {id ? "Edit" : "Create"}
+          {id ? "Update" : "Create"}
         </Button>
       </form>
     </>

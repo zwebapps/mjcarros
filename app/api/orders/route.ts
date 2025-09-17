@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log('MONGODB_URI>>>>', MONGODB_URI);
+
     // Connect to MongoDB
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,

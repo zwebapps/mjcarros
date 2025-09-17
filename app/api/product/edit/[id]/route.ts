@@ -1,28 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, findOne } from "@/lib/db";
+import { MongoClient } from "mongodb";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let client;
+  
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const product = await db.product.findUnique({
-      where: { _id: new ObjectId(params.id ) },
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    const product = await productsCollection.findOne({
+      _id: new ObjectId(params.id)
+    });
+    
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
-    return NextResponse.json(product);
+    
+    // Add id field for compatibility
+    const productWithId = {
+      ...product,
+      id: product._id.toString()
+    };
+    
+    return NextResponse.json(productWithId);
   } catch (error) {
     console.error("Error fetching product:", error);
     return NextResponse.json({ error: "Error fetching product" }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
@@ -30,17 +54,35 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let client;
+  
   try {
-    // Admin guard with JWT fallback
-    let userRole = request.headers.get('x-user-role');
-    if (!userRole) {
-      const token = extractTokenFromHeader(request.headers.get('authorization') ?? undefined);
-      const payload = token ? verifyToken(token) : null;
-      userRole = payload?.role || null as any;
+    // Admin guard with JWT
+    const authHeader = request.headers.get('authorization');
+    const token = extractTokenFromHeader(authHeader);
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
     }
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
+
+    if (decoded.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
+    }
+
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    const categoriesCollection = db.collection('categories');
     const formData = await request.formData();
     const name = String(formData.get("name") || "");
     const price = Number(formData.get("price") || 0);
@@ -63,11 +105,8 @@ export async function PUT(
 
     let categoryIdUpdate: string | undefined = undefined;
     if (category) {
-      if (!db) {
-        return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-      }
-      const cat = await db.category.findFirst({ where: { category } });
-      if (cat) categoryIdUpdate = cat.id;
+      const cat = await categoriesCollection.findOne({ category });
+      if (cat) categoryIdUpdate = cat._id.toString();
     }
 
     // Optional file uploads
@@ -75,10 +114,7 @@ export async function PUT(
     const region = process.env.NEXT_PUBLIC_AWS_S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
     const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || (bucket && region ? `https://${bucket}.s3.${region}.amazonaws.com` : '')).replace(/\/$/, '');
     // Load existing product to append gallery images
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const existing = await findOne('product', { id: params.id  });
+    const existing = await productsCollection.findOne({ _id: new ObjectId(params.id) });
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
     for (const file of newFiles) {
@@ -90,39 +126,61 @@ export async function PUT(
     }
 
     // Decide final gallery URLs (append new uploads)
-    const combinedUrls = newUrls.length && existing ? [...existing.imageURLs, ...newUrls] : (newUrls.length ? newUrls : undefined);
+    const combinedUrls = newUrls.length && existing ? [...(existing.imageURLs || []), ...newUrls] : (newUrls.length ? newUrls : undefined);
+
+    // Prepare update data
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    if (name) updateData.title = name;
+    if (price) updateData.price = price;
+    if (discount !== null) updateData.discount = discount;
+    if (description) updateData.description = description;
+    if (category) updateData.category = category;
+    if (categoryIdUpdate) updateData.categoryId = categoryIdUpdate;
+    updateData.featured = isFeatured;
+    if (modelName) updateData.modelName = modelName;
+    if (year) updateData.year = year;
+    if (stockQuantity) updateData.stockQuantity = stockQuantity;
+    if (color) updateData.color = color;
+    if (fuelType) updateData.fuelType = fuelType;
+    if (transmission) updateData.transmission = transmission;
+    if (mileage !== null) updateData.mileage = mileage;
+    if (condition) updateData.condition = condition;
+    if (combinedUrls) updateData.imageURLs = combinedUrls;
 
     // Update main product fields
-    const updated = await db.product.update({
-      where: { _id: new ObjectId(params.id ) },
-      data: {
-        title: name || undefined,
-        price: price || undefined,
-        discount: discount === null ? undefined : discount,
-        description: description || undefined,
-        category: category || undefined,
-        ...(categoryIdUpdate ? { categoryId: categoryIdUpdate } : {}),
-        featured: isFeatured,
-        modelName,
-        year,
-        stockQuantity,
-        color,
-        fuelType,
-        transmission,
-        mileage: mileage === null ? undefined : mileage,
-        condition,
-        ...(combinedUrls ? { imageURLs: combinedUrls } : {}),
-      },
-    });
+    const result = await productsCollection.updateOne(
+      { _id: new ObjectId(params.id) },
+      { $set: updateData }
+    );
 
-    // sizes removed
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
 
-    const refreshed = await findOne('product', { id: params.id  });
+    // Get the updated product
+    const refreshed = await productsCollection.findOne({ _id: new ObjectId(params.id) });
+    
+    if (!refreshed) {
+      return NextResponse.json({ error: "Product not found after update" }, { status: 404 });
+    }
 
-    return NextResponse.json(refreshed || updated);
+    // Add id field for compatibility
+    const productWithId = {
+      ...refreshed,
+      id: refreshed._id.toString()
+    };
+
+    return NextResponse.json(productWithId);
   } catch (error) {
     console.error("Error updating product:", error);
     return NextResponse.json({ error: "Error updating product" }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
@@ -130,14 +188,32 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let client;
+  
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    
+    const result = await productsCollection.deleteOne({ _id: new ObjectId(params.id) });
+    
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
-    const deleted = await db.product.delete({ where: { _id: new ObjectId(params.id ) } });
-    return NextResponse.json(deleted);
+    
+    return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);
     return NextResponse.json({ error: "Error deleting product" }, { status: 500 });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }

@@ -46,11 +46,24 @@ const NewCategorie = () => {
         .get(`/api/categories/edit/${categoryId}`)
         .then((response) => {
           const categoryData = response.data;
-
-          setFormData(categoryData);
+          
+          // Ensure we have a valid structure before setting formData
+          if (categoryData && typeof categoryData === 'object') {
+            setFormData({
+              category: categoryData.category || "",
+              billboard: categoryData.billboard || "",
+              billboardId: categoryData.billboardId || ""
+            });
+          } else {
+            console.error("Invalid category data received:", categoryData);
+            toast.error("Failed to load category data");
+          }
         })
         .catch((error) => {
-          console.error(error);
+          console.error("Error fetching category:", error);
+          toast.error("Failed to load category");
+          // Keep the initial state if API fails
+          setFormData(initialState);
         });
     }
   }, [categoryId]);
@@ -78,6 +91,7 @@ const NewCategorie = () => {
     });
 
     if (
+      !formData ||
       !formData.category ||
       formData.category.length < 2 ||
       !formData.billboard ||
@@ -87,11 +101,11 @@ const NewCategorie = () => {
       setErrors((prevErrors) => ({
         ...prevErrors,
         category:
-          formData.category.length < 2
+          !formData || formData.category.length < 2
             ? "Category must be at least 3 characters"
             : "",
         billboard:
-          formData.billboard.length < 4
+          !formData || formData.billboard.length < 4
             ? "Billboard must be at least 4 characters"
             : "",
       }));
@@ -132,7 +146,7 @@ const NewCategorie = () => {
               Name
             </label>
             <Input
-              value={formData.category}
+              value={formData?.category || ""}
               type="text"
               name="category"
               size={30}
@@ -152,7 +166,7 @@ const NewCategorie = () => {
               className="flex h-10 w-64 max-md:w-full  rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               name="billboard"
               id="billboard"
-              value={formData.billboard}
+              value={formData?.billboard || ""}
               required
               onChange={(e) =>
                 setFormData({
@@ -190,7 +204,7 @@ const NewCategorie = () => {
           className="mt-4 px-7 bg-green-600"
           variant="default"
         >
-          {categoryId ? "Edit" : "Create"}
+          {categoryId ? "Update" : "Create"}
         </Button>
       </form>
     </>

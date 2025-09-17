@@ -32,6 +32,165 @@ export interface OrderWithItems {
   }[];
 }
 
+export interface ContactFormData {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+}
+
+export function generateContactFormEmail(contactData: ContactFormData): { subject: string; html: string } {
+  const submissionDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const subject = `New Contact Form Submission: ${contactData.subject || 'General Inquiry'} - MJ Carros`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Contact Form Submission - MJ Carros</title>
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f1f5f9; }
+        .container { max-width: 1000px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 40px; text-align: center; position: relative; }
+        .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>') repeat; }
+        .logo { margin-bottom: 12px; position: relative; z-index: 1; }
+        .logo-emoji { font-size: 48px; margin-right: 15px; display: inline-block; vertical-align: middle; }
+        .logo-text { font-size: 36px; font-weight: bold; letter-spacing: 1px; display: inline-block; vertical-align: middle; }
+        .header-subtitle { font-size: 18px; opacity: 0.95; position: relative; z-index: 1; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 30px; }
+        .section-title { font-size: 20px; font-weight: 700; color: #1f2937; margin-bottom: 20px; border-bottom: 3px solid #f59e0b; padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+        .customer-info { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 25px; border-radius: 10px; border: 1px solid #f59e0b; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(245, 158, 11, 0.2); }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: 700; color: #92400e; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-value { color: #1f2937; font-size: 16px; font-weight: 500; }
+        .subject-box { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 20px; border-radius: 8px; border-left: 5px solid #3b82f6; }
+        .subject-text { font-size: 18px; font-weight: 600; color: #1e40af; }
+        .message-container { background: #f8fafc; padding: 30px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .message-content { white-space: pre-wrap; line-height: 1.8; color: #374151; font-size: 15px; }
+        .next-steps { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 25px; border-radius: 10px; border: 1px solid #10b981; }
+        .next-steps ul { margin: 0; padding-left: 20px; }
+        .next-steps li { margin-bottom: 8px; color: #065f46; font-weight: 500; }
+        .footer { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: white; padding: 30px; text-align: center; }
+        .footer-text { font-size: 14px; opacity: 0.9; line-height: 1.8; }
+        .priority-badge { background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <!-- Professional Header -->
+        <div class="header">
+          <div class="logo">
+            <span class="logo-emoji">🏎️</span>
+            <span class="logo-text">MJ CARROS</span>
+          </div>
+          <div class="header-subtitle">Premium Automotive Excellence</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+          <!-- Alert Section -->
+          <div class="section">
+            <div class="section-title">
+              <span>📞 Customer Inquiry</span>
+              <span class="priority-badge">New Inquiry</span>
+            </div>
+            <p style="color: #6b7280; font-size: 16px;">You have received a new customer inquiry through your website. Please review the details below and respond promptly to maintain excellent customer service.</p>
+          </div>
+
+          <!-- Customer Information Table -->
+          <div class="section">
+            <div class="section-title">👤 Customer Information</div>
+            <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+              <thead>
+                <tr style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                  <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Field</th>
+                  <th style="padding: 15px; text-align: left; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Information</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 15px; font-weight: 600; color: #374151; background: #f8f9fa;">Full Name</td>
+                  <td style="padding: 15px; color: #1f2937; font-size: 16px;">${contactData.name}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 15px; font-weight: 600; color: #374151; background: #f8f9fa;">Email Address</td>
+                  <td style="padding: 15px; color: #1f2937; font-size: 16px;">${contactData.email}</td>
+                </tr>
+                ${contactData.phone ? `
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 15px; font-weight: 600; color: #374151; background: #f8f9fa;">Phone Number</td>
+                  <td style="padding: 15px; color: #1f2937; font-size: 16px;">${contactData.phone}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 15px; font-weight: 600; color: #374151; background: #f8f9fa;">Submission Date</td>
+                  <td style="padding: 15px; color: #1f2937; font-size: 16px;">${submissionDate}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Subject Section -->
+          ${contactData.subject ? `
+          <div class="section">
+            <div class="section-title">📋 Inquiry Subject</div>
+            <div class="subject-box">
+              <div class="subject-text">${contactData.subject}</div>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Message Content -->
+          <div class="section">
+            <div class="section-title">💬 Customer Message</div>
+            <div class="message-container">
+              <div class="message-content">${contactData.message}</div>
+            </div>
+          </div>
+
+          <!-- Action Items -->
+          <div class="section">
+            <div class="section-title">🎯 Recommended Actions</div>
+            <div class="next-steps">
+              <ul>
+                <li><strong>Priority Response:</strong> Reply within 24 hours for optimal customer experience</li>
+                <li><strong>Primary Contact:</strong> Respond directly to <strong>${contactData.email}</strong></li>
+                ${contactData.phone ? `<li><strong>Phone Follow-up:</strong> Consider calling <strong>${contactData.phone}</strong> for immediate assistance</li>` : ''}
+                <li><strong>Documentation:</strong> Log this inquiry in your CRM system for tracking</li>
+                <li><strong>Follow-up:</strong> Schedule appropriate follow-up based on inquiry type</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Professional Footer -->
+        <div class="footer">
+          <div class="footer-text">
+            <strong>MJ Carros</strong> - Premium Automotive Excellence<br>
+            🌐 www.mjcarros.pt | 📧 Professional Contact Management System<br>
+            This email was automatically generated from your website contact form at ${submissionDate}
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return { subject, html };
+}
+
 export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMethod: 'Stripe' | 'PayPal'): { subject: string; html: string } {
   const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',

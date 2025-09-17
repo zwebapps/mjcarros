@@ -27,21 +27,47 @@ export default function TableBillboards() {
 
   const queryClient = useQueryClient();
 
+  // Temporarily using static data to stop infinite loading
   const { error, data, isLoading } = useQuery({
     queryKey: ["billboards"],
     queryFn: async () => {
-      const { data } = await axios.get("/api/billboards");
-
-      const sortedData = sortByDate(data);
-      return sortedData as createData[];
+      // Return static data to test if the infinite loading is from the API call
+      return [
+        {
+          id: "1",
+          label: "Premium Collection",
+          imageURL: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23e5e7eb'/%3E%3Ctext x='20' y='25' text-anchor='middle' fill='%23374151' font-size='12'%3E📷%3C/text%3E%3C/svg%3E",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "2", 
+          label: "New Arrivals",
+          imageURL: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23e5e7eb'/%3E%3Ctext x='20' y='25' text-anchor='middle' fill='%23374151' font-size='12'%3E📷%3C/text%3E%3C/svg%3E",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "3",
+          label: "Luxury Vehicles", 
+          imageURL: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23e5e7eb'/%3E%3Ctext x='20' y='25' text-anchor='middle' fill='%23374151' font-size='12'%3E📷%3C/text%3E%3C/svg%3E",
+          createdAt: new Date().toISOString()
+        }
+      ] as createData[];
     },
+    retry: false,
+    staleTime: Infinity, // Don't refetch
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const deleteTask = async (id: string) => {
     try {
-      const res = await axios.delete(`/api/billboards/edit/${id}`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      const res = await axios.delete(`/api/billboards/edit/${id}`, { headers });
       queryClient.invalidateQueries({ queryKey: ["billboards"] });
-      toast.success("Task deleted");
+      toast.success("Billboard deleted successfully");
     } catch (error) {
       toast.error("Something went wrong");
     }
@@ -92,12 +118,16 @@ export default function TableBillboards() {
               <tr key={billboard.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex-shrink-0 h-10 w-10">
-                    <Image
-                      className="h-10 w-10 rounded-full object-cover"
-                      src={billboard.imageURL || "/placeholder-image.jpg"}
-                      alt={billboard.label}
-                      width={40}
-                      height={40}
+                    <img
+                      className="h-10 w-10 rounded-full object-cover bg-gray-200"
+                      src={billboard.imageURL && billboard.imageURL !== '' ? billboard.imageURL : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23e5e7eb'/%3E%3Ctext x='20' y='25' text-anchor='middle' fill='%23374151' font-size='12'%3E📷%3C/text%3E%3C/svg%3E"}
+                      alt={billboard.label || "Billboard"}
+                      onError={(e) => {
+                        // Prevent infinite loop by only setting fallback once
+                        if (!e.currentTarget.src.startsWith('data:image/svg+xml')) {
+                          e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23e5e7eb'/%3E%3Ctext x='20' y='25' text-anchor='middle' fill='%23374151' font-size='12'%3E📷%3C/text%3E%3C/svg%3E";
+                        }
+                      }}
                     />
                   </div>
                 </td>

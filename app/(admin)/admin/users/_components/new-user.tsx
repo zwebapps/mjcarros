@@ -37,19 +37,36 @@ const NewUser = () => {
     userName: "",
   });
 
-  const { data } = useQuery({
-    queryKey: ["getUser"],
+  const { data, error: queryError } = useQuery({
+    queryKey: ["getUser", categoryId],
     queryFn: async () => {
-      const { data } = await axios.get(`/api/clerk/users/${categoryId}`);
-      const mergedData = {
-        email: data.user.emailAddresses[0].emailAddress,
-        isAdmin: data.user.unsafeMetadata.isAdmin ? "Admin" : "User",
-        password: "",
-        userName: data.user.username ? data.user.username : data.user.firstName,
-      };
-      setFormData(mergedData);
-      return data;
+      if (!categoryId) return null;
+      
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        const { data } = await axios.get(`/api/clerk/users/${categoryId}`, { headers });
+        
+        if (data && data.user) {
+          const mergedData = {
+            email: data.user.emailAddresses[0].emailAddress,
+            isAdmin: data.user.unsafeMetadata.isAdmin ? "Admin" : "User",
+            password: "",
+            userName: data.user.username ? data.user.username : data.user.firstName,
+          };
+          setFormData(mergedData);
+          return data;
+        }
+        return null;
+      } catch (error) {
+        console.error('Failed to fetch user for editing:', error);
+        toast.error("Failed to load user data. User may not exist or you may not have permission.");
+        return null;
+      }
     },
+    enabled: !!categoryId,
+    retry: false // Don't retry on failure
   });
 
   const onSubmitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -64,38 +81,49 @@ const NewUser = () => {
       userName: "",
     });
 
-    if (
-      !categoryId &&
-      (!emailRegex.test(formData.email) ||
-        !passwordRegex.test(formData.password))
-    ) {
-      if (!emailRegex.test(formData.email)) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          email: "Invalid email address.",
-        }));
-      }
+    // Email validation
+    if (!emailRegex.test(formData.email)) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        email: "Invalid email address.",
+      }));
+      return;
+    }
 
-      if (!passwordRegex.test(formData.password)) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          password:
-            "Password must have, one uppercase letter, one number, and special character.",
-        }));
-      }
+    // Password validation - required for new users, optional for existing users
+    if (!categoryId && !passwordRegex.test(formData.password)) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        password:
+          "Password must have, one uppercase letter, one number, and special character.",
+      }));
+      return;
+    }
+
+    // For existing users, validate password only if provided
+    if (categoryId && formData.password && !passwordRegex.test(formData.password)) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        password:
+          "Password must have, one uppercase letter, one number, and special character.",
+      }));
       return;
     }
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
       if (categoryId) {
-        const res = await axios.put(`/api/clerk/users/${categoryId}`, formData);
-        toast.success("User succesfully edited.");
+        const res = await axios.put(`/api/clerk/users/${categoryId}`, formData, { headers });
+        toast.success("User successfully edited.");
         router.push("/admin/users");
       } else {
-        const res = await axios.post(`/api/clerk/users/`, formData);
-        toast.success("Created user.");
+        const res = await axios.post(`/api/clerk/users/`, formData, { headers });
+        toast.success("User created successfully.");
         router.push("/admin/users");
       }
     } catch (error) {
+      console.error('User operation error:', error);
       toast.error("Something went wrong.");
     }
   };
@@ -141,15 +169,15 @@ const NewUser = () => {
 
           <div className="flex flex-col gap-y-2">
             <label htmlFor="password" className="font-semibold">
-              Password
+              Password {categoryId && <span className="text-sm font-normal text-gray-600">(optional - leave blank to keep current)</span>}
             </label>
             <Input
-              disabled={checkDisabled}
-              value={categoryId ? "*********" : formData.password}
+              value={formData.password}
+              placeholder={categoryId ? "Leave blank to keep current password" : "Enter password"}
               type="password"
               name="password"
               size={40}
-              required
+              required={!categoryId} // Only required for new users
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
@@ -179,7 +207,7 @@ const NewUser = () => {
           className="mt-4 px-7 bg-green-600"
           variant="default"
         >
-          {categoryId ? "Edit" : "Create"}
+          {categoryId ? "Update" : "Create"}
         </Button>
       </form>
     </>

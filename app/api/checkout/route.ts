@@ -13,14 +13,14 @@ export async function POST(req: NextRequest) {
   
   try {
     if (!stripeSecret || !stripe) {
-      return new NextResponse("Stripe is not configured", { status: 500 });
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 });
     }
 
     const body = await req.json();
     const { items, email } = body as { items: any[]; email?: string };
 
     if (!items || items.length === 0) {
-      return new NextResponse("Items are required", { status: 400 });
+      return NextResponse.json({ error: "Items are required" }, { status: 400 });
     }
 
     const origin = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (error) {
     console.log("[CHECKOUT_ERROR]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   } finally {
     if (client) {
       await client.close();

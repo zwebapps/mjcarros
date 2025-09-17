@@ -6,6 +6,7 @@
 export function getMongoDbUri(): string {
   // Fix malformed DATABASE_URL that might have duplicate key names
   let databaseUrl = process.env.DATABASE_URL;
+  console.log('databaseUrl>>>>', databaseUrl);
   if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
     databaseUrl = databaseUrl.replace('DATABASE_URL=', '');
   }
