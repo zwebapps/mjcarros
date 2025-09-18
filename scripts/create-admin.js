@@ -1,16 +1,13 @@
-const { PrismaClient } = require('@prisma/client');
+const { MongoClient } = require('mongodb');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
-const prisma = new PrismaClient();
 
 async function createAdminUser() {
   try {
     console.log('🔐 Creating admin user...\n');
 
     // Check if any admin users already exist
-    const existingAdmins = await prisma.user.findMany({
-      where: { role: 'ADMIN' }
+    const existingAdmins = await usersCollection.find({
+      role: 'ADMIN'
     });
 
     if (existingAdmins.length > 0) {
@@ -23,12 +20,12 @@ async function createAdminUser() {
     }
 
     // Get admin details from environment or use defaults
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@mjcarros.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
-    const adminName = process.env.ADMIN_NAME || 'Administrator';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminName = process.env.ADMIN_NAME;
 
     // Check if user with this email already exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await usersCollection.findOne({
       where: { email: adminEmail }
     });
 
@@ -36,7 +33,7 @@ async function createAdminUser() {
       console.log(`⚠️  User with email ${adminEmail} already exists.`);
       console.log('💡 Upgrading to admin role...');
       
-      await prisma.user.update({
+      await usersCollection.updateOne({
         where: { email: adminEmail },
         data: { role: 'ADMIN' }
       });
@@ -49,7 +46,7 @@ async function createAdminUser() {
     const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
     // Create admin user
-    const adminUser = await prisma.user.create({
+    const adminUser = await usersCollection.insertOne({
       data: {
         email: adminEmail,
         password: hashedPassword,
@@ -76,7 +73,7 @@ async function createAdminUser() {
     console.error('❌ Error creating admin user:', error);
     process.exit(1);
   } finally {
-    await prisma.$disconnect();
+    await usersCollection.close();
   }
 }
 

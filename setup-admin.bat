@@ -27,11 +27,10 @@ if not exist .env (
     )
 )
 
-REM Check if Prisma is set up
-if not exist "node_modules\.prisma" (
-    echo 📦 Installing dependencies and setting up Prisma...
+REM Check if dependencies are installed
+if not exist "node_modules" (
+    echo 📦 Installing dependencies...
     npm install
-    npx prisma generate
 )
 
 REM Run the admin setup script
