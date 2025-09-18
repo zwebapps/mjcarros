@@ -35,7 +35,10 @@ export default function ProductTable() {
   const { error, data, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const { data } = await axios.get("/api/product");
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      const { data } = await axios.get("/api/product", { headers });
 
       const sortedData = sortByDate(data);
       return sortedData as createData[];
@@ -44,10 +47,14 @@ export default function ProductTable() {
 
   const deleteTask = async (id: string) => {
     try {
-      const res = await axios.delete(`/api/product/${id}`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      const res = await axios.delete(`/api/product/${id}`, { headers });
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Task deleted");
+      toast.success("Product deleted successfully");
     } catch (error) {
+      console.error('Delete product error:', error);
       toast.error("Something went wrong");
     }
   };
