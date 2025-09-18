@@ -14,9 +14,18 @@ export function getMongoDbUri(): string {
   // Use different connection strings for Docker vs local development
   const isDocker = process.env.NODE_ENV === 'production' || process.env.DOCKER === 'true';
   
-  return databaseUrl || 
-    (isDocker 
-      ? 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros'
-      : 'mongodb://mjcarros:786Password@localhost:27017/mjcarros?authSource=mjcarros'
-    );
+  // If DATABASE_URL is provided, use it
+  if (databaseUrl) {
+    return databaseUrl;
+  }
+
+  // Build URI from individual environment variables for better security
+  const username = process.env.MONGO_USERNAME || 'mjcarros';
+  const password = process.env.MONGO_PASSWORD || '786Password';
+  const host = process.env.MONGO_HOST || (isDocker ? 'mongodb' : 'localhost');
+  const port = process.env.MONGO_PORT || '27017';
+  const database = process.env.MONGO_DATABASE || 'mjcarros';
+  const authSource = process.env.MONGO_AUTH_SOURCE || 'mjcarros';
+  
+  return `mongodb://${username}:${password}@${host}:${port}/${database}?authSource=${authSource}`;
 }

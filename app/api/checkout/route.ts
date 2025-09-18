@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { MongoClient } from "mongodb";
 import { generateOrderNumber } from "@/lib/order-number-generator";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+const MONGODB_URI = getMongoDbUri();
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);

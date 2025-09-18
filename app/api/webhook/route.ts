@@ -7,8 +7,9 @@ import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
 import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
 import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+const MONGODB_URI = getMongoDbUri();
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -106,7 +107,8 @@ export async function POST(req: Request) {
       const updatedOrderWithProducts = {
         ...updatedOrder,
         id: updatedOrder._id.toString(),
-        orderItems: orderItemsWithProducts
+        orderItems: orderItemsWithProducts,
+        userEmail: updatedOrder.userEmail || ""
       };
 
       // Log payment completion

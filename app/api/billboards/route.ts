@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+const MONGODB_URI = getMongoDbUri();
 
 export async function GET(request: NextRequest) {
   let client;

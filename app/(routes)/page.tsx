@@ -80,7 +80,8 @@ async function getCategoriesWithCounts() {
   
   try {
     const { MongoClient } = await import('mongodb');
-    const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+    const { getMongoDbUri } = await import('@/lib/mongodb-connection');
+    const MONGODB_URI = getMongoDbUri();
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,

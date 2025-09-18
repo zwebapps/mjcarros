@@ -2,8 +2,9 @@ import { MongoClient } from "mongodb";
 import SidebarItems from "./sidebar-items";
 import PriceInput from "./price-input";
 import { Product as UIProduct } from "@/types";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+const MONGODB_URI = getMongoDbUri();
 
 const SidebarProducts = async () => {
   // During build time, return fallback data if DB is not available
