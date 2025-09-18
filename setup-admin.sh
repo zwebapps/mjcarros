@@ -27,11 +27,10 @@ if [ ! -f .env ]; then
     fi
 fi
 
-# Check if Prisma is set up
-if [ ! -d "node_modules/.prisma" ]; then
-    echo "📦 Installing dependencies and setting up Prisma..."
+# Check if dependencies are installed
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing dependencies..."
     npm install
-    npx prisma generate
 fi
 
 # Run the admin setup script

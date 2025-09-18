@@ -15,6 +15,10 @@ rs.initiate({
 // Wait for replica set to be ready
 sleep(3000);
 
+// Switch to admin database and authenticate as root
+db = db.getSiblingDB('admin');
+db.auth('mjcarros', '786Password');
+
 // Switch to mjcarros database
 db = db.getSiblingDB('mjcarros');
 
