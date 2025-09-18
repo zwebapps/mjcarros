@@ -22,13 +22,24 @@ const CartItem: React.FC<CartItemProps> = ({ data }) => {
   return (
     <div className="flex py-6 border-b">
       <div className="relative h-24 w-24 rounded-md overflow-hidden sm:h-48 sm:w-48">
-        <Image
-          fill
-          src={data.imageURLs[0] || "/placeholder-image.jpg"}
-          alt=""
-          className="object-cover object-center"
-          sizes="(max-width: 640px) 96px, 192px"
-        />
+        {data.imageURLs?.[0] ? (
+          <Image
+            fill
+            src={`${data.imageURLs[0]}?w=400&h=300&fit=crop`}
+            alt={data.title || "Product image"}
+            className="object-cover object-center"
+            sizes="(max-width: 640px) 96px, 192px"
+            onError={() => console.error('Cart image failed to load:', data.imageURLs[0])}
+          />
+        ) : (
+          <Image
+            fill
+            src="/placeholder-image.jpg"
+            alt={data.title || "Product placeholder"}
+            className="object-cover object-center"
+            sizes="(max-width: 640px) 96px, 192px"
+          />
+        )}
       </div>
       <div className="relative ml-4 flex flex-1 flex-col justify-between sm:ml-6">
         <div className="absolute z-10 right-0 top-0">
