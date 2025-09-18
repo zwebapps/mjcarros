@@ -1,13 +1,14 @@
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { ObjectId } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
 import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
 import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
+
+const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -29,6 +30,8 @@ export async function POST(req: Request) {
   const session = event.data.object as Stripe.Checkout.Session;
 
   if (event.type === "checkout.session.completed") {
+    let client;
+    
     try {
       const orderId = session?.metadata?.orderId;
       if (!orderId) {
@@ -37,26 +40,74 @@ export async function POST(req: Request) {
       }
 
       console.log(`💳 Stripe payment completed for order: ${orderId}`);
-      if (!db) {
-        return new NextResponse("Database not found", { status: 500 });
-      }
-      // Update order with payment details
-      const updatedOrder = await db.order.update({
-        where: { _id: new ObjectId(orderId ) },
-        data: {
-          isPaid: true,
-          address: session?.customer_details?.address?.line1 || "",
-          phone: session?.customer_details?.phone || "",
-          userEmail: session?.metadata?.email || session?.customer_details?.email || "",
-        },
-        include: {
-          orderItems: { 
-            include: { 
-              product: true
-            } 
-          }
-        },
+      
+      // Connect to MongoDB
+      client = new MongoClient(MONGODB_URI, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
       });
+      
+      await client.connect();
+      const db = client.db('mjcarros');
+      const ordersCollection = db.collection('orders');
+      const productsCollection = db.collection('products');
+      
+      // Update order with payment details
+      const updateResult = await ordersCollection.updateOne(
+        { _id: new ObjectId(orderId) },
+        {
+          $set: {
+            isPaid: true,
+            address: session?.customer_details?.address?.line1 || "",
+            phone: session?.customer_details?.phone || "",
+            userEmail: session?.metadata?.email || session?.customer_details?.email || "",
+            updatedAt: new Date()
+          }
+        }
+      );
+
+      if (updateResult.matchedCount === 0) {
+        console.error(`❌ Order ${orderId} not found`);
+        return new NextResponse("Order not found", { status: 404 });
+      }
+
+      // Get the updated order with items
+      const updatedOrder = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
+      
+      if (!updatedOrder) {
+        return new NextResponse("Order not found after update", { status: 404 });
+      }
+
+      // Fetch product details for order items
+      const orderItemsWithProducts = await Promise.all(
+        (updatedOrder.orderItems || []).map(async (item: any) => {
+          const product = await productsCollection.findOne({ _id: new ObjectId(item.productId) });
+          return {
+            ...item,
+            product: product ? {
+              _id: product._id.toString(),
+              title: product.title,
+              description: product.description,
+              price: product.price,
+              category: product.category,
+              modelName: product.modelName,
+              year: product.year,
+              mileage: product.mileage,
+              fuelType: product.fuelType,
+              color: product.color,
+              condition: product.condition,
+              imageURLs: product.imageURLs
+            } : null
+          };
+        })
+      );
+
+      const updatedOrderWithProducts = {
+        ...updatedOrder,
+        id: updatedOrder._id.toString(),
+        orderItems: orderItemsWithProducts
+      };
 
       // Log payment completion
       console.log(`✅ Order ${orderId} payment confirmed via Stripe`);
@@ -65,14 +116,14 @@ export async function POST(req: Request) {
       console.log(`💳 Payment Method: Stripe`);
 
       // Backup updated order to S3
-      await backupOrderToS3(updatedOrder);
+      await backupOrderToS3(updatedOrderWithProducts);
 
       // Generate professional email and PDF voucher
-      const { subject, html } = generateOrderConfirmationEmail(updatedOrder as any, 'Stripe');
-      const pdfVoucher = await generatePDFVoucher(updatedOrder as any);
+      const { subject, html } = generateOrderConfirmationEmail(updatedOrderWithProducts as any, 'Stripe');
+      const pdfVoucher = await generatePDFVoucher(updatedOrderWithProducts as any);
       
       // Upload voucher to S3
-      const voucherUrl = await uploadOrderVoucherToS3(updatedOrder as any);
+      const voucherUrl = await uploadOrderVoucherToS3(updatedOrderWithProducts as any);
       
       // Create PDF voucher attachment
       const attachments = [
@@ -84,9 +135,9 @@ export async function POST(req: Request) {
       ];
       
       try {
-        if ((updatedOrder as any).userEmail && (updatedOrder as any).userEmail.trim()) {
-          await sendMail((updatedOrder as any).userEmail, subject, html, attachments);
-          console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${(updatedOrder as any).userEmail}`);
+        if (updatedOrderWithProducts.userEmail && updatedOrderWithProducts.userEmail.trim()) {
+          await sendMail(updatedOrderWithProducts.userEmail, subject, html, attachments);
+          console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${updatedOrderWithProducts.userEmail}`);
           if (voucherUrl) {
             console.log(`☁️ Voucher also available at: ${voucherUrl}`);
           }
@@ -101,6 +152,10 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("❌ Stripe webhook error:", e);
       return new NextResponse("Webhook processing failed", { status: 500 });
+    } finally {
+      if (client) {
+        await client.close();
+      }
     }
   }
 
