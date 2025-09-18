@@ -15,6 +15,9 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   };
 }
 
+// Force dynamic rendering since we use searchParams
+export const dynamic = 'force-dynamic';
+
 const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
   try {
     // For now, return empty array since we removed the db import

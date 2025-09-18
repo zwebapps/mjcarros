@@ -8,12 +8,12 @@ const SortItems = () => {
   const router = useRouter();
 
   const [selectedSort, setSelectedSort] = useState<string>(
-    (searchParams.get("sort") as string) || ""
+    (searchParams?.get("sort") as string) || ""
   );
 
   const handleSortChange = useCallback(
     async (value: string) => {
-      const current = new URLSearchParams(Array.from(searchParams.entries()));
+      const current = new URLSearchParams(Array.from(searchParams?.entries() || []));
 
       if (!value || value === "") {
         current.delete("sort");
@@ -31,7 +31,7 @@ const SortItems = () => {
   );
 
   useEffect(() => {
-    setSelectedSort(searchParams.get("sort") || "");
+    setSelectedSort(searchParams?.get("sort") || "");
   }, [searchParams]);
 
   return (

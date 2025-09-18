@@ -7,6 +7,9 @@ export const metadata = {
   description: "Shop for luxury cars, sports cars, SUVs, and electric vehicles",
 };
 
+// Force dynamic rendering since we use searchParams
+export const dynamic = 'force-dynamic';
+
 const ShopPage = async ({
   searchParams,
 }: {

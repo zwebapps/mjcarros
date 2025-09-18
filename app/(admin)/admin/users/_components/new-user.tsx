@@ -19,7 +19,7 @@ type initialState = {
 const NewUser = () => {
   const router = useRouter();
   const paramas = useParams();
-  const categoryId = paramas.userId as string;
+  const categoryId = paramas?.userId as string | undefined;
 
   const checkDisabled = categoryId ? true : false;
   const initialState: initialState = {

@@ -13,7 +13,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 const ProductItem = () => {
-  const { productId } = useParams();
+  const params = useParams();
+  const productId = params?.productId as string | undefined;
 
   const [productQuery, relatedQuery] = useQueries({
     queries: [

@@ -69,7 +69,7 @@ const NavItem = () => {
           variant="ghost"
           className={`w-full text-white font-normal justify-start ${
             (pathname === route.href ||
-              pathname.startsWith(`${route.href}/new`)) &&
+              pathname?.startsWith(`${route.href}/new`)) &&
             "bg-slate-600 text-sky-300"
           }`}
         >

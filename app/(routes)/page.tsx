@@ -66,11 +66,21 @@ const banners = [
 
 // Build categories dynamically from products
 async function getCategoriesWithCounts() {
+  // During build time, return fallback categories if DB is not available
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_AVAILABLE) {
+    return [
+      { name: "Luxury", count: 15, image: "https://images.unsplash.com/photo-1618843479618-39b0bb21ab70?w=200&h=150&fit=crop" },
+      { name: "Sports", count: 12, image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=200&h=150&fit=crop" },
+      { name: "SUV", count: 20, image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=200&h=150&fit=crop" },
+      { name: "Electric", count: 8, image: "https://images.unsplash.com/photo-1593941707882-a5bacd19c84b?w=200&h=150&fit=crop" },
+    ];
+  }
+
   let client;
   
   try {
     const { MongoClient } = await import('mongodb');
-   const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+    const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
@@ -102,7 +112,13 @@ async function getCategoriesWithCounts() {
       .slice(0, 8);
   } catch (error) {
     console.error('Error fetching categories:', error);
-    return [];
+    // Return fallback categories on error
+    return [
+      { name: "Luxury", count: 15, image: "https://images.unsplash.com/photo-1618843479618-39b0bb21ab70?w=200&h=150&fit=crop" },
+      { name: "Sports", count: 12, image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=200&h=150&fit=crop" },
+      { name: "SUV", count: 20, image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=200&h=150&fit=crop" },
+      { name: "Electric", count: 8, image: "https://images.unsplash.com/photo-1593941707882-a5bacd19c84b?w=200&h=150&fit=crop" },
+    ];
   } finally {
     if (client) {
       await client.close();

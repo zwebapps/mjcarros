@@ -10,10 +10,10 @@ const NavbarSearch = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const searchStr = searchParams.get("q");
+  const searchStr = searchParams?.get("q") || "";
 
   const handleSearchChange = async () => {
-    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    const current = new URLSearchParams(Array.from(searchParams?.entries() || []));
 
     const value = search.trim();
     if (value.length >= 3) {
@@ -47,7 +47,7 @@ const NavbarSearch = () => {
     if (pathname !== "/shop") return;
     const timer = setTimeout(() => {
       const value = search.trim();
-      const current = new URLSearchParams(Array.from(searchParams.entries()));
+      const current = new URLSearchParams(Array.from(searchParams?.entries() || []));
       if (value.length >= 3) {
         current.set("q", value);
       } else {

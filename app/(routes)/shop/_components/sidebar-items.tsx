@@ -36,7 +36,7 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) =
         <select
           onChange={handleSelectChange}
           className="w-full p-2 border border-gray-300 rounded-md text-sm"
-          value={pathName.startsWith("/shop/") ? pathName : "/shop"}
+          value={pathName?.startsWith("/shop/") ? pathName : "/shop"}
         >
           <option value="/shop">All ({totalCount ?? 0})</option>
           {categories?.map((category) => (

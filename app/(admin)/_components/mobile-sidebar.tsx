@@ -12,7 +12,7 @@ import Sidebar from "./Sidebar";
 const MobileSidebar = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const search = searchParams.get("q");
+  const search = searchParams?.get("q") || null;
 
   const [isMounted, setIsMounted] = useState(false);
 

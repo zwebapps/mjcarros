@@ -38,7 +38,7 @@ const EditProduct = () => {
   const params = useParams();
   const router = useRouter();
 
-  const { productId } = params;
+  const productId = params?.productId as string | undefined;
 
   const { data, isLoading } = useQuery({
     queryKey: ["product"],

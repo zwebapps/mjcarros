@@ -20,7 +20,7 @@ const PriceInput = ({ data }: PriceInputProps) => {
 
   const handleSortChange = useCallback(
     async (val: string) => {
-      const current = new URLSearchParams(Array.from(searchParams.entries()));
+      const current = new URLSearchParams(Array.from(searchParams?.entries() || []));
 
       const num = Number(val);
       if (!val || Number.isNaN(num) || num === maxPrice) {
@@ -55,7 +55,7 @@ const PriceInput = ({ data }: PriceInputProps) => {
     };
 
     const init = async () => {
-      if (pathName.startsWith("/shop/") && pathName !== "/shop") {
+      if (pathName?.startsWith("/shop/") && pathName !== "/shop") {
         const urlString = pathName.substring("/shop/".length);
         const categoryProducts = await getCategoryProducts(urlString);
         computeFromProducts(categoryProducts as unknown as Product[]);

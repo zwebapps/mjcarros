@@ -22,7 +22,7 @@ type Billboard = {
 const NewCategorie = () => {
   const router = useRouter();
   const paramas = useParams();
-  const categoryId = paramas.categoryId as string;
+  const categoryId = paramas?.categoryId as string | undefined;
 
   const initialState: initialState = {
     category: "",
