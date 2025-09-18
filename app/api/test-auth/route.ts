@@ -5,6 +5,15 @@ import bcrypt from 'bcryptjs';
 const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
 export async function POST(request: NextRequest) {
+  // During build time, return mock response
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_AVAILABLE) {
+    return NextResponse.json({
+      success: false,
+      error: 'Database unavailable during build',
+      message: 'Build-time mock response'
+    }, { status: 200 });
+  }
+
   let client;
   
   try {
