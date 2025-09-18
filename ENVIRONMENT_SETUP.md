@@ -70,6 +70,26 @@ After successful setup:
 3. **Build Errors**: Check that all environment variables are properly set
 4. **Port Conflicts**: Ensure ports 8080 and 27017 are available
 
+## PayPal Configuration
+
+If you see PayPal-related errors, ensure these variables are set in your `.env` files:
+
+```bash
+# PayPal Configuration
+PAYPAL_CLIENT_ID=your_paypal_client_id_here
+PAYPAL_CLIENT_SECRET=your_paypal_client_secret_here  
+PAYPAL_WEBHOOK_ID=your_paypal_webhook_id_here
+PAYPAL_ENV=sandbox
+NEXT_PUBLIC_PAYPAL_CLIENT_ID=your_paypal_client_id_here
+```
+
+### PayPal Setup Steps:
+1. Create a PayPal Developer account at https://developer.paypal.com
+2. Create a new app in the PayPal Developer Dashboard
+3. Copy the Client ID and Client Secret
+4. Set up webhooks and copy the Webhook ID
+5. Use `sandbox` for testing, `live` for production
+
 ## Sample Data
 
 Use `sample-vehicles.csv` for testing bulk product uploads through the admin panel.
