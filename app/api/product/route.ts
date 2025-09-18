@@ -4,6 +4,8 @@ import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 
+export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+
 const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
 export async function GET(request: NextRequest) {

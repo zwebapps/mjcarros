@@ -54,7 +54,7 @@ const UserTable = () => {
         return [];
       } catch (error) {
         console.error('❌ Frontend: Failed to fetch users:', error);
-        console.error('❌ Frontend: Error details:', error.response?.data);
+        console.error('❌ Frontend: Error details:', (error as any)?.response?.data);
         // Return empty array instead of mock data if API fails
         return [];
       }

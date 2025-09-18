@@ -3,6 +3,8 @@ import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { getMongoDbUri } from "@/lib/mongodb-connection";
 
+export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+
 const MONGODB_URI = getMongoDbUri();
 
 export async function GET() {
@@ -112,6 +114,10 @@ export async function PUT(request: NextRequest) {
     }
     
     // Add id field for compatibility
+    if (!updated) {
+      return NextResponse.json({ error: "Contact page not found after update" }, { status: 404 });
+    }
+
     const contactWithId = {
       ...updated,
       id: updated._id.toString()

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 

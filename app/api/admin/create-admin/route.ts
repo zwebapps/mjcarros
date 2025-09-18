@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 import { db, findMany, findOne, countDocuments } from '@/lib/db';
 import { hashPassword, generateToken } from '@/lib/auth';
 

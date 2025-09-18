@@ -6,6 +6,8 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 import { getMongoDbUri } from "@/lib/mongodb-connection";
 
+export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+
 const MONGODB_URI = getMongoDbUri();
 
 export async function GET(

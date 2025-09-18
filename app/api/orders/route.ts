@@ -6,6 +6,8 @@ import { sendMail } from "@/lib/mail";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { getMongoDbUri } from '@/lib/mongodb-connection';
 
+export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+
 const MONGODB_URI = getMongoDbUri();
 
 export async function GET(request: NextRequest) {
