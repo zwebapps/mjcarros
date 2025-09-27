@@ -121,23 +121,53 @@ export async function PUT(
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
     
-    // Skip S3 upload if no valid credentials or files
-    if (newFiles.length > 0 && bucket && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-      try {
-        for (const file of newFiles) {
-          if (!file) continue;
-          const bytes = Buffer.from(await file.arrayBuffer());
-          const key = `products/${Date.now()}-${file.name}`.replace(/\s+/g, '-');
-          await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
-          if (baseUrl) newUrls.push(`${baseUrl}/${key}`);
+    // Handle image uploads - try S3 first, fallback to local storage
+    if (newFiles.length > 0) {
+      let s3Success = false;
+      
+      // Try S3 upload first if credentials are available
+      if (bucket && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        try {
+          for (const file of newFiles) {
+            if (!file) continue;
+            const bytes = Buffer.from(await file.arrayBuffer());
+            const key = `products/${Date.now()}-${file.name}`.replace(/\s+/g, '-');
+            await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
+            if (baseUrl) newUrls.push(`${baseUrl}/${key}`);
+          }
+          console.log(`✅ Successfully uploaded ${newUrls.length} images to S3`);
+          s3Success = true;
+        } catch (s3Error) {
+          console.warn('⚠️ S3 upload failed, trying local storage:', s3Error.message);
         }
-        console.log(`✅ Successfully uploaded ${newUrls.length} images to S3`);
-      } catch (s3Error) {
-        console.warn('⚠️ S3 upload failed, continuing without new images:', s3Error.message);
-        // Continue without uploading new images
       }
-    } else if (newFiles.length > 0) {
-      console.warn('⚠️ Skipping S3 upload - missing AWS credentials or bucket configuration');
+      
+      // Fallback to local storage if S3 failed
+      if (!s3Success) {
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const uploadsDir = '/app/public/uploads';
+          
+          // Ensure uploads directory exists
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          
+          for (const file of newFiles) {
+            if (!file) continue;
+            const bytes = Buffer.from(await file.arrayBuffer());
+            const fileName = `${Date.now()}-${file.name}`.replace(/\s+/g, '-');
+            const filePath = path.join(uploadsDir, fileName);
+            
+            fs.writeFileSync(filePath, bytes);
+            newUrls.push(`/uploads/${fileName}`);
+          }
+          console.log(`✅ Successfully saved ${newUrls.length} images locally`);
+        } catch (localError) {
+          console.warn('⚠️ Local storage failed:', localError.message);
+        }
+      }
     }
 
     // Decide final gallery URLs (append new uploads only if S3 upload succeeded)
