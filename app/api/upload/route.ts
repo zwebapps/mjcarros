@@ -26,10 +26,33 @@ export async function POST(req: NextRequest) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, '-');
     const key = `${folder}/${Date.now()}-${safeName}`;
-    await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
-    const url = baseUrl ? `${baseUrl}/${key}` : undefined;
-
-    return NextResponse.json({ url, key });
+    
+    try {
+      await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
+      const url = baseUrl ? `${baseUrl}/${key}` : undefined;
+      console.log(`✅ Successfully uploaded to S3: ${key}`);
+      return NextResponse.json({ url, key });
+    } catch (s3Error) {
+      console.warn('⚠️ S3 upload failed, using local storage fallback:', s3Error instanceof Error ? s3Error.message : String(s3Error));
+      
+      // Fallback to local storage
+      const fs = require('fs');
+      const path = require('path');
+      const uploadsDir = '/app/public/uploads';
+      
+      // Ensure uploads directory exists
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const fileName = `${Date.now()}-${safeName}`;
+      const filePath = path.join(uploadsDir, fileName);
+      fs.writeFileSync(filePath, bytes);
+      
+      const localUrl = `/uploads/${fileName}`;
+      console.log(`✅ Successfully saved locally: ${fileName}`);
+      return NextResponse.json({ url: localUrl, key: fileName, local: true });
+    }
   } catch (e) {
     console.error('[UPLOAD_ERROR]', e);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });

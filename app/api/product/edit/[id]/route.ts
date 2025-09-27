@@ -121,13 +121,14 @@ export async function PUT(
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
     
-    // Handle image uploads - try S3 first, fallback to local storage
+    // Handle image uploads - S3 first, then local storage fallback
     if (newFiles.length > 0) {
       let s3Success = false;
       
       // Try S3 upload first if credentials are available
       if (bucket && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
         try {
+          console.log('🔄 Attempting S3 upload...');
           for (const file of newFiles) {
             if (!file) continue;
             const bytes = Buffer.from(await file.arrayBuffer());
@@ -138,13 +139,16 @@ export async function PUT(
           console.log(`✅ Successfully uploaded ${newUrls.length} images to S3`);
           s3Success = true;
         } catch (s3Error) {
-          console.warn('⚠️ S3 upload failed, trying local storage:', s3Error.message);
+          console.warn('⚠️ S3 upload failed, trying local storage:', s3Error instanceof Error ? s3Error.message : String(s3Error));
         }
+      } else {
+        console.log('⚠️ S3 credentials not available, using local storage');
       }
       
-      // Fallback to local storage if S3 failed
+      // Fallback to local storage if S3 failed or not configured
       if (!s3Success) {
         try {
+          console.log('🔄 Using local storage fallback...');
           const fs = require('fs');
           const path = require('path');
           const uploadsDir = '/app/public/uploads';
@@ -165,7 +169,7 @@ export async function PUT(
           }
           console.log(`✅ Successfully saved ${newUrls.length} images locally`);
         } catch (localError) {
-          console.warn('⚠️ Local storage failed:', localError.message);
+          console.warn('⚠️ Local storage failed:', localError instanceof Error ? localError.message : String(localError));
         }
       }
     }
