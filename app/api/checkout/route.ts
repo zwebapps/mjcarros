@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Items are required" }, { status: 400 });
     }
 
-    const origin = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
+    // Use external URL for Stripe redirects, not internal Docker URL
+    const origin = process.env.NEXT_PUBLIC_APP_URL === 'http://nextjs:3000' 
+      ? 'http://localhost:8080' 
+      : (process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000");
 
     // Connect to MongoDB
     client = new MongoClient(MONGODB_URI, {
