@@ -62,6 +62,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     mileage,
     condition,
   } = data;
+  // Handle both S3 and local storage URLs
   const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
 
   const initialState = {
@@ -203,15 +204,20 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         const fd = new FormData();
         fd.append('file', file);
         fd.append('folder', 'products');
-        const res = await fetch('/api/upload', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : undefined, body: fd });
+        const res = await fetch('/api/upload', { 
+          method: 'POST', 
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined, 
+          body: fd 
+        });
         if (!res.ok) throw new Error('Upload failed');
         const data = await res.json();
         if (data?.url) uploaded.push(data.url);
       }
       setPreviewImage([...(previewImage || []), ...uploaded]);
-      toast.success('Gallery updated');
+      toast.success(`Gallery updated - ${uploaded.length} images added`);
     } catch (err) {
-      toast.error('Gallery upload failed');
+      console.error('Gallery upload error:', err);
+      toast.error('Gallery upload failed - please try again');
     } finally {
       setIsUploading(false);
     }
@@ -360,25 +366,52 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         onChange={handleFileChange}
         multiple
       />
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {previewImage?.map((preview, index) => {
           const isHttp = /^https?:\/\//.test(preview);
           const isBlobOrData = /^(blob:|data:)/.test(preview);
-          const cleaned = preview.replace(/^\/+/, "");
-          const imagePath = (isHttp || isBlobOrData)
-            ? preview
-            : baseUrl
-              ? `${baseUrl}/${cleaned}`
-              : `/${cleaned}`;
+          const isLocalUpload = preview.startsWith('/uploads/');
+          
+          let imagePath = preview;
+          
+          if (isHttp || isBlobOrData) {
+            // Direct URLs (S3, blob, data URLs)
+            imagePath = preview;
+          } else if (isLocalUpload) {
+            // Local uploads - use as is
+            imagePath = preview;
+          } else if (baseUrl) {
+            // S3 URLs that need base URL
+            const cleaned = preview.replace(/^\/+/, "");
+            imagePath = `${baseUrl}/${cleaned}`;
+          } else {
+            // Fallback to relative path
+            const cleaned = preview.replace(/^\/+/, "");
+            imagePath = `/${cleaned}`;
+          }
+          
           return (
-            <img
-              key={`preview-${index}-${preview.slice(-10)}`} // More unique key
-              src={imagePath}
-              alt={`Preview ${index}`}
-              width={100}
-              height={100}
-              className="rounded-sm object-cover"
-            />
+            <div key={`preview-${index}-${preview.slice(-10)}`} className="relative">
+              <img
+                src={imagePath}
+                alt={`Preview ${index + 1}`}
+                width={100}
+                height={100}
+                className="rounded-sm object-cover border"
+                onError={(e) => {
+                  console.warn(`Failed to load image: ${imagePath}`);
+                  const img = e.currentTarget as HTMLImageElement;
+                  img.src = '/logo.png'; // Fallback image
+                }}
+              />
+              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center cursor-pointer"
+                   onClick={() => {
+                     const newPreviews = previewImage.filter((_, i) => i !== index);
+                     setPreviewImage(newPreviews);
+                   }}>
+                ×
+              </div>
+            </div>
           );
         })}
       </div>
