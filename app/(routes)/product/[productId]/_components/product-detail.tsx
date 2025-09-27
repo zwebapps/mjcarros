@@ -22,6 +22,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!productId) {
+      console.error('No productId provided');
+      setError('No product ID provided');
+      setIsLoading(false);
+      return;
+    }
+
     const fetchProduct = async () => {
       try {
         console.log('Fetching product:', productId);

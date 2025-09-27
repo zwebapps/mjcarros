@@ -22,6 +22,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:3000"
+    depends_on:
+      - mongodb
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
@@ -48,7 +50,12 @@ services:
       AWS_REGION: ${AWS_REGION}
       AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
       NEXT_PUBLIC_S3_BASE_URL: ${NEXT_PUBLIC_S3_BASE_URL}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      NEXT_PUBLIC_APP_URL: http://nextjs:3000
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
     depends_on:
       - mongodb
     volumes:

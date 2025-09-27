@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { generateOrderNumber } from "@/lib/order-number-generator";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
@@ -39,24 +39,58 @@ export async function GET(request: NextRequest) {
     await client.connect();
     const db = client.db('mjcarros');
     const ordersCollection = db.collection('orders');
-    // Admin: return all orders
+    const productsCollection = db.collection('products');
+    
+    // Helper function to enrich orders with product details
+    const enrichOrdersWithProducts = async (orders: any[]) => {
+      return Promise.all(orders.map(async (order) => {
+        const enrichedOrderItems = await Promise.all(
+          (order.orderItems || []).map(async (item: any) => {
+            let product = null;
+            
+            // Only try to fetch product if productId is a valid ObjectId
+            if (item.productId && ObjectId.isValid(item.productId)) {
+              try {
+                product = await productsCollection.findOne({ _id: new ObjectId(item.productId) });
+              } catch (error) {
+                console.error(`Error fetching product ${item.productId}:`, error);
+              }
+            }
+            
+            return {
+              ...item,
+              product: product ? {
+                _id: product._id.toString(),
+                title: product.title,
+                description: product.description,
+                price: product.price,
+                category: product.category,
+                imageURLs: product.imageURLs || []
+              } : null
+            };
+          })
+        );
+        
+        return {
+          ...order,
+          id: order._id.toString(),
+          orderItems: enrichedOrderItems
+        };
+      }));
+    };
+
+    // Admin: return all orders with product details
     if (userRole === 'ADMIN') {
       const orders = await ordersCollection.find({}).sort({ createdAt: -1 }).toArray();
-      const ordersWithId = orders.map(order => ({
-        ...order,
-        id: order._id.toString() // Add id field for compatibility
-      }));
-      return NextResponse.json(ordersWithId);
+      const enrichedOrders = await enrichOrdersWithProducts(orders);
+      return NextResponse.json(enrichedOrders);
     }
 
-    // Authenticated user: return own orders
+    // Authenticated user: return own orders with product details
     if (userEmail) {
       const orders = await ordersCollection.find({ userEmail }).sort({ createdAt: -1 }).toArray();
-      const ordersWithId = orders.map(order => ({
-        ...order,
-        id: order._id.toString() // Add id field for compatibility
-      }));
-      return NextResponse.json(ordersWithId);
+      const enrichedOrders = await enrichOrdersWithProducts(orders);
+      return NextResponse.json(enrichedOrders);
     }
 
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });

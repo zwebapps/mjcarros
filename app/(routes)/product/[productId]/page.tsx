@@ -2,6 +2,7 @@ import { type Metadata } from "next";
 import { MongoClient } from "mongodb";
 import { siteConfig } from "@/config/site";
 import ProductDetail from "./_components/product-detail";
+import Link from "next/link";
 
 const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
 
@@ -50,6 +51,19 @@ export async function generateMetadata({
 }
 
 const ProductPage = ({ params }: { params: { productId: string } }) => {
+  if (!params?.productId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 text-lg mb-4">Invalid product ID</p>
+          <Link href="/shop" className="text-blue-600 hover:text-blue-800 underline">
+            Back to shop
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  
   return <ProductDetail productId={params.productId} />;
 };
 

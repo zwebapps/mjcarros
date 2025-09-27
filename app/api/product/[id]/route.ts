@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+const MONGODB_URI = getMongoDbUri();
+
+export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
