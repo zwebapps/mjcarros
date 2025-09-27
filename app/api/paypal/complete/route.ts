@@ -116,13 +116,9 @@ export async function POST(req: NextRequest) {
     try {
       if (order.userEmail && order.userEmail.trim()) {
         await sendMail(order.userEmail, subject, html, attachments);
-        console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${order.userEmail}`);
-        if (voucherUrl) {
-          console.log(`☁️ Voucher also available at: ${voucherUrl}`);
-        }
+        console.log(`📧 Professional order confirmation email sent to: ${order.userEmail}`);
       } else {
         console.log('⚠️ No email address provided - skipping email notification');
-        console.log(`☁️ Voucher available at: ${voucherUrl}`);
       }
     } catch (emailError) {
       console.warn('Failed to send order confirmation email:', emailError);
