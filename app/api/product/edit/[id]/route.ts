@@ -111,7 +111,7 @@ export async function PUT(
       if (cat) categoryIdUpdate = cat._id.toString();
     }
 
-    // Optional file uploads - handle S3 errors gracefully
+    // Optional file uploads - skip S3 if credentials are invalid
     const bucket = process.env.AWS_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
     const region = process.env.NEXT_PUBLIC_AWS_S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
     const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || (bucket && region ? `https://${bucket}.s3.${region}.amazonaws.com` : '')).replace(/\/$/, '');
@@ -121,8 +121,8 @@ export async function PUT(
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
     
-    // Only attempt S3 upload if we have files and bucket is configured
-    if (newFiles.length > 0 && bucket) {
+    // Skip S3 upload if no valid credentials or files
+    if (newFiles.length > 0 && bucket && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       try {
         for (const file of newFiles) {
           if (!file) continue;
@@ -131,10 +131,13 @@ export async function PUT(
           await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
           if (baseUrl) newUrls.push(`${baseUrl}/${key}`);
         }
+        console.log(`✅ Successfully uploaded ${newUrls.length} images to S3`);
       } catch (s3Error) {
-        console.warn('S3 upload failed, continuing without new images:', s3Error);
+        console.warn('⚠️ S3 upload failed, continuing without new images:', s3Error.message);
         // Continue without uploading new images
       }
+    } else if (newFiles.length > 0) {
+      console.warn('⚠️ Skipping S3 upload - missing AWS credentials or bucket configuration');
     }
 
     // Decide final gallery URLs (append new uploads only if S3 upload succeeded)
