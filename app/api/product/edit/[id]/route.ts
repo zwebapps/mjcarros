@@ -111,23 +111,33 @@ export async function PUT(
       if (cat) categoryIdUpdate = cat._id.toString();
     }
 
-    // Optional file uploads
+    // Optional file uploads - handle S3 errors gracefully
     const bucket = process.env.AWS_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
     const region = process.env.NEXT_PUBLIC_AWS_S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
     const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || (bucket && region ? `https://${bucket}.s3.${region}.amazonaws.com` : '')).replace(/\/$/, '');
+    
     // Load existing product to append gallery images
     const existing = await productsCollection.findOne({ _id: new ObjectId(params.id) });
     const newFiles = formData.getAll('image') as File[];
     let newUrls: string[] = [];
-    for (const file of newFiles) {
-      if (!file || !bucket) continue;
-      const bytes = Buffer.from(await file.arrayBuffer());
-      const key = `products/${Date.now()}-${file.name}`.replace(/\s+/g, '-');
-      await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
-      if (baseUrl) newUrls.push(`${baseUrl}/${key}`);
+    
+    // Only attempt S3 upload if we have files and bucket is configured
+    if (newFiles.length > 0 && bucket) {
+      try {
+        for (const file of newFiles) {
+          if (!file) continue;
+          const bytes = Buffer.from(await file.arrayBuffer());
+          const key = `products/${Date.now()}-${file.name}`.replace(/\s+/g, '-');
+          await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
+          if (baseUrl) newUrls.push(`${baseUrl}/${key}`);
+        }
+      } catch (s3Error) {
+        console.warn('S3 upload failed, continuing without new images:', s3Error);
+        // Continue without uploading new images
+      }
     }
 
-    // Decide final gallery URLs (append new uploads)
+    // Decide final gallery URLs (append new uploads only if S3 upload succeeded)
     const combinedUrls = newUrls.length && existing ? [...(existing.imageURLs || []), ...newUrls] : (newUrls.length ? newUrls : undefined);
 
     // Prepare update data
