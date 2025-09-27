@@ -115,7 +115,7 @@ export default function ProductTable() {
                   <div className="flex-shrink-0 h-10 w-10">
                     <img
                       className="h-10 w-10 rounded-full object-cover"
-                      src={product.imageURLs[0] || "/logo.png"}
+                      src={product.imageURLs[0] ? `${product.imageURLs[0]}?w=400&h=300&fit=crop` : "/logo.png"}
                       alt={product.title}
                       onError={(e) => { const img = e.currentTarget as HTMLImageElement; img.onerror = null; img.src = "/logo.png"; }}
                     />

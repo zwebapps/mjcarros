@@ -100,7 +100,7 @@ async function getCategoriesWithCounts() {
       const current = map.get(key) || { count: 0, image: undefined };
       current.count += 1;
       if (!current.image && Array.isArray(p.imageURLs) && p.imageURLs.length > 0) {
-        current.image = p.imageURLs[0];
+        current.image = p.imageURLs[0] ? `${p.imageURLs[0]}?w=400&h=300&fit=crop` : "/logo.png";
       }
       map.set(key, current);
     }

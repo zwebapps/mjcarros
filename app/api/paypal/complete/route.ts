@@ -106,21 +106,12 @@ export async function POST(req: NextRequest) {
     // Backup order to S3
     await backupOrderToS3(order);
 
-    // Generate professional email and PDF voucher
+    // Generate professional email (skip PDF generation for now)
     const { subject, html } = generateOrderConfirmationEmail(order, 'PayPal');
-    const pdfVoucher = await generatePDFVoucher(order);
     
-    // Upload voucher to S3
-    const voucherUrl = await uploadOrderVoucherToS3(order);
-    
-    // Create PDF voucher attachment
-    const attachments = [
-      {
-        filename: `voucher-${order._id || order.id}.pdf`,
-        content: pdfVoucher,
-        contentType: 'application/pdf'
-      }
-    ];
+    // Skip PDF generation since Chrome is not available
+    console.log('⚠️ PDF generation skipped - Chrome not available');
+    const attachments: any[] = [];
     
     try {
       if (order.userEmail && order.userEmail.trim()) {
