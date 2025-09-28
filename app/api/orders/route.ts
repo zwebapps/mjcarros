@@ -180,18 +180,9 @@ export async function POST(request: NextRequest) {
     // Backup order to S3
     await backupOrderToS3(newOrder);
 
-    // Send confirmation email to customer
-    const subject = `Your MJ Carros order ${newOrder._id}`;
-    const itemsHtml = newOrder.orderItems.map((i) => `<li>${i.productName}</li>`).join('');
-    const html = `
-      <div>
-        <h2>Thank you for your order!</h2>
-        <p>Order ID: ${newOrder._id}</p>
-        <ul>${itemsHtml}</ul>
-        <p>We will contact you shortly.</p>
-      </div>
-    `;
-    try { await sendMail(newOrder.userEmail, subject, html); } catch (e) { console.warn('sendMail failed', e); }
+    // Do NOT send email here for Stripe/PayPal flows; emails are sent after payment is confirmed
+    // (webhook/confirm routes handle notification with invoice attachment)
+    // If you later add a manual payment method, you can send an email here for that flow only.
 
     return NextResponse.json(newOrder);
   } catch (error) {

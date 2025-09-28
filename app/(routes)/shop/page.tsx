@@ -1,6 +1,8 @@
 import ProductCard from "@/components/ui/product-card";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
+import { MongoClient } from "mongodb";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 export const metadata = {
   title: "Shop | MJ Carros",
@@ -16,16 +18,18 @@ const ShopPage = async ({
   searchParams: { [key: string]: string | string[] | undefined };
 }) => {
   try {
-    // Fetch products from API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/product`, {
-      cache: 'no-store' // Ensure fresh data
+    // Query MongoDB directly during SSR to avoid self-HTTP calls
+    const uri = getMongoDbUri();
+    const client = new MongoClient(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch products: ${response.status}`);
-    }
-    
-    const dbProducts = await response.json();
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    const dbProducts = await productsCollection.find({}).toArray();
+    await client.close();
 
     const products: Product[] = dbProducts.map((dbProduct: any) => ({
       id: dbProduct._id?.toString(),

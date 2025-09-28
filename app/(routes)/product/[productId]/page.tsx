@@ -4,7 +4,9 @@ import { siteConfig } from "@/config/site";
 import ProductDetail from "./_components/product-detail";
 import Link from "next/link";
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+import { getMongoDbUri } from "@/lib/mongodb-connection";
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function generateMetadata({
   params,

@@ -147,7 +147,21 @@ export default function GuestOrdersPage() {
           <h2 className="text-xl font-semibold mb-4">Your Orders</h2>
           <div className="space-y-6">
             {orders.map((order) => {
-              const primaryImage = order.orderItems[0]?.product?.imageURLs?.[0] || '';
+              const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
+              const normalize = (src: string): string => {
+                if (!src) return '/logo.png';
+                if (/^https?:\/\//.test(src)) {
+                  if (src.includes('images.unsplash.com') && !src.includes('?')) {
+                    return `${src}?w=600&h=400&fit=crop&auto=format`;
+                  }
+                  return src;
+                }
+                if (src.startsWith('/uploads/')) return src;
+                if (baseUrl) return `${baseUrl}/${src.replace(/^\/+/, '')}`;
+                return `/${src.replace(/^\/+/, '')}`;
+              };
+
+              const primaryImage = normalize(order.orderItems[0]?.product?.imageURLs?.[0] || '');
               const dateStr = new Date(order.createdAt).toLocaleString();
               return (
                 <div key={order._id} className="border rounded p-4">
@@ -161,6 +175,7 @@ export default function GuestOrdersPage() {
                           fill 
                           className="object-cover" 
                           sizes="160px" 
+                          onError={(e) => { (e.currentTarget as any).src = '/logo.png'; }}
                         />
                       ) : (
                         <div className="h-full w-full bg-gray-200" />
@@ -181,7 +196,7 @@ export default function GuestOrdersPage() {
                       {/* Items list */}
                       <ul className="mt-4 divide-y">
                         {order.orderItems.map((item) => {
-                          const image = item.product?.imageURLs?.[0] || "";
+                          const image = normalize(item.product?.imageURLs?.[0] || "");
                           const qty = item.quantity ?? 1;
                           const soldOut = qty === 0;
                           return (
@@ -195,6 +210,7 @@ export default function GuestOrdersPage() {
                                       fill 
                                       className="object-cover" 
                                       sizes="40px" 
+                                      onError={(e) => { (e.currentTarget as any).src = '/logo.png'; }}
                                     />
                                   </div>
                                 ) : (

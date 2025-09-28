@@ -9,7 +9,9 @@ import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+import { getMongoDbUri } from "@/lib/mongodb-connection";
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function POST(req: NextRequest) {
   let client;
@@ -61,10 +63,16 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     };
 
-    await ordersCollection.updateOne(
-      { _id: new ObjectId(orderId) },
-      { $set: updateData }
+    // Atomically mark as notified if not already (prevents duplicate emails)
+    const updateResult = await ordersCollection.updateOne(
+      { _id: new ObjectId(orderId), notificationSent: { $ne: true } },
+      { $set: { ...updateData, notificationSent: true } }
     );
+
+    if (updateResult.modifiedCount === 0) {
+      const existing = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
+      return new NextResponse(JSON.stringify({ ok: true, email: existing?.userEmail, message: 'Already notified' }), { status: 200 });
+    }
 
     // Fetch the updated order with all details
     const updated = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
@@ -91,32 +99,32 @@ export async function POST(req: NextRequest) {
       userEmail: updated.userEmail || ""
     };
 
-    // Generate professional email and PDF voucher
+    // Generate professional email and attach the same invoice PDF
     const { subject, html } = generateOrderConfirmationEmail(updatedWithProducts as any, 'Stripe');
-    const pdfVoucher = await generatePDFVoucher(updatedWithProducts as any);
-    
-    // Upload voucher to S3
-    const voucherUrl = await uploadOrderVoucherToS3(updatedWithProducts as any);
-    
-    // Create PDF voucher attachment
-    const attachments = [
-      {
-        filename: `voucher-${updatedWithProducts._id || updatedWithProducts._id}.pdf`,
-        content: pdfVoucher,
-        contentType: 'application/pdf'
+    const attachments: any[] = [];
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const invoiceRes = await fetch(`${appUrl}/api/orders/${orderId}/invoice`, { headers: { Accept: 'application/pdf' }, cache: 'no-store' });
+      if (invoiceRes.ok) {
+        const pdfArrayBuffer = await invoiceRes.arrayBuffer();
+        attachments.push({ filename: `invoice-${orderId}.pdf`, content: Buffer.from(pdfArrayBuffer), contentType: 'application/pdf' });
+      } else {
+        console.warn('⚠️ Invoice fetch failed (confirm route):', invoiceRes.status, invoiceRes.statusText);
       }
-    ];
+    } catch (e) {
+      console.warn('⚠️ Failed to fetch invoice PDF (confirm route):', e);
+    }
     
     try {
       if (updatedWithProducts.userEmail && updatedWithProducts.userEmail.trim()) {
-        await sendMail(updatedWithProducts.userEmail, subject, html, attachments);
-        console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${updatedWithProducts.userEmail}`);
-        if (voucherUrl) {
-          console.log(`☁️ Voucher also available at: ${voucherUrl}`);
-        }
+        const logoBuffer = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`).then(r=>r.arrayBuffer()).then(b=>Buffer.from(b));
+        await sendMail(updatedWithProducts.userEmail, subject, html, [
+          { filename: 'logo.png', content: logoBuffer, cid: 'mjcarros-logo' },
+          ...attachments
+        ]);
+        console.log(`📧 Order confirmation email with invoice sent to: ${updatedWithProducts.userEmail}`);
       } else {
         console.log('⚠️ No email address provided - skipping email notification');
-        console.log(`☁️ Voucher available at: ${voucherUrl}`);
       }
     } catch (emailError) {
       console.warn('Failed to send payment confirmation email:', emailError);

@@ -524,7 +524,7 @@ export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMet
           
           <!-- Header -->
           <div class="header">
-            <img src="https://mjcarros.com/logo.png" alt="MJ Carros Logo" style="height: 60px; margin-bottom: 10px;" />
+            <img src="cid:mjcarros-logo" alt="MJ Carros Logo" style="height: 60px; margin-bottom: 10px;" />
             <h1 class="company-name">MJ Carros</h1>
             <p class="company-tagline">Professional Automotive Solutions</p>
           </div>

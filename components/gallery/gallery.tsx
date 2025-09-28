@@ -10,17 +10,39 @@ interface GalleryProps {
 }
 
 const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
+  const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
+
+  const normalizeUrl = (src: string): string => {
+    if (!src) return "/logo.png";
+    if (/^https?:\/\//.test(src)) {
+      if (src.includes("images.unsplash.com") && !src.includes("?")) {
+        return `${src}?w=1200&h=900&fit=crop&auto=format`;
+      }
+      return src;
+    }
+    if (src.startsWith("/uploads/")) return src;
+    if (baseUrl) return `${baseUrl}/${src.replace(/^\/+/, "")}`;
+    return `/${src.replace(/^\/+/, "")}`;
+  };
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget as HTMLImageElement;
+    img.src = "/logo.png";
+  };
+
+  const normalizedImages = (images && images.length > 0 ? images : ["/logo.png"]).map(normalizeUrl);
+
   return (
     <Tab.Group as="div" className="flex flex-col-reverse">
       <div className="mx-auto mt-6 w-full max-w-2xl sm:block lg:max-w-2xl">
         <Tab.List className="grid grid-cols-4 gap-6">
-          {images.map((image, index) => (
+          {normalizedImages.map((image, index) => (
             <GalleryTab image={image} key={index} />
           ))}
         </Tab.List>
       </div>
       <Tab.Panels className="aspect-square w-full">
-        {images.map((image, index) => (
+        {normalizedImages.map((image, index) => (
           <Tab.Panel key={index}>
             <div className="aspect-square relative h-full w-full sm:rounded-lg overflow-hidden">
               <NextImage
@@ -33,6 +55,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
                 onLoad={(
                   event: React.SyntheticEvent<HTMLImageElement, Event>
                 ) => event.currentTarget.classList.remove("opacity-0")}
+                onError={handleError}
               />
             </div>
           </Tab.Panel>

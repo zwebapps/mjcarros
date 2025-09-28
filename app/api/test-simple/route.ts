@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+import { getMongoDbUri } from "@/lib/mongodb-connection";
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function GET(request: NextRequest) {
   // During build time, return mock data to avoid connection errors

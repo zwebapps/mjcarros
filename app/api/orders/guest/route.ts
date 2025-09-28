@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+import { getMongoDbUri } from "@/lib/mongodb-connection";
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function POST(request: NextRequest) {
   let client;
@@ -39,10 +41,20 @@ export async function POST(request: NextRequest) {
       orders.map(async (order) => {
         const orderItemsWithProducts = await Promise.all(
           (order.orderItems || []).map(async (item: any) => {
-            const product = await productsCollection.findOne({ _id: item.productId });
+            let product = null;
+            try {
+              if (item?.productId) {
+                if (ObjectId.isValid(item.productId)) {
+                  product = await productsCollection.findOne({ _id: new ObjectId(item.productId) });
+                } else {
+                  // Fallback: some historical data may store string ids or custom id field
+                  product = await productsCollection.findOne({ id: String(item.productId) });
+                }
+              }
+            } catch {}
             return {
               ...item,
-              product: product
+              product
             };
           })
         );

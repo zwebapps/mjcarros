@@ -5,7 +5,9 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { readFile } from "fs/promises";
 import path from "path";
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+import { getMongoDbUri } from "@/lib/mongodb-connection";
+
+const MONGODB_URI = getMongoDbUri();
 
 export async function GET(
   request: NextRequest,
@@ -71,17 +73,38 @@ export async function GET(
       logoImage = await pdfDoc.embedPng(logoBytes);
     } catch {}
 
-    // Load car image from the first product
+    // Load car image from the first product (supports PNG and JPEG)
     let carImage: any = null;
     try {
       const firstProduct = orderWithProducts.orderItems[0]?.product;
       if (firstProduct?.imageURLs?.[0]) {
-        const imageUrl = firstProduct.imageURLs[0];
-        const response = await fetch(imageUrl);
+        let imageUrl = String(firstProduct.imageURLs[0] || "");
+        // Improve Unsplash rendering by adding sizing if missing
+        if (imageUrl.includes('images.unsplash.com') && !imageUrl.includes('?')) {
+          imageUrl = `${imageUrl}?w=1200&h=800&fit=crop&auto=format`;
+        }
+        const response = await fetch(imageUrl, { cache: 'no-store' });
         if (response.ok) {
+          const contentType = response.headers.get('content-type') || '';
           const imageBuffer = await response.arrayBuffer();
           const imageBytes = new Uint8Array(imageBuffer);
-          carImage = await pdfDoc.embedPng(imageBytes);
+          try {
+            if (contentType.includes('png')) {
+              carImage = await pdfDoc.embedPng(imageBytes);
+            } else {
+              // Default to JPEG when content type is jpeg/jpg or unknown
+              carImage = await pdfDoc.embedJpg(imageBytes);
+            }
+          } catch (embedErr) {
+            // Fallback: try the other format once
+            try {
+              carImage = await pdfDoc.embedPng(imageBytes);
+            } catch {
+              try {
+                carImage = await pdfDoc.embedJpg(imageBytes);
+              } catch {}
+            }
+          }
         }
       }
     } catch (error) {

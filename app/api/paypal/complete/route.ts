@@ -10,6 +10,8 @@ import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
+export const runtime = 'nodejs'; // Ensure Node.js runtime for Puppeteer/pdf generation
+
 export async function POST(req: NextRequest) {
   let client;
   
@@ -106,12 +108,26 @@ export async function POST(req: NextRequest) {
     // Backup order to S3
     await backupOrderToS3(order);
 
-    // Generate professional email (skip PDF generation for now)
+    // Generate professional email and attach PDF voucher (fallback if generation fails)
     const { subject, html } = generateOrderConfirmationEmail(order, 'PayPal');
-    
-    // Skip PDF generation since Chrome is not available
-    console.log('⚠️ PDF generation skipped - Chrome not available');
     const attachments: any[] = [];
+    // Fetch the same invoice PDF via internal API and attach to email
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const invoiceRes = await fetch(`${appUrl}/api/orders/${order._id || order.id}/invoice`, { headers: { Accept: 'application/pdf' }, cache: 'no-store' });
+      if (invoiceRes.ok) {
+        const pdfArrayBuffer = await invoiceRes.arrayBuffer();
+        attachments.push({
+          filename: `invoice-${order._id || order.id}.pdf`,
+          content: Buffer.from(pdfArrayBuffer),
+          contentType: 'application/pdf',
+        });
+      } else {
+        console.warn('⚠️ Invoice fetch failed:', invoiceRes.status, invoiceRes.statusText);
+      }
+    } catch (pdfErr) {
+      console.warn('⚠️ Failed to fetch invoice PDF for attachment:', pdfErr);
+    }
     
     try {
       if (order.userEmail && order.userEmail.trim()) {

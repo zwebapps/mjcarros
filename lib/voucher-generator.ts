@@ -46,6 +46,19 @@ export function generateVoucherHTML(order: OrderWithItems): string {
   }, 0);
 
   const voucherNumber = `VCH-${order._id || order.id}-${Date.now()}`;
+  const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
+  const normalize = (src: string): string => {
+    if (!src) return '/logo.png';
+    if (/^https?:\/\//.test(src)) {
+      if (src.includes('images.unsplash.com') && !src.includes('?')) {
+        return `${src}?w=1200&h=800&fit=crop&auto=format`;
+      }
+      return src;
+    }
+    if (src.startsWith('/uploads/')) return src;
+    if (baseUrl) return `${baseUrl}/${src.replace(/^\/+/, '')}`;
+    return `/${src.replace(/^\/+/, '')}`;
+  };
 
   return `
     <!DOCTYPE html>
@@ -364,7 +377,7 @@ export function generateVoucherHTML(order: OrderWithItems): string {
             return carImage ? `
               <section class="vehicle-image-section" style="text-align: center; margin: 20px 0;">
                 <h2 style="color: #f59e0b; margin-bottom: 15px; text-transform: uppercase;">Vehicle Image</h2>
-                <img src="${carImage}" alt="${item.productName}" style="max-width: 100%; max-height: 300px; border: 2px solid #f59e0b; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+              <img src="${normalize(carImage)}" alt="${item.productName}" style="max-width: 100%; max-height: 300px; border: 2px solid #f59e0b; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
               </section>
             ` : '';
           }).join('')}

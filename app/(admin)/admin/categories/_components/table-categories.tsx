@@ -35,7 +35,10 @@ const TableCategories = () => {
 
   const deleteTask = async (id: string) => {
     try {
-      const res = await axios.delete(`/api/categories/edit/${id}`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const res = await axios.delete(`/api/categories/edit/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["category"] });
       toast.success("Category deleted");
     } catch (error) {

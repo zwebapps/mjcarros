@@ -5,8 +5,6 @@ import { MongoClient, ObjectId } from "mongodb";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
-import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
-import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
 import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
@@ -120,32 +118,39 @@ export async function POST(req: Request) {
       // Backup updated order to S3
       await backupOrderToS3(updatedOrderWithProducts);
 
-      // Generate professional email and PDF voucher
+      // Atomically set notificationSent if not set to prevent duplicate notifications
+      const notifUpdate = await ordersCollection.updateOne(
+        { _id: new ObjectId(orderId), notificationSent: { $ne: true } },
+        { $set: { notificationSent: true } }
+      );
+      if (notifUpdate.modifiedCount === 0) {
+        console.log(`ℹ️ Order ${orderId} already notified. Skipping email.`);
+        await backupOrderToS3(updatedOrderWithProducts);
+        return new NextResponse(null, { status: 200 });
+      }
+
+      // Generate professional email and attach the same invoice PDF
       const { subject, html } = generateOrderConfirmationEmail(updatedOrderWithProducts as any, 'Stripe');
-      const pdfVoucher = await generatePDFVoucher(updatedOrderWithProducts as any);
-      
-      // Upload voucher to S3
-      const voucherUrl = await uploadOrderVoucherToS3(updatedOrderWithProducts as any);
-      
-      // Create PDF voucher attachment
-      const attachments = [
-        {
-          filename: `voucher-${(updatedOrder as any).id || orderId}.pdf`,
-          content: pdfVoucher,
-          contentType: 'application/pdf'
-        }
-      ];
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const invoiceRes = await fetch(`${appUrl}/api/orders/${orderId}/invoice`, { headers: { Accept: 'application/pdf' }, cache: 'no-store' });
+      const attachments: any[] = [];
+      if (invoiceRes.ok) {
+        const pdfArrayBuffer = await invoiceRes.arrayBuffer();
+        attachments.push({ filename: `invoice-${orderId}.pdf`, content: Buffer.from(pdfArrayBuffer), contentType: 'application/pdf' });
+      } else {
+        console.warn('⚠️ Invoice fetch failed for webhook attachment:', invoiceRes.status, invoiceRes.statusText);
+      }
       
       try {
         if (updatedOrderWithProducts.userEmail && updatedOrderWithProducts.userEmail.trim()) {
-          await sendMail(updatedOrderWithProducts.userEmail, subject, html, attachments);
-          console.log(`📧 Professional order confirmation email with PDF voucher sent to: ${updatedOrderWithProducts.userEmail}`);
-          if (voucherUrl) {
-            console.log(`☁️ Voucher also available at: ${voucherUrl}`);
-          }
+          const logoBuffer = await fetch(`${appUrl}/logo.png`).then(r=>r.arrayBuffer()).then(b=>Buffer.from(b));
+          await sendMail(updatedOrderWithProducts.userEmail, subject, html, [
+            { filename: 'logo.png', content: logoBuffer, cid: 'mjcarros-logo' },
+            ...attachments
+          ]);
+          console.log(`📧 Professional order confirmation email with invoice sent to: ${updatedOrderWithProducts.userEmail}`);
         } else {
           console.log('⚠️ No email address provided - skipping email notification');
-          console.log(`☁️ Voucher available at: ${voucherUrl}`);
         }
       } catch (emailError) {
         console.warn('Failed to send order confirmation email:', emailError);

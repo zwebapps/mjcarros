@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
-import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
-import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
 import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 export async function POST(
@@ -31,16 +29,11 @@ export async function POST(
     const ordersCollection = db.collection('orders');
     const productsCollection = db.collection('products');
 
-    // Update order as paid
-    const updateData = {
-      isPaid: true,
-      updatedAt: new Date(),
-    };
-
-    const updateResult = await ordersCollection.updateOne(
-      { _id: new ObjectId(orderId) },
-      { $set: updateData }
-    );
+            // Atomically set notificationSent to prevent duplicates
+            const updateResult = await ordersCollection.updateOne(
+              { _id: new ObjectId(orderId), notificationSent: { $ne: true } },
+              { $set: { isPaid: true, updatedAt: new Date(), notificationSent: true } }
+            );
 
     if (updateResult.matchedCount === 0) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -86,16 +79,30 @@ export async function POST(
       userEmail: updatedOrder.userEmail || ""
     };
 
-    // Generate professional email (skip PDF generation for now)
+    // Generate professional email and attach PDF voucher (fallback if generation fails)
     const { subject, html } = generateOrderConfirmationEmail(updatedOrderWithProducts as any, 'Stripe');
-    
-    // Skip PDF generation since Chrome is not available
-    console.log('⚠️ PDF generation skipped - Chrome not available');
     const attachments: any[] = [];
-    
+    // Fetch the same invoice PDF via internal API and attach to email
     try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const invoiceRes = await fetch(`${appUrl}/api/orders/${updatedOrderWithProducts.id}/invoice`, { headers: { Accept: 'application/pdf' }, cache: 'no-store' });
+      if (invoiceRes.ok) {
+        const pdfArrayBuffer = await invoiceRes.arrayBuffer();
+        attachments.push({
+          filename: `invoice-${updatedOrderWithProducts.id}.pdf`,
+          content: Buffer.from(pdfArrayBuffer),
+          contentType: 'application/pdf',
+        });
+      } else {
+        console.warn('⚠️ Invoice fetch failed:', invoiceRes.status, invoiceRes.statusText);
+      }
+    } catch (pdfErr) {
+      console.warn('⚠️ Failed to fetch invoice PDF for attachment:', pdfErr);
+    }
+    
+            try {
       if (updatedOrderWithProducts.userEmail && updatedOrderWithProducts.userEmail.trim()) {
-        await sendMail(updatedOrderWithProducts.userEmail, subject, html, attachments);
+                await sendMail(updatedOrderWithProducts.userEmail, subject, html, attachments);
         console.log(`📧 Professional order confirmation email sent to: ${updatedOrderWithProducts.userEmail}`);
       } else {
         console.log('⚠️ No email address provided - skipping email notification');
