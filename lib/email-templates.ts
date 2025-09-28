@@ -192,6 +192,10 @@ export function generateContactFormEmail(contactData: ContactFormData): { subjec
 }
 
 export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMethod: 'Stripe' | 'PayPal'): { subject: string; html: string } {
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'MJ Carros';
+  const sitePhone = process.env.NEXT_PUBLIC_SITE_PHONE || '+1 (555) 000-0000';
+  const siteEmail = process.env.NEXT_PUBLIC_SITE_EMAIL || 'info@mjcarros.com';
+  const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || 'www.mjcarros.com';
   const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -204,7 +208,7 @@ export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMet
     return sum + (item.product?.price || 0);
   }, 0);
 
-  const subject = `Order Confirmation ${getDisplayOrderNumber(order)} - MJ Carros`;
+  const subject = `Order Confirmation ${getDisplayOrderNumber(order)} - ${siteName}`;
 
   const html = `
     <!DOCTYPE html>
@@ -212,7 +216,7 @@ export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMet
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Order Confirmation ${getDisplayOrderNumber(order)} - MJ Carros</title>
+        <title>Order Confirmation ${getDisplayOrderNumber(order)} - ${siteName}</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -524,9 +528,9 @@ export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMet
           
           <!-- Header -->
           <div class="header">
-            <img src="cid:mjcarros-logo" alt="MJ Carros Logo" style="height: 60px; margin-bottom: 10px;" />
-            <h1 class="company-name">MJ Carros</h1>
-            <p class="company-tagline">Professional Automotive Solutions</p>
+            <img src="cid:mjcarros-logo" alt="${siteName} Logo" style="height: 60px; margin-bottom: 10px;" />
+            <h1 class="company-name">${siteName}</h1>
+            <p class="company-tagline">${siteWeb}</p>
           </div>
 
           <!-- Content -->
@@ -631,7 +635,7 @@ export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMet
               <p>• Your order has been confirmed and payment processed successfully</p>
               <p>• Please keep this email and the attached PDF voucher for your records</p>
               <p>• Our team will contact you shortly to arrange vehicle delivery</p>
-              <p>• If you have any questions, please contact us at info@mjcarros.com</p>
+              <p>• If you have any questions, please contact us at ${siteEmail}</p>
               <br>
               <p>Thank you for choosing MJ Carros for your automotive needs!</p>
             </div>
@@ -639,9 +643,9 @@ export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMet
 
           <!-- Footer -->
           <div class="footer">
-            <p><span class="company-name">MJ Carros</span> - Professional Automotive Solutions</p>
-            <p>Email: info@mjcarros.com | Phone: +1 (555) 000-0000</p>
-            <p>© 2024 MJ Carros. All rights reserved.</p>
+            <p><span class="company-name">${siteName}</span> - ${siteWeb}</p>
+            <p>Email: ${siteEmail} | Phone: ${sitePhone}</p>
+            <p>© ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
           </div>
 
         </div>

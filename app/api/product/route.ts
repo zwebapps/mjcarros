@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
     const productsCollection = db.collection('products');
     
     const products = await productsCollection.find({}).toArray();
-    return NextResponse.json(products);
+    const withCode = products.map((p:any)=>({
+      ...p,
+      productCode: p.productCode || `PRD-${p._id.toString().slice(-6).toUpperCase()}`,
+    }));
+    return NextResponse.json(withCode);
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json({ error: "Error fetching products" }, { status: 500 });
@@ -132,7 +136,12 @@ export async function POST(request: NextRequest) {
     const db = client.db('mjcarros');
     const productsCollection = db.collection('products');
     
+    // Pre-generate an ObjectId so we can derive a human-friendly productCode
+    const newId = new ObjectId();
+    const productCode = `PRD-${newId.toHexString().slice(-6).toUpperCase()}`;
+
     const productData = {
+      _id: newId,
       title,
       description,
       imageURLs,
@@ -142,6 +151,7 @@ export async function POST(request: NextRequest) {
       finalPrice,
       discount,
       featured: featured || false,
+      productCode,
       ...extras,
       createdAt: new Date(),
       updatedAt: new Date()

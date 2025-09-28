@@ -44,7 +44,8 @@ export async function GET(
     // Transform the product to include id field for compatibility
     const transformedProduct = {
       ...product,
-      id: product._id.toString()
+      id: product._id.toString(),
+      productCode: (product as any).productCode || `PRD-${product._id.toString().slice(-6).toUpperCase()}`
     };
 
     // Transform related products

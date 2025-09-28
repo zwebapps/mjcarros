@@ -34,6 +34,12 @@ export interface OrderWithItems {
 }
 
 export function generateVoucherHTML(order: OrderWithItems): string {
+  const siteName = (process.env.NEXT_PUBLIC_SITE_NAME || 'MJ Carros');
+  const siteAddr1 = process.env.NEXT_PUBLIC_SITE_ADDRESS1 || '178 Expensive Avenue';
+  const siteCity = process.env.NEXT_PUBLIC_SITE_CITY || 'Philadelphia, 20100 PH';
+  const sitePhone = process.env.NEXT_PUBLIC_SITE_PHONE || '+1 (555) 000-0000';
+  const siteEmail = process.env.NEXT_PUBLIC_SITE_EMAIL || 'info@mjcarros.com';
+  const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || 'www.mjcarros.com';
   const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -337,15 +343,15 @@ export function generateVoucherHTML(order: OrderWithItems): string {
         <div class="container">
           <header class="header">
             <div>
-              <img src="https://mjcarros.com/logo.png" alt="MJ Carros Logo" style="height: 50px; margin-bottom: 10px;" />
-          <h1>VEHICLE PURCHASE ORDER</h1>
-          <p>Order # <span style="font-weight: bold;">${getDisplayOrderNumber(order)}</span></p>
+              <img src="cid:mjcarros-logo" alt="${siteName} Logo" style="height: 50px; margin-bottom: 10px;" />
+              <h1>VEHICLE PURCHASE ORDER</h1>
+              <p>Order # <span style="font-weight: bold;">${getDisplayOrderNumber(order)}</span></p>
             </div>
             <address class="company-address">
-              <div class="company-name">MJ CARROS</div>
-              <div class="address">178 Expensive Avenue<br>Philadelphia, 20100 PH</div>
-              <div style="margin-top: 5px;">+1 (555) 000-0000 • info@mjcarros.com</div>
-              <div style="margin-top: 5px;">www.mjcarros.com</div>
+              <div class="company-name">${siteName.toUpperCase()}</div>
+              <div class="address">${siteAddr1}<br>${siteCity}</div>
+              <div style="margin-top: 5px;">${sitePhone} • ${siteEmail}</div>
+              <div style="margin-top: 5px;">${siteWeb}</div>
             </address>
           </header>
 
@@ -467,7 +473,7 @@ export function generateVoucherHTML(order: OrderWithItems): string {
           </section>
 
           <footer class="footer">
-            <p>This invoice serves as proof of purchase and warranty document. © 2024 MJ Carros. All rights reserved.</p>
+            <p>This invoice serves as proof of purchase and warranty document. © ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
           </footer>
         </div>
       </body>

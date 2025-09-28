@@ -56,6 +56,7 @@ export async function GET(
       orderItems: orderItemsWithProducts,
       address: order.address || "",
       phone: order.phone || "",
+      userEmail: (order as any).userEmail || "",
       createdAt: order.createdAt || new Date()
     };
 
@@ -169,6 +170,20 @@ export async function GET(
       });
     };
 
+    // Site/company variables (purely env-driven; no hardcoded defaults)
+    const siteNameEnv = process.env.NEXT_PUBLIC_SITE_NAME || '';
+    const siteName = siteNameEnv ? siteNameEnv.toUpperCase() : '';
+    const siteAddr1 = process.env.NEXT_PUBLIC_SITE_ADDRESS1 || '';
+    const siteCity = process.env.NEXT_PUBLIC_SITE_CITY || '';
+    const sitePhone = process.env.NEXT_PUBLIC_SITE_PHONE || '';
+    const siteEmail = process.env.NEXT_PUBLIC_SITE_EMAIL || '';
+    const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || '';
+
+    // Purchaser variables
+    const purchaserName = (orderWithProducts as any).customerName || (orderWithProducts.userEmail || 'Customer');
+    const purchaserAddress = orderWithProducts.address || '';
+    const purchaserPhone = orderWithProducts.phone || '';
+
     // Header band
     line(0, 820, 595.28, 4, orange);
 
@@ -205,31 +220,26 @@ export async function GET(
       rightX = 325;
     let infoY = 660;
 
-    draw("JOHN DOE", leftX, infoY, 10, true);
-    draw("COMPANY NAME", rightX, infoY, 10, true);
+    draw(String(purchaserName).toUpperCase(), leftX, infoY, 10, true);
+    draw(String(siteName).toUpperCase(), rightX, infoY, 10, true);
 
     infoY -= 22;
     box(leftX, infoY, 240, 16);
-    draw("Purchaser Name", leftX + 6, infoY + 4, 9);
+    draw("Purchaser", leftX + 6, infoY + 4, 9);
     box(rightX, infoY, 240, 16);
-    draw("MJ Carros", rightX + 6, infoY + 4, 9);
+    draw(siteAddr1, rightX + 6, infoY + 4, 9);
 
     infoY -= 22;
     box(leftX, infoY, 240, 16);
-    draw(
-      (orderWithProducts.address || "").split(/\n/)[0] || "Address",
-      leftX + 6,
-      infoY + 4,
-      9
-    );
+    draw((purchaserAddress.split(/\n/)[0] || 'Address'), leftX + 6, infoY + 4, 9);
     box(rightX, infoY, 240, 16);
-    draw("www.mjcarros.com", rightX + 6, infoY + 4, 9);
+    draw(siteWeb, rightX + 6, infoY + 4, 9);
 
     infoY -= 22;
     box(leftX, infoY, 240, 16);
-    draw(orderWithProducts.phone || "Phone", leftX + 6, infoY + 4, 9);
+    draw(purchaserPhone || "Phone", leftX + 6, infoY + 4, 9);
     box(rightX, infoY, 240, 16);
-    draw("Sales", rightX + 6, infoY + 4, 9);
+    draw(siteEmail, rightX + 6, infoY + 4, 9);
 
     // Vehicle Information (moved lower to avoid overlaps with top panels)
     line(30, 570, 535, 2, orange);
@@ -369,12 +379,7 @@ export async function GET(
     // Footer - company name and contact details
     page.drawRectangle({ x: 0, y: 0, width: 595.28, height: 70, color: orange });
     const white = rgb(1, 1, 1);
-    const siteName = (process.env.NEXT_PUBLIC_SITE_NAME || 'MJ Carros').toUpperCase();
-    const siteAddr1 = process.env.NEXT_PUBLIC_SITE_ADDRESS1 || '178 Expensive Avenue';
-    const siteCity = process.env.NEXT_PUBLIC_SITE_CITY || 'Philadelphia, 20100 PH';
-    const sitePhone = process.env.NEXT_PUBLIC_SITE_PHONE || '+1 (555) 000-0000';
-    const siteEmail = process.env.NEXT_PUBLIC_SITE_EMAIL || 'info@mjcarros.com';
-    const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || 'www.mjcarros.com';
+    // (company details already defined above)
 
     // Right-aligned block in footer
     const footerRightX = 580;

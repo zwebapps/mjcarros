@@ -199,6 +199,12 @@ export async function PUT(
     if (condition) updateData.condition = condition;
     if (combinedUrls) updateData.imageURLs = combinedUrls;
 
+    // Ensure a human-friendly productCode is set once
+    const existingProduct = existing || await productsCollection.findOne({ _id: new ObjectId(params.id) });
+    if (existingProduct && !existingProduct.productCode) {
+      updateData.productCode = `PRD-${String(params.id).slice(-6).toUpperCase()}`;
+    }
+
     // Update main product fields
     const result = await productsCollection.updateOne(
       { _id: new ObjectId(params.id) },
