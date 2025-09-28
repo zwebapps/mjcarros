@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Disable built-in optimizer to avoid _next/image "url parameter is not allowed" issues in Docker
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "*.s3.*.amazonaws.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
