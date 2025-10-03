@@ -1,6 +1,6 @@
 "use client";
 
-import { getCategoryProducts } from "@/lib/apiCalls";
+import { getCategoryProducts, getAllProducts } from "@/lib/apiCalls";
 import { Product } from "@/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -60,7 +60,12 @@ const PriceInput = ({ data }: PriceInputProps) => {
         const categoryProducts = await getCategoryProducts(urlString);
         computeFromProducts(categoryProducts as unknown as Product[]);
       } else {
-        computeFromProducts(data);
+        if (data && data.length > 0) {
+          computeFromProducts(data);
+        } else {
+          const all = await getAllProducts();
+          computeFromProducts(all as unknown as Product[]);
+        }
       }
     };
 
