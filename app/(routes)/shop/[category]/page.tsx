@@ -2,6 +2,8 @@ import { Metadata } from "next";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import ProductCard from "@/components/ui/product-card";
+import { MongoClient } from "mongodb";
+import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 interface CategoryPageProps {
   params: { category: string };
@@ -20,9 +22,16 @@ export const dynamic = 'force-dynamic';
 
 const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
   try {
-    // For now, return empty array since we removed the db import
-    // This page will need to be updated to use MongoDB directly
-    const dbProducts: any[] = [];
+    const uri = getMongoDbUri();
+    const client = new MongoClient(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    await client.connect();
+    const db = client.db('mjcarros');
+    const productsCollection = db.collection('products');
+    const dbProducts: any[] = await productsCollection.find({ category: new RegExp(`^${params.category}$`, 'i') }).toArray();
 
     const products: Product[] = dbProducts.map((dbProduct) => ({
       id: dbProduct._id?.toString(),
@@ -53,6 +62,7 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
       );
     }
 
+    await client.close();
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-10">
         {displayed.map((product: Product) => (
