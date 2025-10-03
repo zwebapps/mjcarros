@@ -13,6 +13,13 @@ export const transporter = hasEmailConfig
   : null;
 
 export async function sendMail(to: string, subject: string, html: string, attachments?: any[]) {
+  // Debug log email configuration (without password)
+  try {
+    const maskedUser = user ? `${user.slice(0, 2)}***@***` : '';
+    console.log('[MAIL] Config:', { host, port, user: maskedUser, fromAddress, hasEmailConfig });
+    console.log('[MAIL] Sending to:', to, 'subject:', subject);
+  } catch {}
+
   if (!transporter) return { skipped: true } as const;
   await transporter.sendMail({ 
     from: fromAddress, 

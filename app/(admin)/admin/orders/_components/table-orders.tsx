@@ -1,11 +1,12 @@
 "use client";
 import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Spinner from "@/components/Spinner";
 import formatDate, { sortByDate } from "@/app/utils/formateDate";
 import ReactPaginate from "react-paginate";
 import { useState } from "react";
 import TitleHeader from "@/app/(admin)/_components/title-header";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 type OrderItem = {
   id: string;
@@ -29,6 +30,8 @@ const TableOrders = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const productsPerPage = 25;
 
+  const queryClient = useQueryClient();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const { error, data, isLoading } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
@@ -50,6 +53,18 @@ const TableOrders = () => {
 
   const handlePrint = (order: Order) => {
     window.open(`/api/orders/${order._id || order._id}/invoice`, "_blank");
+  };
+
+  const handleDelete = async (order: Order) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.delete(`/api/orders/${order._id}`, { headers });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setPendingDeleteId(null);
+    } catch (e) {
+      // no-op; UI will remain unchanged on failure
+    }
   };
 
   if (isLoading) {
@@ -122,9 +137,24 @@ const TableOrders = () => {
                   {formatDate(order.createdAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                  <button onClick={() => handlePrint(order)} className="text-indigo-600 hover:text-indigo-500 underline">
-                    Invoice (PDF)
-                  </button>
+                  <div className="flex items-center justify-center gap-3">
+                    <button onClick={() => handlePrint(order)} className="text-indigo-600 hover:text-indigo-500 underline">
+                      Invoice (PDF)
+                    </button>
+                    {pendingDeleteId === order._id ? (
+                      <ConfirmDialog
+                        open
+                        title="Delete order?"
+                        description="This action cannot be undone."
+                        onCancel={() => setPendingDeleteId(null)}
+                        onConfirm={() => handleDelete(order)}
+                      />
+                    ) : (
+                      <button onClick={() => setPendingDeleteId(order._id)} className="text-red-600 hover:text-red-800 underline">
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

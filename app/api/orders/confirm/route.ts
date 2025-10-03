@@ -12,6 +12,7 @@ const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16
 import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   let client;
@@ -103,8 +104,11 @@ export async function POST(req: NextRequest) {
     const { subject, html } = generateOrderConfirmationEmail(updatedWithProducts as any, 'Stripe');
     const attachments: any[] = [];
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const invoiceRes = await fetch(`${appUrl}/api/orders/${orderId}/invoice`, { headers: { Accept: 'application/pdf' }, cache: 'no-store' });
+      const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'localhost:3000';
+      const proto = req.headers.get('x-forwarded-proto') || 'http';
+      const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
+      const fHeaders: any = { Accept: 'application/pdf', origin, 'x-forwarded-host': host, 'x-forwarded-proto': proto };
+      const invoiceRes = await fetch(`${origin}/api/orders/${orderId}/invoice`, { headers: fHeaders, cache: 'no-store' });
       if (invoiceRes.ok) {
         const pdfArrayBuffer = await invoiceRes.arrayBuffer();
         attachments.push({ filename: `invoice-${orderId}.pdf`, content: Buffer.from(pdfArrayBuffer), contentType: 'application/pdf' });

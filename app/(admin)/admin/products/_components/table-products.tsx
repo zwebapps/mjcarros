@@ -11,6 +11,7 @@ import { useState } from "react";
 import ReactPaginate from "react-paginate";
 import formatDate, { sortByDate } from "@/app/utils/formateDate";
 import TitleHeader from "@/app/(admin)/_components/title-header";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 type createData = {
   title: string;
@@ -31,6 +32,7 @@ export default function ProductTable() {
   const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "https://your-s3-bucket.s3.region.amazonaws.com";
 
   const queryClient = useQueryClient();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const { error, data, isLoading } = useQuery({
     queryKey: ["products"],
@@ -53,6 +55,7 @@ export default function ProductTable() {
       const res = await axios.delete(`/api/product/${id}`, { headers });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("Product deleted successfully");
+      setConfirmId(null);
     } catch (error) {
       console.error('Delete product error:', error);
       toast.error("Something went wrong");
@@ -138,12 +141,22 @@ export default function ProductTable() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   <div className="flex items-center justify-center space-x-2">
-                    <button
-                      onClick={() => deleteTask(product._id || product.id)}
-                      className="text-red-600 hover:text-red-800 p-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {confirmId === (product._id || product.id) ? (
+                      <ConfirmDialog
+                        open
+                        title="Delete product?"
+                        description="This action cannot be undone."
+                        onCancel={() => setConfirmId(null)}
+                        onConfirm={() => deleteTask(product._id || product.id)}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => setConfirmId(product._id || product.id)}
+                        className="text-red-600 hover:text-red-800 p-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                     <Link 
                       href={`/admin/products/${product._id || product.id}`}
                       className="text-blue-600 hover:text-blue-800 p-1"
