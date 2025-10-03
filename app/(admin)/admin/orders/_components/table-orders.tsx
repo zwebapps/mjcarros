@@ -6,6 +6,8 @@ import formatDate, { sortByDate } from "@/app/utils/formateDate";
 import ReactPaginate from "react-paginate";
 import { useState } from "react";
 import TitleHeader from "@/app/(admin)/_components/title-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 type OrderItem = {
@@ -32,6 +34,40 @@ const TableOrders = () => {
 
   const queryClient = useQueryClient();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Order | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState("Stripe");
+  const [editIsPaid, setEditIsPaid] = useState(false);
+
+  const openEdit = (order: Order) => {
+    setEditing(order);
+    setEditEmail(order.userEmail || "");
+    setEditPhone(order.phone || "");
+    setEditAddress(order.address || "");
+    setEditPaymentMethod("Stripe");
+    setEditIsPaid(!!order.isPaid);
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' } as any;
+      await axios.patch(`/api/orders/${editing._id}`, {
+        userEmail: editEmail,
+        phone: editPhone,
+        address: editAddress,
+        paymentMethod: editPaymentMethod,
+        isPaid: editIsPaid,
+      }, { headers });
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    } catch (e) {
+      // silent; keep modal open for retry
+    }
+  };
   const { error, data, isLoading } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
@@ -82,6 +118,44 @@ const TableOrders = () => {
         count={data?.length}
         description="Manage orders for your store"
       />
+      {editing && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setEditing(null)} />
+          <div className="relative z-50 w-full max-w-md rounded-md bg-white p-5 shadow-lg">
+            <h3 className="text-lg font-semibold mb-4">Edit Order</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Email</label>
+                <Input value={editEmail} onChange={(e)=>setEditEmail(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Phone</label>
+                <Input value={editPhone} onChange={(e)=>setEditPhone(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Address</label>
+                <Input value={editAddress} onChange={(e)=>setEditAddress(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Payment Method</label>
+                <select className="w-full border rounded-sm h-10 px-2" value={editPaymentMethod} onChange={(e)=>setEditPaymentMethod(e.target.value)}>
+                  <option value="Stripe">Stripe</option>
+                  <option value="PayPal">PayPal</option>
+                  <option value="Manual">Manual</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input id="paid" type="checkbox" checked={editIsPaid} onChange={(e)=>setEditIsPaid(e.target.checked)} />
+                <label htmlFor="paid" className="text-sm">Mark as paid</label>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" onClick={()=>setEditing(null)}>Cancel</Button>
+              <Button onClick={saveEdit}>Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -140,6 +214,9 @@ const TableOrders = () => {
                   <div className="flex items-center justify-center gap-3">
                     <button onClick={() => handlePrint(order)} className="text-indigo-600 hover:text-indigo-500 underline">
                       Invoice (PDF)
+                    </button>
+                    <button onClick={() => openEdit(order)} className="text-blue-600 hover:text-blue-800 underline">
+                      Edit
                     </button>
                     {pendingDeleteId === order._id ? (
                       <ConfirmDialog
