@@ -78,7 +78,7 @@ const PriceInput = ({ data }: PriceInputProps) => {
       <div className="range-label flex justify-between">
         <div className="flex flex-col gap-y-1">
           <p className="font-semibold">Price</p>
-          <span className="font-serif">${value?.toFixed(2)}</span>
+          <span className="font-serif">€{value?.toFixed(2)}</span>
         </div>
       </div>
       <input

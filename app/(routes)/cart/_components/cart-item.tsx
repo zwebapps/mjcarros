@@ -61,7 +61,7 @@ const CartItem: React.FC<CartItemProps> = ({ data }) => {
           </div>
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-black">
-              ${data.finalPrice ? data.finalPrice.toLocaleString() : data.price.toLocaleString()}
+              €{(data.finalPrice ?? data.price).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>

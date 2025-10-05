@@ -102,7 +102,7 @@ const DashboardPage = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="pl-6 pb-3">
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">€{totalRevenue.toLocaleString('de-DE')}</div>
             <p className="text-xs text-muted-foreground">
               +12.5% from last month
             </p>

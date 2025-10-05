@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       
       console.log(`💳 PayPal payment completed: ${eventType}`);
       console.log(`👤 Payer Email: ${payerEmail}`);
-      console.log(`💰 Amount: ${amount} ${currency}`);
+      console.log(`💰 Amount: €${amount} ${currency}`);
       
       try {
         if (payerEmail) {
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
             // Log payment completion
             console.log(`✅ Order ${order._id || order.id} payment confirmed via PayPal`);
             console.log(`👤 Customer: ${(updatedOrder as any).userEmail}`);
-            console.log(`💰 Amount: $${amount} ${currency}`);
+            console.log(`💰 Amount: €${amount} ${currency}`);
             console.log(`💳 Payment Method: PayPal`);
 
             // Backup updated order to S3
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
                 <p>Your payment has been successfully processed.</p>
                 <p><strong>Order ID:</strong> ${order._id || order.id}</p>
                 <p><strong>Payment Method:</strong> PayPal</p>
-                <p><strong>Amount:</strong> $${amount} ${currency}</p>
+                <p><strong>Amount:</strong> €${amount} ${currency}</p>
                 <p>We will process your order and contact you shortly.</p>
               </div>
             `;

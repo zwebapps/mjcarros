@@ -134,7 +134,7 @@ export default function ProductTable() {
                   {product.featured ? "Yes" : "No"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                  ${product.price.toLocaleString()}
+                  €{product.price.toLocaleString('de-DE')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   {formatDate(product.createdAt)}

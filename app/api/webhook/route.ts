@@ -112,7 +112,7 @@ export async function POST(req: Request) {
       // Log payment completion
       console.log(`✅ Order ${orderId} payment confirmed via Stripe`);
       console.log(`👤 Customer: ${(updatedOrder as any).userEmail}`);
-      console.log(`💰 Amount: $${session?.amount_total ? (session.amount_total / 100).toFixed(2) : 'N/A'}`);
+      console.log(`💰 Amount: €${session?.amount_total ? (session.amount_total / 100).toFixed(2) : 'N/A'}`);
       console.log(`💳 Payment Method: Stripe`);
 
       // Backup updated order to S3
