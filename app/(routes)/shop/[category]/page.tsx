@@ -41,6 +41,7 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
       finalPrice: dbProduct.finalPrice || undefined,
       discount: dbProduct.discount || undefined,
       featured: dbProduct.featured,
+      sold: !!dbProduct.sold,
       imageURLs: dbProduct.imageURLs,
       category: dbProduct.category,
       categoryId: dbProduct.categoryId,

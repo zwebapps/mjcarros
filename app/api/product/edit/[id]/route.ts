@@ -38,7 +38,8 @@ export async function GET(
     // Add id field for compatibility
     const productWithId = {
       ...product,
-      id: product._id.toString()
+      id: product._id.toString(),
+      sold: !!(product as any).sold
     };
     
     return NextResponse.json(productWithId);
@@ -92,7 +93,13 @@ export async function PUT(
     const discount = discountRaw !== null && String(discountRaw).length > 0 ? Number(discountRaw) : null;
     const description = String(formData.get("description") || "");
     const category = String(formData.get("category") || "");
-    const isFeatured = String(formData.get("isFeatured") || "false") === "true";
+    const parseBool = (v: FormDataEntryValue | null): boolean => {
+      if (v == null) return false;
+      const s = String(v).toLowerCase();
+      return s === 'true' || s === 'on' || s === '1' || s === 'yes' || s === 'checked';
+    };
+    const isFeatured = parseBool(formData.get("isFeatured"));
+    const isSold = parseBool(formData.get("isSold"));
     const productSizesRaw = String(formData.get("productSizes") || "[]");
     // New fields
     const modelName = String(formData.get("modelName") || "");
@@ -189,6 +196,7 @@ export async function PUT(
     if (category) updateData.category = category;
     if (categoryIdUpdate) updateData.categoryId = categoryIdUpdate;
     updateData.featured = isFeatured;
+    updateData.sold = isSold;
     if (modelName) updateData.modelName = modelName;
     if (year) updateData.year = year;
     if (stockQuantity) updateData.stockQuantity = stockQuantity;

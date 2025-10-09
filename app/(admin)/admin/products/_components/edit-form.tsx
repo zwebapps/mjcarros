@@ -29,6 +29,7 @@ type InitialType = {
   category: string;
   files: File[];
   isFeatured: boolean;
+  isSold?: boolean;
   productSizes?: SizeProduct[];
   categoryId: string;
   discount?: number;
@@ -72,6 +73,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     category,
     files: [],
     isFeatured: featured,
+    isSold: (data as any).sold || false,
     productSizes: productSizes,
     categoryId,
     discount,
@@ -87,6 +89,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [checkbox, setCheckBox] = useState<boolean>(featured);
+  const [soldCheckbox, setSoldCheckbox] = useState<boolean>((data as any).sold || false);
   const [previewImage, setPreviewImage] = useState<string[]>();
   const [dataForm, setDataForm] = useState<InitialType>(initialState);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -95,9 +98,13 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const handleCheckboxChange = () => {
     setCheckBox((prevCheck) => !prevCheck);
   };
+  const handleSoldCheckboxChange = () => {
+    setSoldCheckbox((prevCheck) => !prevCheck);
+  };
 
   useEffect(() => {
     setCheckBox(featured);
+    setSoldCheckbox((data as any).sold || false);
   }, [featured]);
 
   useEffect(() => {
@@ -112,6 +119,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       category,
       files: [],
       isFeatured: featured,
+      isSold: (data as any).sold || false,
       productSizes,
       categoryId,
       discount,
@@ -142,6 +150,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     transmission,
     mileage,
     condition,
+    (data as any).sold,
   ]);
 
   useEffect(() => {
@@ -187,6 +196,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     setIsLoading(true);
     const formData = new FormData(e.currentTarget);
     formData.append("isFeatured", checkbox.toString());
+    formData.append("isSold", soldCheckbox.toString());
     // sizes removed
     await onSubmit(formData);
 
@@ -356,6 +366,21 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         <div className="space-y-1 leading-none">
           <p className="font-semibold">Featured</p>
           <div>This product will appear on the home page</div>
+        </div>
+      </div>
+      <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+        <div>
+          <input
+            type="checkbox"
+            id="isSold"
+            name="isSold"
+            checked={soldCheckbox}
+            onChange={handleSoldCheckboxChange}
+          />
+        </div>
+        <div className="space-y-1 leading-none">
+          <p className="font-semibold">Sold</p>
+          <div>Mark vehicle as sold (hidden from cart)</div>
         </div>
       </div>
       <label htmlFor="image">Change Product Image</label>

@@ -45,7 +45,8 @@ export async function GET(
     const transformedProduct = {
       ...product,
       id: product._id.toString(),
-      productCode: (product as any).productCode || `PRD-${product._id.toString().slice(-6).toUpperCase()}`
+      productCode: (product as any).productCode || `PRD-${product._id.toString().slice(-6).toUpperCase()}`,
+      sold: !!(product as any).sold
     };
 
     // Transform related products

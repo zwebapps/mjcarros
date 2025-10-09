@@ -25,6 +25,7 @@ type initialState = {
   category: string;
   files: File[];
   isFeatured: boolean;
+  isSold: boolean;
   categoryId: string;
   // sizes removed
   discount?: string;
@@ -50,6 +51,7 @@ const AddProduct = () => {
     categoryId: "",
     files: [],
     isFeatured: false,
+    isSold: false,
     // sizes removed
     discount: "",
     modelName: "",
@@ -138,6 +140,9 @@ const AddProduct = () => {
   const handleCheckboxChange = (isChecked: boolean) => {
     setDataForm((prevData) => ({ ...prevData, isFeatured: isChecked }));
   };
+  const handleSoldChange = (isChecked: boolean) => {
+    setDataForm((prevData) => ({ ...prevData, isSold: isChecked }));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -187,6 +192,7 @@ const AddProduct = () => {
       price: convPrice,
       files: dataForm.files,
       featured: dataForm.isFeatured,
+      sold: dataForm.isSold,
       category: dataForm.category,
       // no sizes
       categoryId: dataForm.categoryId,
@@ -393,6 +399,21 @@ const AddProduct = () => {
           <div className="space-y-1 leading-none">
             <p className="font-semibold">Featured</p>
             <div>This product will appear on the home page</div>
+          </div>
+        </div>
+        <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+          <div>
+            <input
+              type="checkbox"
+              id="isSold"
+              name="isSold"
+              checked={dataForm.isSold}
+              onChange={(e) => handleSoldChange(e.target.checked)}
+            />
+          </div>
+          <div className="space-y-1 leading-none">
+            <p className="font-semibold">Sold</p>
+            <div>Mark vehicle as sold (hidden from cart)</div>
           </div>
         </div>
         <label htmlFor="image">Add Product Image</label>

@@ -71,9 +71,10 @@ const Info: React.FC<InfoProps> = ({ data }) => {
         <Button
           onClick={onAddToCart}
           className="flex items-center gap-x-2"
+          disabled={!!data.sold}
         >
-          Add To Cart
-          <ShoppingCart size={20} />
+          {data.sold ? 'Sold' : 'Add To Cart'}
+          {!data.sold && <ShoppingCart size={20} />}
         </Button>
       </div>
     </div>

@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const withCode = products.map((p:any)=>({
       ...p,
       productCode: p.productCode || `PRD-${p._id.toString().slice(-6).toUpperCase()}`,
+      sold: !!p.sold,
     }));
     return NextResponse.json(withCode);
   } catch (error) {
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
     let finalPrice: number | undefined = undefined;
     let discount: number | undefined = undefined;
     let featured: boolean = false;
+    let sold: boolean = false;
     let imageURLs: string[] = [];
     let extras: any = {};
 
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
       finalPrice = parsed.finalPrice ? Number(parsed.finalPrice) : undefined;
       discount = parsed.discount ? Number(parsed.discount) : undefined;
       featured = !!parsed.featured;
+      sold = !!parsed.sold;
       // sizes removed
       // Car attributes
       extras = {
@@ -115,7 +118,7 @@ export async function POST(request: NextRequest) {
       imageURLs = [...preUrls, ...imageURLs];
     } else {
       const body = await request.json();
-      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, ...extras } = body);
+      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, sold, ...extras } = body);
     }
 
     if (!title || !description || !category || !categoryId || !price) {
@@ -151,6 +154,7 @@ export async function POST(request: NextRequest) {
       finalPrice,
       discount,
       featured: featured || false,
+      sold: sold || false,
       productCode,
       ...extras,
       createdAt: new Date(),

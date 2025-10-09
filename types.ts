@@ -8,6 +8,7 @@ export interface Product {
   finalPrice?: number;
   discount?: number;
   featured: boolean;
+  sold?: boolean;
   imageURLs: string[];
   categoryId: string;
   createdAt?: string;
@@ -48,6 +49,7 @@ export interface RequestData {
   price: number;
   files: File[];
   featured: boolean;
+  sold?: boolean;
   category: string;
   categoryId: string;
   discount?: number;

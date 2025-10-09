@@ -7,9 +7,10 @@ import GalleryTab from "./gallery-tab";
 
 interface GalleryProps {
   images: string[];
+  sold?: boolean;
 }
 
-const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
+const Gallery: React.FC<GalleryProps> = ({ images = [], sold = false }) => {
   const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
 
   const normalizeUrl = (src: string): string => {
@@ -57,6 +58,11 @@ const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
                 ) => event.currentTarget.classList.remove("opacity-0")}
                 onError={handleError}
               />
+              {sold && (
+                <div className="absolute inset-0 bg-yellow-400/40 flex items-center justify-center pointer-events-none">
+                  <span className="bg-yellow-400 text-black font-bold px-4 py-1 rounded shadow">SOLD</span>
+                </div>
+              )}
             </div>
           </Tab.Panel>
         ))}

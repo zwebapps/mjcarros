@@ -57,6 +57,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           finalPrice: data.product.finalPrice || undefined,
           discount: data.product.discount || undefined,
           featured: data.product.featured,
+          sold: !!data.product.sold,
           imageURLs: data.product.imageURLs || [],
           category: data.product.category,
           categoryId: data.product.categoryId,
@@ -73,6 +74,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           finalPrice: dbProduct.finalPrice || undefined,
           discount: dbProduct.discount || undefined,
           featured: dbProduct.featured,
+          sold: !!dbProduct.sold,
           imageURLs: dbProduct.imageURLs || [],
           category: dbProduct.category,
           categoryId: dbProduct.categoryId,
@@ -143,7 +145,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
             </Link>
             
             <div className="lg:grid lg:grid-cols-[500px_minmax(400px,_1fr)_100px] lg:items-start lg:gap-x-8">
-              <Gallery images={product.imageURLs} />
+              <Gallery images={product.imageURLs} sold={product.sold} />
               <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
                 <Info data={product} />
               </div>
