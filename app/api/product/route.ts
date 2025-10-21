@@ -3,7 +3,7 @@ import { MongoClient, ObjectId } from "mongodb";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
     const products = await productsCollection.find({}).toArray();
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       extras = {
         modelName: parsed.modelName || "",
         year: parsed.year ? Number(parsed.year) : 0,
-        stockQuantity: parsed.stockQuantity ? Number(parsed.stockQuantity) : 0,
+        stockQuantity: parsed.stockQuantity ? Number(parsed.stockQuantity) : 1,
         color: parsed.color || "",
         fuelType: parsed.fuelType || "",
         transmission: parsed.transmission || "",
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
     // Pre-generate an ObjectId so we can derive a human-friendly productCode

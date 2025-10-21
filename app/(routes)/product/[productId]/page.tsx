@@ -4,7 +4,7 @@ import { siteConfig } from "@/config/site";
 import ProductDetail from "./_components/product-detail";
 import Link from "next/link";
 
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -23,7 +23,7 @@ export async function generateMetadata({
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
     const { ObjectId } = await import('mongodb');

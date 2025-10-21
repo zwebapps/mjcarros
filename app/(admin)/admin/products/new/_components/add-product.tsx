@@ -56,7 +56,7 @@ const AddProduct = () => {
     discount: "",
     modelName: "",
     year: "",
-    stockQuantity: "",
+    stockQuantity: "1",
     color: "",
     fuelType: "",
     transmission: "",
@@ -346,7 +346,7 @@ const AddProduct = () => {
           </div>
           <div>
             <label htmlFor="stockQuantity">Stock Quantity</label>
-            <Input id="stockQuantity" type="number" value={dataForm.stockQuantity || ''} onChange={(e) => setDataForm({ ...dataForm, stockQuantity: e.target.value })} />
+            <Input id="stockQuantity" type="number" min={1} value={dataForm.stockQuantity || '1'} onChange={(e) => setDataForm({ ...dataForm, stockQuantity: e.target.value })} />
           </div>
           <div>
             <label htmlFor="color">Color</label>

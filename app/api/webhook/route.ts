@@ -5,13 +5,29 @@ import { MongoClient, ObjectId } from "mongodb";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
 export async function POST(req: Request) {
   const body = await req.text();
   const signature = headers().get("Stripe-Signature") as string;
+
+  // Log Stripe gateway response BEFORE any processing
+  try {
+    const parsed = JSON.parse(body);
+    console.log('[STRIPE_WEBHOOK_RECEIVED]', {
+      hasSignature: !!signature,
+      eventId: parsed?.id,
+      eventType: parsed?.type,
+      object: parsed?.data?.object?.object,
+      sessionId: parsed?.data?.object?.id,
+      paymentIntent: parsed?.data?.object?.payment_intent,
+      metadata: parsed?.data?.object?.metadata || null,
+    });
+  } catch {
+    console.log('[STRIPE_WEBHOOK_RECEIVED_RAW]', { hasSignature: !!signature, bodyLength: body?.length || 0 });
+  }
 
   let event: Stripe.Event;
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2023-10-16" });
@@ -48,10 +64,27 @@ export async function POST(req: Request) {
       });
       
       await client.connect();
-      const db = client.db('mjcarros');
+      const db = client.db(getMongoDbName());
       const ordersCollection = db.collection('orders');
       const productsCollection = db.collection('products');
       
+      // Determine Stripe transaction/intent ids
+      const sessionPaymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent as any)?.id;
+      let sessionChargeId: string | undefined = undefined;
+      try {
+        if (sessionPaymentIntentId) {
+          const paymentIntent = await stripe.paymentIntents.retrieve(sessionPaymentIntentId, { expand: ['latest_charge'] });
+          const latestCharge: any = paymentIntent.latest_charge;
+          if (typeof latestCharge === 'string') {
+            sessionChargeId = latestCharge;
+          } else if (latestCharge && typeof latestCharge.id === 'string') {
+            sessionChargeId = latestCharge.id;
+          }
+        }
+      } catch (piErr) {
+        console.warn('Failed to retrieve PaymentIntent for transaction id:', piErr);
+      }
+
       // Update order with payment details
       const updateResult = await ordersCollection.updateOne(
         { _id: new ObjectId(orderId) },
@@ -61,9 +94,14 @@ export async function POST(req: Request) {
             address: session?.customer_details?.address?.line1 || "",
             phone: session?.customer_details?.phone || "",
             userEmail: session?.metadata?.email || session?.customer_details?.email || "",
+            paymentMethod: 'Stripe',
+            paymentIntentId: sessionPaymentIntentId || null,
+            transactionId: sessionChargeId || sessionPaymentIntentId || null,
+            checkoutSessionId: session?.id || null,
             updatedAt: new Date()
           }
-        }
+        },
+        { upsert: false }
       );
 
       if (updateResult.matchedCount === 0) {
@@ -106,8 +144,26 @@ export async function POST(req: Request) {
         ...updatedOrder,
         id: updatedOrder._id.toString(),
         orderItems: orderItemsWithProducts,
-        userEmail: updatedOrder.userEmail || ""
+        userEmail: updatedOrder.userEmail || "",
+        paymentIntentId: sessionPaymentIntentId || undefined,
+        transactionId: sessionChargeId || sessionPaymentIntentId || undefined,
+        checkoutSessionId: session?.id || undefined
       };
+
+      // Mark purchased products as sold
+      try {
+        const itemIds = (updatedOrder.orderItems || [])
+          .map((it: any) => it.productId)
+          .filter((pid: any) => pid && ObjectId.isValid(pid));
+        if (itemIds.length > 0) {
+          await productsCollection.updateMany(
+            { _id: { $in: itemIds.map((pid: string) => new ObjectId(pid)) } },
+            { $set: { sold: true, updatedAt: new Date() } }
+          );
+        }
+      } catch (soldErr) {
+        console.warn('[STRIPE_SET_SOLD_FAIL]', soldErr);
+      }
 
       // Log payment completion
       console.log(`✅ Order ${orderId} payment confirmed via Stripe`);

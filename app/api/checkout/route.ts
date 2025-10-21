@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { MongoClient } from "mongodb";
 import { generateOrderNumber } from "@/lib/order-number-generator";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
 
     // Generate order number
@@ -89,6 +89,13 @@ export async function POST(req: NextRequest) {
       cancel_url: `${origin}/cart?canceled=1`,
       metadata: { email: email || "", orderId: String(order._id) },
     });
+
+    // Store checkout session id on order for traceability
+    try {
+      await ordersCollection.updateOne({ _id: order._id }, { $set: { checkoutSessionId: session.id, updatedAt: new Date() } });
+    } catch (e) {
+      console.warn('[CHECKOUT_STORE_SESSION_ID_FAIL]', e);
+    }
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (error) {

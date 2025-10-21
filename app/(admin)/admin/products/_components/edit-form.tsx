@@ -125,7 +125,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       discount,
       modelName,
       year,
-      stockQuantity,
+      stockQuantity: (typeof stockQuantity === 'number' ? String(stockQuantity) : (stockQuantity || '1')) as any,
       color,
       fuelType,
       transmission,
@@ -250,6 +250,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         placeholder="Enter Product name"
         onChange={(e) => setDataForm({ ...dataForm, title: e.target.value })}
       />
+      <input type="hidden" name="description" value={dataForm.description} />
       <label htmlFor="price">Enter Product Price</label>
       <Input
         value={dataForm.price}
@@ -305,28 +306,29 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label htmlFor="modelName">Model Name</label>
-          <Input id="modelName" value={dataForm.modelName || ''} onChange={(e) => setDataForm({ ...dataForm, modelName: e.target.value })} />
+          <Input id="modelName" name="modelName" value={dataForm.modelName || ''} onChange={(e) => setDataForm({ ...dataForm, modelName: e.target.value })} />
         </div>
         <div>
           <label htmlFor="year">Year</label>
-          <Input id="year" type="number" value={dataForm.year || 0} onChange={(e) => setDataForm({ ...dataForm, year: +e.target.value })} />
+          <Input id="year" name="year" type="number" value={dataForm.year || 0} onChange={(e) => setDataForm({ ...dataForm, year: +e.target.value })} />
         </div>
         <div>
           <label htmlFor="stockQuantity">Stock Quantity</label>
-          <Input id="stockQuantity" type="number" value={dataForm.stockQuantity || 0} onChange={(e) => setDataForm({ ...dataForm, stockQuantity: +e.target.value })} />
+          <Input id="stockQuantity" name="stockQuantity" type="number" min={1} value={dataForm.stockQuantity as any || '1'} onChange={(e) => setDataForm({ ...dataForm, stockQuantity: +e.target.value })} />
         </div>
         <div>
           <label htmlFor="color">Color</label>
-          <Input id="color" type="text" placeholder="e.g., Black Sapphire, Pearl White" value={dataForm.color || ''} onChange={(e) => setDataForm({ ...dataForm, color: e.target.value })} />
+          <Input id="color" name="color" type="text" placeholder="e.g., Black Sapphire, Pearl White" value={dataForm.color || ''} onChange={(e) => setDataForm({ ...dataForm, color: e.target.value })} />
         </div>
         <div>
           <label htmlFor="fuelType">Fuel Type</label>
-          <Input id="fuelType" value={dataForm.fuelType || ''} onChange={(e) => setDataForm({ ...dataForm, fuelType: e.target.value })} placeholder="petrol, diesel, electric" />
+          <Input id="fuelType" name="fuelType" value={dataForm.fuelType || ''} onChange={(e) => setDataForm({ ...dataForm, fuelType: e.target.value })} placeholder="petrol, diesel, electric" />
         </div>
         <div>
           <label htmlFor="transmission">Transmission</label>
           <select
             id="transmission"
+            name="transmission"
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             value={dataForm.transmission || 'manual'}
             onChange={(e) => setDataForm({ ...dataForm, transmission: e.target.value })}
@@ -337,12 +339,13 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         </div>
         <div>
           <label htmlFor="mileage">Mileage</label>
-          <Input id="mileage" type="number" value={dataForm.mileage || 0} onChange={(e) => setDataForm({ ...dataForm, mileage: +e.target.value })} />
+          <Input id="mileage" name="mileage" type="number" value={dataForm.mileage || 0} onChange={(e) => setDataForm({ ...dataForm, mileage: +e.target.value })} />
         </div>
         <div>
           <label htmlFor="condition">Condition</label>
           <select
             id="condition"
+            name="condition"
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             value={dataForm.condition || 'new'}
             onChange={(e) => setDataForm({ ...dataForm, condition: e.target.value })}

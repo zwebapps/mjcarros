@@ -23,6 +23,7 @@ type createData = {
   imageURLs: string[];
   category: string;
   createdAt: string;
+  stockQuantity?: number;
 };
 
 export default function ProductTable() {
@@ -101,6 +102,9 @@ export default function ProductTable() {
                 Featured
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Quantity
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Price
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -133,6 +137,9 @@ export default function ProductTable() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   {product.featured ? "Yes" : "No"}
                 </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                {typeof product.stockQuantity === 'number' ? Math.max(1, product.stockQuantity) : 1}
+              </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   €{product.price.toLocaleString('de-DE')}
                 </td>

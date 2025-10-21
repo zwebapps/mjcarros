@@ -29,3 +29,20 @@ export function getMongoDbUri(): string {
   
   return `mongodb://${username}:${password}@${host}:${port}/${database}?authSource=${authSource}`;
 }
+
+export function getMongoDbName(): string {
+  // If DATABASE_URL provided, try to parse db name from path
+  let databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
+    databaseUrl = databaseUrl.replace('DATABASE_URL=', '');
+  }
+  if (databaseUrl) {
+    try {
+      const url = new URL(databaseUrl);
+      const pathname = url.pathname || '';
+      const db = pathname.replace(/^\//, '') || '';
+      if (db) return db;
+    } catch {}
+  }
+  return process.env.MONGO_DATABASE || 'mjcarros';
+}

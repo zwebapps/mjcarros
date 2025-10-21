@@ -2,7 +2,7 @@ import ProductCard from "@/components/ui/product-card";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import { MongoClient } from "mongodb";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const metadata = {
   title: "Shop | MJ Carros",
@@ -26,7 +26,7 @@ const ShopPage = async ({
       socketTimeoutMS: 45000,
     });
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     const dbProducts = await productsCollection.find({}).toArray();
     await client.close();

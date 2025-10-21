@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
 
@@ -33,7 +33,7 @@ export async function DELETE(
       socketTimeoutMS: 45000,
     });
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
 
     const result = await ordersCollection.deleteOne({ _id: new ObjectId(orderId) });
@@ -78,7 +78,7 @@ export async function PATCH(
       socketTimeoutMS: 45000,
     });
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
     const productsCollection = db.collection('products');
 

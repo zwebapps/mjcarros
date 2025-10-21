@@ -9,9 +9,12 @@ export interface OrderWithItems {
   phone: string;
   address: string;
   paymentMethod: string;
+  transactionId?: string; // optional gateway transaction identifier
+  paymentIntentId?: string; // optional Stripe payment intent id
+  checkoutSessionId?: string; // optional Stripe checkout session id
   createdAt: Date;
   updatedAt: Date;
-  orderItems: {
+  orderItems: { 
     productId: string;
     productName: string;
     quantity: number;
@@ -49,7 +52,10 @@ export function generateContactFormEmail(contactData: ContactFormData): { subjec
     minute: '2-digit'
   });
 
-  const subject = `New Contact Form Submission: ${contactData.subject || 'General Inquiry'} - MJ Carros`;
+  const subject = `${contactData.subject || 'General Inquiry'}`;
+
+  const siteEmail = process.env.NEXT_PUBLIC_SITE_EMAIL || 'info@mjcarros.com';
+  const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || 'www.mjcarros.pt';
 
   const html = `
     <!DOCTYPE html>
@@ -179,7 +185,7 @@ export function generateContactFormEmail(contactData: ContactFormData): { subjec
         <div class="footer">
           <div class="footer-text">
             <strong>MJ Carros</strong> - Premium Automotive Excellence<br>
-            🌐 www.mjcarros.pt | 📧 Professional Contact Management System<br>
+            🌐 ${siteWeb} | 📧 ${siteEmail}<br>
             This email was automatically generated from your website contact form at ${submissionDate}
           </div>
         </div>
@@ -626,7 +632,7 @@ export function generateOrderConfirmationEmail(order: OrderWithItems, paymentMet
             <div class="payment-info">
               <h3>Payment Information</h3>
               <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-              <p><strong>Transaction ID:</strong> ${order.id}</p>
+              <p><strong>Transaction ID:</strong> ${order.transactionId || order.paymentIntentId || order.checkoutSessionId || order.id}</p>
               <p><strong>Payment Status:</strong> <span style="color: #006600; font-weight: bold;">COMPLETED</span></p>
             </div>
 

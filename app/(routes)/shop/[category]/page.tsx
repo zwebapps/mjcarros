@@ -3,7 +3,7 @@ import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import ProductCard from "@/components/ui/product-card";
 import { MongoClient } from "mongodb";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 interface CategoryPageProps {
   params: { category: string };
@@ -29,7 +29,7 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
       socketTimeoutMS: 45000,
     });
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     const dbProducts: any[] = await productsCollection.find({ category: new RegExp(`^${params.category}$`, 'i') }).toArray();
 

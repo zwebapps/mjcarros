@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
     const productsCollection = db.collection('products');
 

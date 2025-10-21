@@ -6,7 +6,7 @@ import { generateOrderConfirmationEmail } from "@/lib/email-templates";
 import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
 import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
 import { generateOrderNumber } from "@/lib/order-number-generator";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -16,7 +16,15 @@ export async function POST(req: NextRequest) {
   let client;
   
   try {
-    const { items, email } = await req.json();
+    const raw = await req.text();
+    // Log PayPal complete request BEFORE any processing
+    try {
+      console.log('[PAYPAL_COMPLETE_RECEIVED]', raw ? JSON.parse(raw) : {});
+    } catch {
+      console.log('[PAYPAL_COMPLETE_RECEIVED_RAW]', { bodyLength: raw?.length || 0 });
+    }
+
+    const { items, email } = raw ? JSON.parse(raw) : { items: [], email: '' };
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Items are required" }, { status: 400 });
@@ -30,7 +38,7 @@ export async function POST(req: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
     const productsCollection = db.collection('products');
 
@@ -101,6 +109,19 @@ export async function POST(req: NextRequest) {
       id: result.insertedId.toString(),
       paymentMethod: 'PayPal'
     };
+
+    // Mark purchased products as sold
+    try {
+      const itemIds = (order.orderItems || []).map((it: any) => it.productId).filter((pid: any) => pid);
+      if (itemIds.length > 0) {
+        await productsCollection.updateMany(
+          { _id: { $in: itemIds.map((pid: string) => new ObjectId(pid)) } },
+          { $set: { sold: true, updatedAt: new Date() } }
+        );
+      }
+    } catch (soldErr) {
+      console.warn('[PAYPAL_SET_SOLD_FAIL]', soldErr);
+    }
 
     // Log order creation
     logOrderCreation(order);

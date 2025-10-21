@@ -4,7 +4,7 @@ import { generateOrderNumber } from "@/lib/order-number-generator";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
-import { getMongoDbUri } from '@/lib/mongodb-connection';
+import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
     const productsCollection = db.collection('products');
     

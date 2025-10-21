@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -22,7 +22,7 @@ export async function GET(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
     // Find the product by _id

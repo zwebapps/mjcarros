@@ -5,7 +5,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { readFile } from "fs/promises";
 import path from "path";
 
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -28,7 +28,7 @@ export async function GET(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+            const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
     const productsCollection = db.collection('products');
     

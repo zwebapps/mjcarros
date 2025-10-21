@@ -4,7 +4,7 @@ import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -24,7 +24,7 @@ export async function GET(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
     const product = await productsCollection.findOne({
@@ -87,10 +87,13 @@ export async function PUT(
     const productsCollection = db.collection('products');
     const categoriesCollection = db.collection('categories');
     const formData = await request.formData();
+    const hasField = (key: string) => formData.has(key);
     const name = String(formData.get("name") || "");
     const price = Number(formData.get("price") || 0);
     const discountRaw = formData.get("discount");
     const discount = discountRaw !== null && String(discountRaw).length > 0 ? Number(discountRaw) : null;
+    const finalPriceRaw = formData.get("finalPrice");
+    const finalPrice = finalPriceRaw !== null && String(finalPriceRaw).length > 0 ? Number(finalPriceRaw) : null;
     const description = String(formData.get("description") || "");
     const category = String(formData.get("category") || "");
     const parseBool = (v: FormDataEntryValue | null): boolean => {
@@ -104,7 +107,7 @@ export async function PUT(
     // New fields
     const modelName = String(formData.get("modelName") || "");
     const year = Number(formData.get("year") || 0);
-    const stockQuantity = Number(formData.get("stockQuantity") || 0);
+    const stockQuantity = Number(formData.get("stockQuantity") || 1);
     const color = String(formData.get("color") || "");
     const fuelType = String(formData.get("fuelType") || "");
     const transmission = String(formData.get("transmission") || "");
@@ -113,7 +116,7 @@ export async function PUT(
     const condition = String(formData.get("condition") || "");
 
     let categoryIdUpdate: string | undefined = undefined;
-    if (category) {
+    if (hasField('category')) {
       const cat = await categoriesCollection.findOne({ category });
       if (cat) categoryIdUpdate = cat._id.toString();
     }
@@ -184,39 +187,48 @@ export async function PUT(
     // Decide final gallery URLs (append new uploads only if S3 upload succeeded)
     const combinedUrls = newUrls.length && existing ? [...(existing.imageURLs || []), ...newUrls] : (newUrls.length ? newUrls : undefined);
 
-    // Prepare update data
-    const updateData: any = {
-      updatedAt: new Date()
-    };
+    // Prepare update data using field presence (not truthiness)
+    const setData: any = { updatedAt: new Date(), featured: isFeatured, sold: isSold };
+    const unsetData: any = {};
 
-    if (name) updateData.title = name;
-    if (price) updateData.price = price;
-    if (discount !== null) updateData.discount = discount;
-    if (description) updateData.description = description;
-    if (category) updateData.category = category;
-    if (categoryIdUpdate) updateData.categoryId = categoryIdUpdate;
-    updateData.featured = isFeatured;
-    updateData.sold = isSold;
-    if (modelName) updateData.modelName = modelName;
-    if (year) updateData.year = year;
-    if (stockQuantity) updateData.stockQuantity = stockQuantity;
-    if (color) updateData.color = color;
-    if (fuelType) updateData.fuelType = fuelType;
-    if (transmission) updateData.transmission = transmission;
-    if (mileage !== null) updateData.mileage = mileage;
-    if (condition) updateData.condition = condition;
-    if (combinedUrls) updateData.imageURLs = combinedUrls;
+    if (hasField('name')) setData.title = name;
+    if (hasField('price')) setData.price = price;
+    if (hasField('discount')) {
+      if (discountRaw !== null && String(discountRaw).length > 0) setData.discount = discount;
+      else unsetData.discount = "";
+    }
+    if (hasField('finalPrice')) {
+      if (finalPriceRaw !== null && String(finalPriceRaw).length > 0) setData.finalPrice = finalPrice;
+      else unsetData.finalPrice = "";
+    }
+    if (hasField('description')) setData.description = description;
+    if (hasField('category')) setData.category = category;
+    if (hasField('category') && categoryIdUpdate) setData.categoryId = categoryIdUpdate;
+    if (hasField('modelName')) setData.modelName = modelName;
+    if (hasField('year')) setData.year = year;
+    if (hasField('stockQuantity')) setData.stockQuantity = stockQuantity > 0 ? stockQuantity : 1;
+    if (hasField('color')) setData.color = color;
+    if (hasField('fuelType')) setData.fuelType = fuelType;
+    if (hasField('transmission')) setData.transmission = transmission;
+    if (hasField('mileage')) {
+      if (mileageRaw !== null && String(mileageRaw).length > 0) setData.mileage = mileage;
+      else unsetData.mileage = "";
+    }
+    if (hasField('condition')) setData.condition = condition || 'new';
+    if (combinedUrls) setData.imageURLs = combinedUrls;
 
     // Ensure a human-friendly productCode is set once
     const existingProduct = existing || await productsCollection.findOne({ _id: new ObjectId(params.id) });
     if (existingProduct && !existingProduct.productCode) {
-      updateData.productCode = `PRD-${String(params.id).slice(-6).toUpperCase()}`;
+      setData.productCode = `PRD-${String(params.id).slice(-6).toUpperCase()}`;
     }
 
     // Update main product fields
+    const updateOps: any = { $set: setData };
+    if (Object.keys(unsetData).length > 0) updateOps.$unset = unsetData;
     const result = await productsCollection.updateOne(
       { _id: new ObjectId(params.id) },
-      { $set: updateData }
+      updateOps
     );
 
     if (result.matchedCount === 0) {
