@@ -9,7 +9,7 @@ import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName} from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 export const runtime = 'nodejs';
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
     const productsCollection = db.collection('products');
 
