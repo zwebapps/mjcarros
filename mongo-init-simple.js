@@ -4,11 +4,19 @@ print('Starting MongoDB initialization...');
 // Wait for MongoDB to be ready
 sleep(3000);
 
-const dbName       = "mjcarros";
-const appUser      = "mjcarros";
-const appPassword  = "786Password";
-const adminEmail   = "admin@mjcarros.com";
-const adminPass    = "Admin123!"; 
+console.log("-------------Mongo Init Simple-------------------");
+console.log(process.env);
+console.log("-------------Mongo Init Simple-------------------");
+// Use your new credentials
+const dbName = process.env.MONGO_DATABASE;
+const appUser = process.env.MONGO_APP_USER;
+const appPassword = process.env.MONGO_APP_PASSWORD;
+const adminEmail = process.env.MONGO_ADMIN_EMAIL;
+const adminPass = process.env.MONGO_ADMIN_PASSWORD;
+console.log("-------------DB Name-------------------");
+console.log(dbName);
+console.log("-------------DB Name-------------------");
+
 
 print('✅ Environment variables loaded successfully');
 print('Database: ' + dbName);
@@ -17,10 +25,10 @@ print('App Password: ' + appPassword);
 print('Admin Email: ' + adminEmail);
 print('Admin Password: ' + adminPass);
 
-// Switch to mjcarros database
+// Switch to the specified database
 db = db.getSiblingDB(dbName);
 
-// Create application user (same as root user in this case)
+// Create application user
 db.createUser({
   user: appUser,
   pwd: appPassword,
@@ -41,13 +49,13 @@ db.createCollection('sizes');
 
 print('✅ Collections created successfully');
 
-// Create admin user in users collection (without bcrypt for now)
+// Create admin user in users collection
 db.users.insertOne({
   _id: ObjectId(),
   email: adminEmail,
   name: "Administrator",
   role: "ADMIN",
-  password: adminPass, // We'll hash this later
+  password: adminPass,
   createdAt: new Date(),
   updatedAt: new Date()
 });
