@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import { comparePassword, generateToken } from '@/lib/auth';
-import { getMongoDbUri } from '@/lib/mongodb-connection';
+import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await client.connect();
     console.log('✅ Connected to MongoDB');
     
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const usersCollection = db.collection('users');
     
     // Find user

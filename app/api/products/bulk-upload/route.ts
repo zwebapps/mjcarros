@@ -7,6 +7,11 @@ import { extractTokenFromHeader, verifyToken } from '@/lib/auth';
 import { getMongoDbUri } from '@/lib/mongodb-connection';
 
 const MONGODB_URI = getMongoDbUri();
+const dbName = process.env.MONGO_DATABASE;
+console.log("-------------DB Name-------------------");
+console.log(dbName);
+console.log("-------------DB Name-------------------");
+
 
 export async function POST(request: NextRequest) {
   let client;
@@ -65,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const categoriesCollection = db.collection('categories');
     
     // Get all categories for validation

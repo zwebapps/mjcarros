@@ -1,6 +1,8 @@
 const { MongoClient } = require('mongodb');
 const bcrypt = require('bcryptjs');
 
+const dbName = process.env.MONGO_DATABASE || 'mjcarrosdb';
+
 // Use different connection strings for Docker vs local development
 const isDocker = process.env.NODE_ENV === 'production' || process.env.DOCKER === 'true';
 console.log("--------------------------------");
@@ -14,11 +16,13 @@ if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
 
 const MONGODB_URI = databaseUrl || 
   (isDocker 
-    ? 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros'
-    : 'mongodb://mjcarros:786Password@localhost:27017/mjcarros?authSource=mjcarros'
+    ? `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@mongodb:27017/${dbName}?authSource=${dbName}`
+    : `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@localhost:27017/${dbName}?authSource=${dbName}`
   );
 
-console.log(MONGODB_URI);
+  console.log("--------------------------------");
+  console.log(MONGODB_URI);
+  console.log("--------------------------------");
 async function setupAdmin() {
   let client;
   
@@ -35,7 +39,7 @@ async function setupAdmin() {
     await client.connect();
     console.log('✅ Connected to MongoDB');
     
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const usersCollection = db.collection('users');
     const categoriesCollection = db.collection('categories');
     const billboardsCollection = db.collection('billboards');
@@ -43,9 +47,9 @@ async function setupAdmin() {
 
     // 1. Create Admin User
     console.log('1️⃣ Creating admin user...');
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@mjcarros.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
-    const adminName = process.env.ADMIN_NAME || 'Administrator';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminName = process.env.ADMIN_NAME;
 
     const existingAdmin = await usersCollection.findOne({
       email: adminEmail

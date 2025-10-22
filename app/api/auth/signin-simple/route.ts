@@ -3,7 +3,7 @@ import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await client.connect();
     console.log('✅ Connected to MongoDB');
     
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const usersCollection = db.collection('users');
     
     // Find user

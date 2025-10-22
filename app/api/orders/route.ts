@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const ordersCollection = db.collection('orders');
     
     // Generate order number

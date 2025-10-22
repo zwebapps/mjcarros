@@ -8,6 +8,7 @@ const MONGODB_URI = getMongoDbUri();
 
 export const runtime = 'nodejs';
 
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -94,7 +95,7 @@ export async function DELETE(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
     // Delete the product

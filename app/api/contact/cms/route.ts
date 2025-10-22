@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -18,7 +18,7 @@ export async function GET() {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const contactPagesCollection = db.collection('contactPages');
     
     // Return single ContactPage (create default if missing)
@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const contactPagesCollection = db.collection('contactPages');
     
     const existing = await contactPagesCollection.findOne({});

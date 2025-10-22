@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -21,7 +21,7 @@ export async function GET(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const billboardsCollection = db.collection('billboards');
     
     const billboard = await billboardsCollection.findOne({
@@ -94,7 +94,7 @@ export async function PUT(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const billboardsCollection = db.collection('billboards');
 
     const result = await billboardsCollection.updateOne(
@@ -169,7 +169,7 @@ export async function DELETE(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const billboardsCollection = db.collection('billboards');
     
     const result = await billboardsCollection.deleteOne({ _id: new ObjectId(params.id) });

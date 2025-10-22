@@ -7,9 +7,6 @@ export function getMongoDbUri(): string {
   // Fix malformed DATABASE_URL that might have duplicate key names
   let databaseUrl = process.env.DATABASE_URL;
   console.log('databaseUrl>>>>', databaseUrl);
-  if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
-    databaseUrl = databaseUrl.replace('DATABASE_URL=', '');
-  }
 
   // Use different connection strings for Docker vs local development
   const isDocker = process.env.NODE_ENV === 'production' || process.env.DOCKER === 'true';

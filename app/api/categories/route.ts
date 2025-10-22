@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const categoriesCollection = db.collection('categories');
     
     const categories = await categoriesCollection.find({}).sort({ createdAt: -1 }).toArray();
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(getMongoDbName());
     const categoriesCollection = db.collection('categories');
     
     const categoryData = {

@@ -5,7 +5,10 @@ import bcrypt from 'bcryptjs';
 import { getMongoDbUri } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
-
+const dbName = process.env.MONGO_DATABASE;
+console.log("-------------DB Name-------------------");
+console.log(dbName);
+console.log("-------------DB Name-------------------");
 export async function POST(request: NextRequest) {
   // During build time, return mock response
   if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_AVAILABLE) {
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
     await client.connect();
     console.log('✅ Connected to MongoDB');
     
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const usersCollection = db.collection('users');
     
     // Find user

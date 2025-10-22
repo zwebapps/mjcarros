@@ -2,10 +2,13 @@ import { MongoClient } from "mongodb";
 import SidebarItems from "./sidebar-items";
 import PriceInput from "./price-input";
 import { Product as UIProduct } from "@/types";
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri ,getMongoDbName} from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
-
+const dbName = getMongoDbName();
+console.log("-------------DB Name-------------------");
+console.log(dbName);
+console.log("-------------DB Name-------------------");
 const SidebarProducts = async () => {
   // During build time, return fallback data if DB is not available
   if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_AVAILABLE) {
@@ -40,7 +43,7 @@ const SidebarProducts = async () => {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const categoriesCollection = db.collection('categories');
     const productsCollection = db.collection('products');
     

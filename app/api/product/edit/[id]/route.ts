@@ -9,6 +9,10 @@ import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
 const MONGODB_URI = getMongoDbUri();
+const dbName = process.env.MONGO_DATABASE;
+console.log("-------------DB Name-------------------");
+console.log(dbName);
+console.log("-------------DB Name-------------------");
 
 export async function GET(
   request: NextRequest,
@@ -24,7 +28,7 @@ export async function GET(
     });
     
     await client.connect();
-    const db = client.db(getMongoDbName());
+    const db = client.db(dbName);
     const productsCollection = db.collection('products');
     
     const product = await productsCollection.findOne({
@@ -83,7 +87,7 @@ export async function PUT(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const productsCollection = db.collection('products');
     const categoriesCollection = db.collection('categories');
     const formData = await request.formData();
@@ -273,7 +277,7 @@ export async function DELETE(
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const productsCollection = db.collection('products');
     
     const result = await productsCollection.deleteOne({ _id: new ObjectId(params.id) });

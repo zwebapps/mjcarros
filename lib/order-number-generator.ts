@@ -15,9 +15,14 @@ export async function generateOrderNumber(): Promise<number> {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
+
+    const dbName = process.env.MONGO_DATABASE;
+    console.log("-------------DB Name-------------------");
+    console.log(dbName);
+    console.log("-------------DB Name-------------------");
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const ordersCollection = db.collection('orders');
     
     // Find the highest existing order number

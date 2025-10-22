@@ -77,7 +77,11 @@ async function getCategoriesWithCounts() {
   }
 
   let client;
-  
+
+  const dbName = process.env.MONGO_DATABASE;
+  console.log("-------------DB Name-------------------");
+  console.log(dbName);
+  console.log("-------------DB Name-------------------");
   try {
     const { MongoClient } = await import('mongodb');
     const { getMongoDbUri } = await import('@/lib/mongodb-connection');
@@ -89,7 +93,7 @@ async function getCategoriesWithCounts() {
     });
     
     await client.connect();
-    const db = client.db('mjcarros');
+    const db = client.db(dbName);
     const productsCollection = db.collection('products');
     
     const products = await productsCollection.find({}).sort({ category: 1 }).toArray();

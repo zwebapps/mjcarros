@@ -29,8 +29,11 @@ export async function GET(request: NextRequest) {
     
     await client.connect();
     console.log('✅ Connected to MongoDB');
-    
-    const db = client.db('mjcarros');
+    const dbName = process.env.MONGO_DATABASE;
+    console.log("-------------DB Name-------------------");
+    console.log(dbName);
+    console.log("-------------DB Name-------------------");
+    const db = client.db(dbName);
     const usersCollection = db.collection('users');
     
     const userCount = await usersCollection.countDocuments();

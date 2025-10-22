@@ -1,7 +1,7 @@
 import { MongoClient, ObjectId } from 'mongodb';
 
 const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
-
+const dbName = process.env.MONGO_DATABASE;
 // MongoDB utility functions to replace Prisma operations
 export class MongoDBUtils {
   private static client: MongoClient | null = null;
@@ -20,7 +20,7 @@ export class MongoDBUtils {
 
   static async getDb() {
     const client = await this.getClient();
-    return client.db('mjcarros');
+    return client.db(dbName);
   }
 
   // Generic find operations
