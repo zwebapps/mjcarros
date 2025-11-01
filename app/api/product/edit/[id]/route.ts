@@ -133,6 +133,9 @@ export async function PUT(
     // Load existing product to append gallery images
     const existing = await productsCollection.findOne({ _id: new ObjectId(params.id) });
     const newFiles = formData.getAll('image') as File[];
+    // Client may send the final image list as existingImageURLs
+    const existingImagesRaw = formData.get('existingImageURLs');
+    const existingImages: string[] | null = existingImagesRaw ? JSON.parse(String(existingImagesRaw)) : null;
     let newUrls: string[] = [];
     
     // Handle image uploads - S3 first, then local storage fallback
@@ -188,8 +191,17 @@ export async function PUT(
       }
     }
 
-    // Decide final gallery URLs (append new uploads only if S3 upload succeeded)
-    const combinedUrls = newUrls.length && existing ? [...(existing.imageURLs || []), ...newUrls] : (newUrls.length ? newUrls : undefined);
+    // Decide final gallery URLs
+    // If client provided existingImageURLs, treat it as the final list and ignore newly uploaded files.
+    // Otherwise, append any newly uploaded files to the current ones.
+    let combinedUrls: string[] | undefined;
+    if (existingImages !== null) {
+      combinedUrls = existingImages;
+    } else if (newUrls.length && existing) {
+      combinedUrls = [...(existing.imageURLs || []), ...newUrls];
+    } else if (newUrls.length) {
+      combinedUrls = newUrls;
+    }
 
     // Prepare update data using field presence (not truthiness)
     const setData: any = { updatedAt: new Date(), featured: isFeatured, sold: isSold };
@@ -219,7 +231,13 @@ export async function PUT(
       else unsetData.mileage = "";
     }
     if (hasField('condition')) setData.condition = condition || 'new';
-    if (combinedUrls) setData.imageURLs = combinedUrls;
+    if (combinedUrls !== undefined) {
+      const sanitized = combinedUrls
+        .map((u) => typeof u === 'string' ? u.trim() : u)
+        .filter((u): u is string => typeof u === 'string' && u.length > 0 && !u.endsWith('-'));
+      const unique = Array.from(new Set(sanitized));
+      setData.imageURLs = unique;
+    }
 
     // Ensure a human-friendly productCode is set once
     const existingProduct = existing || await productsCollection.findOne({ _id: new ObjectId(params.id) });

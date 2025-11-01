@@ -85,7 +85,12 @@ const AddProduct = () => {
       try {
         const resCategory = await axios.get("/api/categories");
         const data = resCategory.data;
-        setCategory(data);
+        const categoriesWithIds = data.map((c: any, i: number) => ({
+          ...c,
+          id: c._id ? String(c._id) : (c.id ?? `category-${i}`),
+          _id: c._id ? String(c._id) : c._id,
+        }));
+        setCategory(categoriesWithIds);
       } catch (error) {
         console.log("Error getting categories", error);
       }

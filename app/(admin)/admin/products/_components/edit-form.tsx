@@ -187,7 +187,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       const imagePreviews: string[] = Array.from(selectedFiles).map(
         (file) => URL.createObjectURL(file) as string
       );
-      setPreviewImage(imagePreviews);
+      setPreviewImage([...(previewImage || []), ...imagePreviews]);
     }
   };
 
@@ -197,7 +197,11 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     const formData = new FormData(e.currentTarget);
     formData.append("isFeatured", checkbox.toString());
     formData.append("isSold", soldCheckbox.toString());
-    // sizes removed
+    // Include the current image list (filter out blobs). Always append, even if empty
+    if (previewImage) {
+      const validImages = previewImage.filter((img) => !img.startsWith('blob:'));
+      formData.append("existingImageURLs", JSON.stringify(validImages));
+    }
     await onSubmit(formData);
 
     setIsLoading(false);
