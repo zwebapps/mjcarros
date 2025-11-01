@@ -2,47 +2,44 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ui/product-card";
 
-// Real products from database - these will actually work when clicked
-const featuredProducts = [
-  {
-    id: "cmf4g40lr0005yd4erj60ypqi",
-    title: "2024 Mercedes-Benz S-Class",
-    price: 125000,
-    finalPrice: 118000,
-    discount: 5.6,
-    imageURLs: ["https://images.unsplash.com/photo-1618843479618-39b0bb21ab70?w=400&h=300&fit=crop"],
-    category: "Luxury",
-    featured: true
-  },
-  {
-    id: "cmf4g40mr0006yd4e8s90rvfy",
-    title: "2024 Porsche 911 GT3",
-    price: 165000,
-    imageURLs: ["https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop"],
-    category: "Sports",
-    featured: true
-  },
-  {
-    id: "cmf4g40ng0007yd4e7fndy2ae",
-    title: "2024 BMW X7 M60i",
-    price: 98000,
-    finalPrice: 92000,
-    discount: 6.1,
-    imageURLs: ["https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop"],
-    category: "SUV",
-    featured: false
-  },
-  {
-    id: "cmf4g40o50008yd4ekyyv02by",
-    title: "2024 Tesla Model S Plaid",
-    price: 89000,
-    finalPrice: 85000,
-    discount: 4.5,
-    imageURLs: ["https://images.unsplash.com/photo-1593941707882-a5bacd19c84b?w=400&h=300&fit=crop"],
-    category: "Electric",
-    featured: true
+// Ensure this page is always rendered dynamically and never statically cached
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// Fetch featured products dynamically from MongoDB
+async function getFeaturedProducts() {
+  let client: any;
+  try {
+    const { MongoClient } = await import('mongodb');
+    const { getMongoDbUri, getMongoDbName } = await import('@/lib/mongodb-connection');
+    const MONGODB_URI = getMongoDbUri();
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    await client.connect();
+    const db = client.db(getMongoDbName());
+    const productsCollection = db.collection('products');
+    const docs = await productsCollection
+      .find({ featured: true })
+      .sort({ updatedAt: -1 })
+      .limit(8)
+      .toArray();
+    return docs.map((p: any) => ({
+      ...p,
+      id: (p._id || '').toString(),
+      imageURLs: Array.isArray(p.imageURLs) ? p.imageURLs : [],
+    }));
+  } catch (e) {
+    console.warn('Failed to load featured products, returning empty list');
+    return [] as any[];
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
-];
+}
 
 // Dummy data for banners
 const banners = [
@@ -66,25 +63,10 @@ const banners = [
 
 // Build categories dynamically from products
 async function getCategoriesWithCounts() {
-  // During build time, return fallback categories if DB is not available
-  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_AVAILABLE) {
-    return [
-      { name: "Luxury", count: 15, image: "https://images.unsplash.com/photo-1618843479618-39b0bb21ab70?w=200&h=150&fit=crop" },
-      { name: "Sports", count: 12, image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=200&h=150&fit=crop" },
-      { name: "SUV", count: 20, image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=200&h=150&fit=crop" },
-      { name: "Electric", count: 8, image: "https://images.unsplash.com/photo-1593941707882-a5bacd19c84b?w=200&h=150&fit=crop" },
-    ];
-  }
-
   let client;
-
-  const dbName = process.env.MONGO_DATABASE;
-  console.log("-------------DB Name-------------------");
-  console.log(dbName);
-  console.log("-------------DB Name-------------------");
   try {
     const { MongoClient } = await import('mongodb');
-    const { getMongoDbUri } = await import('@/lib/mongodb-connection');
+    const { getMongoDbUri, getMongoDbName } = await import('@/lib/mongodb-connection');
     const MONGODB_URI = getMongoDbUri();
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,
@@ -93,7 +75,7 @@ async function getCategoriesWithCounts() {
     });
     
     await client.connect();
-    const db = client.db(dbName);
+    const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
     const products = await productsCollection.find({}).sort({ category: 1 }).toArray();
@@ -117,13 +99,8 @@ async function getCategoriesWithCounts() {
       .slice(0, 8);
   } catch (error) {
     console.error('Error fetching categories:', error);
-    // Return fallback categories on error
-    return [
-      { name: "Luxury", count: 15, image: "https://images.unsplash.com/photo-1618843479618-39b0bb21ab70?w=200&h=150&fit=crop" },
-      { name: "Sports", count: 12, image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=200&h=150&fit=crop" },
-      { name: "SUV", count: 20, image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=200&h=150&fit=crop" },
-      { name: "Electric", count: 8, image: "https://images.unsplash.com/photo-1593941707882-a5bacd19c84b?w=200&h=150&fit=crop" },
-    ];
+    // Return an empty list on error to avoid static/fake counts
+    return [];
   } finally {
     if (client) {
       await client.close();
@@ -132,7 +109,10 @@ async function getCategoriesWithCounts() {
 }
 
 const HomePage = async () => {
-  const categories = await getCategoriesWithCounts();
+  const [categories, featured] = await Promise.all([
+    getCategoriesWithCounts(),
+    getFeaturedProducts(),
+  ]);
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero with background slider */}
@@ -196,7 +176,7 @@ const HomePage = async () => {
           <p className="text-lg text-gray-600">Handpicked cars for our valued customers</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((product) => (
+          {featured.map((product: any) => (
             <ProductCard key={product.id} data={product} />
           ))}
         </div>
