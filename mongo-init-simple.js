@@ -1,29 +1,23 @@
-// Simple MongoDB initialization script
+// Simple MongoDB initialization script — secrets must come from the container environment only.
 print('Starting MongoDB initialization...');
 
-// Wait for MongoDB to be ready
 sleep(3000);
 
-console.log("-------------Mongo Init Simple-------------------");
-console.log(process.env);
-console.log("-------------Mongo Init Simple-------------------");
-// Use your new credentials
 const dbName = process.env.MONGO_DATABASE;
-const appUser = process.env.MONGO_APP_USER;
-const appPassword = process.env.MONGO_APP_PASSWORD;
-const adminEmail = process.env.MONGO_ADMIN_EMAIL;
-const adminPass = process.env.MONGO_ADMIN_PASSWORD;
-console.log("-------------DB Name-------------------");
-console.log(dbName);
-console.log("-------------DB Name-------------------");
+const appUser = process.env.MONGO_USERNAME;
+const appPassword = process.env.MONGO_PASSWORD;
+const adminEmail = process.env.ADMIN_EMAIL;
+const adminPass = process.env.ADMIN_PASSWORD;
 
+if (!appPassword || !adminPass) {
+  print('ERROR: MONGO_PASSWORD and ADMIN_PASSWORD must be set in the environment.');
+  quit(1);
+}
 
-print('✅ Environment variables loaded successfully');
+print('✅ Required secrets present (values not logged)');
 print('Database: ' + dbName);
 print('App User: ' + appUser);
-print('App Password: ' + appPassword);
 print('Admin Email: ' + adminEmail);
-print('Admin Password: ' + adminPass);
 
 // Switch to the specified database
 db = db.getSiblingDB(dbName);
@@ -32,9 +26,7 @@ db = db.getSiblingDB(dbName);
 db.createUser({
   user: appUser,
   pwd: appPassword,
-  roles: [
-    { role: "readWrite", db: dbName }
-  ]
+  roles: [{ role: 'readWrite', db: dbName }],
 });
 
 print('✅ Application user created successfully');
@@ -49,20 +41,19 @@ db.createCollection('sizes');
 
 print('✅ Collections created successfully');
 
-// Create admin user in users collection
+// Create admin user in users collection (plain password; setup-admin hashes on first run if needed)
 db.users.insertOne({
   _id: ObjectId(),
   email: adminEmail,
-  name: "Administrator",
-  role: "ADMIN",
+  name: 'Administrator',
+  role: 'ADMIN',
   password: adminPass,
   createdAt: new Date(),
-  updatedAt: new Date()
+  updatedAt: new Date(),
 });
 
 print('✅ Admin user created in users collection');
-print('Email: ' + adminEmail);  
-print('Password: ' + adminPass);
+print('Admin Email: ' + adminEmail);
 
 print('🎉 MongoDB initialization completed successfully!');
 print('Database: ' + dbName);

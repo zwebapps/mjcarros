@@ -29,7 +29,7 @@ try {
   defaultProductsSeed = [];
 }
 
-const dbName = process.env.MONGO_DATABASE || 'mjcarrosdb';
+const dbName = process.env.MONGO_DATABASE;
 
 const mongoClientOptions = {
   maxPoolSize: 10,

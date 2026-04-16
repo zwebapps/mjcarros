@@ -176,24 +176,10 @@ docker compose -f docker-compose.prod.yml run --rm setup-admin
 # MongoDB: localhost:27018
 ```
 
-#### S3 MongoDB Backup (Optional)
-```bash
-# Backup MongoDB to S3
-docker compose run --rm s3-backup
+#### Images and uploads
+Uploaded images are stored locally under `public/uploads/` and served from `/uploads/...`.
 
-# Restore from S3 (automatic on startup if S3_MONGO_BUCKET is set)
-# Just start the services normally
-```
-
-#### Docker Environment Variables
-Add these to your `.env` file for S3 backup functionality:
-```env
-# AWS S3 Configuration
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_DEFAULT_REGION=your_region
-S3_MONGO_BUCKET=your-bucket-name/mongo
-S3_ORDERS_BUCKET=your-bucket-name/orders
+If you previously used S3, migrate existing S3 URLs in MongoDB to local files under `public/uploads/` (see `scripts/migrate-s3-to-uploads.ts`).
 
 # MongoDB Configuration
 MONGO_ROOT_USERNAME=admin

@@ -11,7 +11,7 @@ function getMongoDbUri() {
     return databaseUrl;
   }
 
-  const username = process.env.MONGO_USERNAME || 'mjcarros';
+  const username = process.env.MONGO_USERNAME;
   const password = process.env.MONGO_PASSWORD;
   if (!password) {
     throw new Error(
@@ -23,7 +23,7 @@ function getMongoDbUri() {
   const rawHost = process.env.MONGO_HOST || (isDocker ? 'mongodb' : 'localhost');
   const host = !isDocker && rawHost === 'mongodb' ? '127.0.0.1' : rawHost;
   const port = process.env.MONGO_PORT || '27017';
-  const database = process.env.MONGO_DATABASE || 'mjcarros';
+  const database = process.env.MONGO_DATABASE;
   const authSource = process.env.MONGO_AUTH_SOURCE || database;
 
   const user = encodeURIComponent(username);

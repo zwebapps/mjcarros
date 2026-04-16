@@ -1,12 +1,22 @@
 #!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/.env" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
+: "${MONGO_PASSWORD:?Error: set MONGO_PASSWORD (e.g. in .env at repo root)}"
+MONGO_USERNAME="${MONGO_USERNAME:-mjcarros}"
 
 echo "🔧 Setting up MongoDB with authentication and replica set..."
 
-# Wait for MongoDB to be ready
 echo "⏳ Waiting for MongoDB to start..."
 sleep 10
 
-# Initialize replica set
 echo "🔄 Initializing replica set..."
 docker exec mongodb mongosh --eval "
 rs.initiate({
@@ -17,26 +27,23 @@ rs.initiate({
 })
 "
 
-# Wait for replica set to be ready
 echo "⏳ Waiting for replica set to be ready..."
 sleep 5
 
-# Create application user
 echo "👤 Creating application user..."
-docker exec mongodb mongosh admin -u mjcarros -p 786Password --eval "
+docker exec mongodb mongosh admin -u "$MONGO_USERNAME" -p "$MONGO_PASSWORD" --eval "
 db = db.getSiblingDB('mjcarros');
 db.createUser({
-  user: 'mjcarros',
-  pwd: '786Password',
+  user: '$MONGO_USERNAME',
+  pwd: '$MONGO_PASSWORD',
   roles: [
     { role: 'readWrite', db: 'mjcarros' }
   ]
 });
 "
 
-# Create collections
 echo "📁 Creating collections..."
-docker exec mongodb mongosh mjcarros -u mjcarros -p 786Password --authenticationDatabase admin --eval "
+docker exec mongodb mongosh mjcarros -u "$MONGO_USERNAME" -p "$MONGO_PASSWORD" --authenticationDatabase admin --eval "
 db.createCollection('users');
 db.createCollection('products');
 db.createCollection('categories');
@@ -45,4 +52,4 @@ db.createCollection('orders');
 "
 
 echo "✅ MongoDB setup completed successfully!"
-echo "🔗 Connection string: mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=admin"
+echo "🔗 Use DATABASE_URL or MONGO_* variables from your .env (password not printed)."

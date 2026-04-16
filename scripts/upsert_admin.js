@@ -1,12 +1,13 @@
-const { PrismaClient, Role } = require('@prisma/client');
+const { Role } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
-const prisma = new PrismaClient();
-
 async function main() {
-  const email = process.env.ADMIN_EMAIL || 'admin@mjcarros.com';
-  const name = process.env.ADMIN_NAME || 'Administrator';
-  const password = process.env.ADMIN_PASSWORD || 'Admin@12345';
+  console.log("-------------Upsert Admin-------------------");
+  console.log(process.env);
+  console.log("-------------Upsert Admin-------------------");
+  const email = process.env.ADMIN_EMAIL;
+  const name = process.env.ADMIN_NAME;
+  const password = process.env.ADMIN_PASSWORD;
 
   const passwordHash = await bcrypt.hash(password, 10);
 

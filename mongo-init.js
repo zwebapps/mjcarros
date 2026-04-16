@@ -1,37 +1,35 @@
-// MongoDB initialization script for replica set with authentication
+// Legacy replica-set init — prefer mongo-init-simple.js for Docker. Secrets via environment only.
 print('Starting MongoDB initialization...');
 
-// Wait for MongoDB to be ready
 sleep(5000);
 
-// Initialize replica set
+const appUser = process.env.MONGO_USERNAME;
+const appPassword = process.env.MONGO_PASSWORD;
+const dbName = process.env.MONGO_DATABASE;
+
+if (!appPassword) {
+  print('ERROR: MONGO_PASSWORD must be set.');
+  quit(1);
+}
+
 rs.initiate({
-  _id: "rs0",
-  members: [
-    { _id: 0, host: "localhost:27017" }
-  ]
+  _id: 'rs0',
+  members: [{ _id: 0, host: 'localhost:27017' }],
 });
 
-// Wait for replica set to be ready
 sleep(3000);
 
-// Switch to admin database and authenticate as root
 db = db.getSiblingDB('admin');
-db.auth('mjcarros', '786Password');
+db.auth(appUser, appPassword);
 
-// Switch to mjcarros database
-db = db.getSiblingDB('mjcarros');
+db = db.getSiblingDB(dbName);
 
-// Create a user for the mjcarros database
 db.createUser({
-  user: "mjcarros",
-  pwd: "786Password",
-  roles: [
-    { role: "readWrite", db: "mjcarros" }
-  ]
+  user: appUser,
+  pwd: appPassword,
+  roles: [{ role: 'readWrite', db: dbName }],
 });
 
-// Create collections
 db.createCollection('users');
 db.createCollection('products');
 db.createCollection('categories');
@@ -40,6 +38,6 @@ db.createCollection('orders');
 
 print('MongoDB replica set initialized successfully!');
 print('Replica Set: rs0');
-print('Database: mjcarros');
-print('User created: mjcarros with readWrite permissions');
+print('Database: ' + dbName);
+print('User created: ' + appUser + ' with readWrite permissions');
 print('Collections created: users, products, categories, billboards, orders');

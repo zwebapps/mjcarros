@@ -16,11 +16,7 @@ JWT_SECRET="your-super-secure-jwt-secret-key-here"
 
 ### AWS S3 Configuration (Optional - for image uploads)
 ```bash
-AWS_ACCESS_KEY_ID="your-aws-access-key"
-AWS_SECRET_ACCESS_KEY="your-aws-secret-key"
-AWS_REGION="your-aws-region"
-AWS_BUCKET_NAME="your-s3-bucket-name"
-NEXT_PUBLIC_S3_BASE_URL="https://your-s3-bucket.s3.your-region.amazonaws.com"
+# Images are stored locally under `public/uploads/` and served as `/uploads/...`
 ```
 
 ### Stripe Configuration (Optional - for payments)
@@ -64,7 +60,7 @@ If you're using S3 for image storage, make sure to:
 1. Create an S3 bucket in your AWS account
 2. Configure CORS settings for your bucket
 3. Update the bucket name in your environment variables
-4. Set `NEXT_PUBLIC_S3_BASE_URL` to your bucket's public URL
+4. Upload images from admin; they will appear in `/uploads/...`
 5. Update any hardcoded S3 URLs in components to use your bucket
 
 ## Example S3 CORS Configuration
