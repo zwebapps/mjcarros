@@ -44,7 +44,24 @@ next-env.d.ts
 prd.env
 .env.production
 
-# Local uploads & backups (keep structure in Docker volume)
+# User uploads (images, PDFs) — never commit binaries; only .gitkeep preserves folders in git.
+# Order matters: un-ignore a directory before un-ignoring files inside it.
 public/uploads/*
 !public/uploads/.gitkeep
+
+!public/uploads/product/
+public/uploads/product/*
+!public/uploads/product/.gitkeep
+
+!public/uploads/category/
+public/uploads/category/*
+!public/uploads/category/.gitkeep
+
+!public/uploads/vouchers/
+public/uploads/vouchers/*
+!public/uploads/vouchers/.gitkeep
+
+!public/uploads/seed/
+public/uploads/seed/*
+!public/uploads/seed/.gitkeep
 data/order-backups/
