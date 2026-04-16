@@ -155,8 +155,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
     );
   }
 
-  console.log('Rendering product:', product);
-
   return (
     <div>
       <div className="bg-white">
@@ -167,13 +165,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
               <p className="text-md font-semibold leading-none">Back to shop</p>
             </Link>
             
-            <div className="lg:grid lg:grid-cols-[500px_minmax(400px,_1fr)_100px] lg:items-start lg:gap-x-8">
+            <div className="lg:grid lg:grid-cols-[minmax(0,500px)_minmax(0,1fr)] lg:items-start lg:gap-x-8">
               <Gallery
                 images={product.imageURLs}
                 sold={product.sold}
                 negotiable={!!product.negotiable}
               />
-              <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
+              <div className="mt-10 min-w-0 px-4 sm:mt-16 sm:px-0 lg:mt-0">
                 <Info data={product} />
               </div>
             </div>

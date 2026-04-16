@@ -21,21 +21,21 @@ const Info: React.FC<InfoProps> = ({ data }) => {
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">{data.title}</h1>
-      
-      {/* Category Badge */}
-      <div className="mt-3">
+    <div className="min-w-0 max-w-full">
+      <h1 className="text-3xl font-bold text-gray-900 break-words">{data.title}</h1>
+
+      {/* Category badges — flex-wrap so labels never run together on narrow widths */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="inline-block bg-blue-600 text-white text-sm px-3 py-1 rounded-full font-medium">
           {data.category}
         </span>
         {data.featured && (
-          <span className="ml-2 inline-block bg-yellow-500 text-white text-sm px-3 py-1 rounded-full font-medium">
+          <span className="inline-block bg-yellow-500 text-white text-sm px-3 py-1 rounded-full font-medium">
             Featured
           </span>
         )}
         {data.negotiable && (
-          <span className="ml-2 inline-block bg-emerald-100 text-emerald-700 text-sm px-3 py-1 rounded-full font-medium">
+          <span className="inline-block bg-emerald-100 text-emerald-700 text-sm px-3 py-1 rounded-full font-medium">
             Negotiable
           </span>
         )}
@@ -78,9 +78,21 @@ const Info: React.FC<InfoProps> = ({ data }) => {
         )}
       </div>
 
-      {/* Rich Description */}
-      <div className="mt-6 prose max-w-none prose-headings:mt-4 prose-th:text-gray-900 prose-td:text-gray-700">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{data?.description || ''}</ReactMarkdown>
+      {/* Rich Description — wrap long words/URLs; horizontal scroll for wide tables/pre */}
+      <div className="mt-6 min-w-0 w-full overflow-x-auto">
+        <div
+          className={[
+            "prose prose-neutral max-w-none",
+            "prose-headings:mt-4 prose-headings:break-words",
+            "prose-p:break-words prose-li:break-words prose-td:break-words prose-th:break-words",
+            "prose-th:text-gray-900 prose-td:text-gray-700",
+            "prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:break-normal",
+            "[&_table]:max-w-full",
+            "[&_a]:break-all [&_code]:break-all",
+          ].join(" ")}
+        >
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{data?.description || ""}</ReactMarkdown>
+        </div>
       </div>
 
       {/* sizes removed */}

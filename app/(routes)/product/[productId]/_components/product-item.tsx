@@ -57,9 +57,9 @@ const ProductItem = () => {
             <ArrowLeft className="w-5 h-5 shrink-0" />
             <p className="text-md font-semibold leading-none">Back to shop</p>
           </Link>
-          <div className="lg:grid lg:grid-cols-[500px_minmax(400px,_1fr)_100px] lg:items-start lg:gap-x-8">
+          <div className="lg:grid lg:grid-cols-[minmax(0,500px)_minmax(0,1fr)] lg:items-start lg:gap-x-8">
             <Gallery images={productQuery.data?.imageURLs} sold={productQuery.data?.sold} negotiable={productQuery.data?.negotiable} />
-            <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
+            <div className="mt-10 min-w-0 px-4 sm:mt-16 sm:px-0 lg:mt-0">
               <Info data={productQuery?.data} />
             </div>
           </div>
