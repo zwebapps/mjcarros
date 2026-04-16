@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
-import { s3Client } from "@/lib/s3";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
+import { writeBufferToPublicUploads } from "@/lib/public-uploads";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
@@ -68,12 +67,9 @@ export async function POST(request: NextRequest) {
     let discount: number | undefined = undefined;
     let featured: boolean = false;
     let sold: boolean = false;
+    let negotiable: boolean = false;
     let imageURLs: string[] = [];
     let extras: any = {};
-
-    const bucket = process.env.AWS_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
-    const region = process.env.NEXT_PUBLIC_AWS_S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
-    const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || (bucket && region ? `https://${bucket}.s3.${region}.amazonaws.com` : '')).replace(/\/$/, '');
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -88,6 +84,7 @@ export async function POST(request: NextRequest) {
       discount = parsed.discount ? Number(parsed.discount) : undefined;
       featured = !!parsed.featured;
       sold = !!parsed.sold;
+      negotiable = !!parsed.negotiable;
       // sizes removed
       // Car attributes
       extras = {
@@ -108,17 +105,18 @@ export async function POST(request: NextRequest) {
 
       const files = formData.getAll('files') as File[];
       for (const file of files) {
-        if (!file || !bucket) continue;
+        if (!file) continue;
         const bytes = Buffer.from(await file.arrayBuffer());
-        const key = `products/${Date.now()}-${file.name}`.replace(/\s+/g, '-');
-        await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: file.type || 'application/octet-stream' }));
-        if (baseUrl) imageURLs.push(`${baseUrl}/${key}`);
+        const safe = file.name.replace(/\s+/g, '-').replace(/[^A-Za-z0-9._-]/g, '');
+        const relativePath = `product/${Date.now()}-${safe || 'image'}`;
+        const url = await writeBufferToPublicUploads(relativePath, bytes);
+        imageURLs.push(url);
       }
 
       imageURLs = [...preUrls, ...imageURLs];
     } else {
       const body = await request.json();
-      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, sold, ...extras } = body);
+      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, sold, negotiable, ...extras } = body);
     }
 
     if (!title || !description || !category || !categoryId || !price) {
@@ -155,6 +153,7 @@ export async function POST(request: NextRequest) {
       discount,
       featured: featured || false,
       sold: sold || false,
+      negotiable: negotiable || false,
       productCode,
       ...extras,
       createdAt: new Date(),

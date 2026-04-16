@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { writeBufferToPublicUploads } from "@/lib/public-uploads";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -85,8 +86,36 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid category ID format' }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { billboard, billboardId, category } = body;
+    const contentType = request.headers.get("content-type") || "";
+    let billboard = "";
+    let billboardId = "";
+    let category = "";
+    let uploadedImageUrl: string | null = null;
+
+    const slugifyCategory = (name: string): string =>
+      name
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9_-]/g, "");
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("file") as File | null;
+      billboard = String(form.get("billboard") || "");
+      billboardId = String(form.get("billboardId") || "");
+      category = String(form.get("category") || "");
+      if (file) {
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const safeExt = (file.name.split(".").pop() || "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase();
+        const slug = slugifyCategory(category);
+        const rel = `category/${slug || Date.now()}.${safeExt || "jpg"}`;
+        uploadedImageUrl = await writeBufferToPublicUploads(rel, bytes);
+      }
+    } else {
+      const body = await request.json();
+      ({ billboard, billboardId, category } = body || {});
+    }
 
     if (!billboard || !billboardId || !category) {
       return NextResponse.json(
@@ -104,11 +133,19 @@ export async function PUT(
     await client.connect();
     const db = client.db(getMongoDbName());
     const categoriesCollection = db.collection('categories');
+    const billboardsCollection = db.collection('billboards');
 
     // Check if category exists
     const existingCategory = await categoriesCollection.findOne({ _id: new ObjectId(params.id) });
     if (!existingCategory) {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    }
+
+    if (uploadedImageUrl && ObjectId.isValid(billboardId)) {
+      await billboardsCollection.updateOne(
+        { _id: new ObjectId(billboardId) },
+        { $set: { imageURL: uploadedImageUrl, updatedAt: new Date() } }
+      );
     }
 
     const updateData = {

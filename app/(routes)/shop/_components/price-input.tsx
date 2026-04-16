@@ -1,6 +1,6 @@
 "use client";
 
-import { getCategoryProducts, getAllProducts } from "@/lib/apiCalls";
+import { getCategoryProducts } from "@/lib/apiCalls";
 import { Product } from "@/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -13,30 +13,48 @@ const PriceInput = ({ data }: PriceInputProps) => {
   const pathName = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParamsKey = useMemo(() => searchParams?.toString() ?? "", [searchParams]);
 
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(0);
   const [value, setValue] = useState<number>(0);
 
   const handleSortChange = useCallback(
-    async (val: string) => {
+    async (val: string, explicitMax?: number) => {
       const current = new URLSearchParams(Array.from(searchParams?.entries() || []));
+      const ceiling = explicitMax ?? maxPrice;
 
       const num = Number(val);
-      if (!val || Number.isNaN(num) || num === maxPrice) {
+      if (!val || Number.isNaN(num) || num >= ceiling) {
         current.delete("price");
       } else {
-        current.set("price", String(num));
+        current.set("price", String(Math.round(num)));
       }
       const search = current.toString();
       const query = search ? `?${search}` : "";
+      const base = pathName ?? "/shop";
 
-      await router.replace(`${pathName}${query}`);
+      await router.replace(`${base}${query}`);
     },
     [searchParams, pathName, router, maxPrice]
   );
 
   useEffect(() => {
+    const applyUrlPrice = (computedMin: number, computedMax: number) => {
+      const raw = searchParams?.get("price");
+      if (raw == null || raw === "") {
+        setValue(computedMax);
+        return;
+      }
+      const n = Number(raw);
+      if (Number.isNaN(n)) {
+        setValue(computedMax);
+        return;
+      }
+      const clamped = Math.min(Math.max(n, computedMin), computedMax);
+      setValue(clamped);
+    };
+
     const computeFromProducts = (products: Product[]) => {
       if (!products || products.length === 0) {
         setMinPrice(0);
@@ -51,7 +69,7 @@ const PriceInput = ({ data }: PriceInputProps) => {
       const computedMax = Math.max(...prices);
       setMinPrice(computedMin);
       setMaxPrice(computedMax);
-      setValue(computedMax);
+      applyUrlPrice(computedMin, computedMax);
     };
 
     const init = async () => {
@@ -60,18 +78,12 @@ const PriceInput = ({ data }: PriceInputProps) => {
         const categoryProducts = await getCategoryProducts(urlString);
         computeFromProducts(categoryProducts as unknown as Product[]);
       } else {
-        if (data && data.length > 0) {
-          computeFromProducts(data);
-        } else {
-          const all = await getAllProducts();
-          computeFromProducts(all as unknown as Product[]);
-        }
+        computeFromProducts(data || []);
       }
     };
 
-    init();
-    // Recompute when pathname or data changes
-  }, [pathName, data]);
+    void init();
+  }, [pathName, data, searchParamsKey, searchParams]);
 
   return (
     <div className="range-container mt-2">
@@ -88,8 +100,9 @@ const PriceInput = ({ data }: PriceInputProps) => {
         value={value}
         step="1"
         onChange={(e) => {
-          handleSortChange(e.target.value);
-          setValue(parseFloat(e.target.value));
+          const n = parseFloat(e.target.value);
+          setValue(n);
+          void handleSortChange(e.target.value, maxPrice);
         }}
         className=" accent-neutral-800 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
       />

@@ -22,29 +22,28 @@ const filteredData = (params: any, data: Product[]) => {
     );
   }
 
+  let result = data;
+
   if (params.price) {
-    const filteredPrice = data.filter((product: Product) => {
+    result = result.filter((product: Product) => {
       if (product.finalPrice && product.finalPrice > 0) {
         return +product.finalPrice <= +params.price;
-      } else {
-        return +product.price <= +params.price;
       }
+      return +product.price <= +params.price;
     });
-    return filteredPrice;
   }
 
   if (params.q) {
     const q = Array.isArray(params.q)
       ? params.q.join(" ").toLowerCase().trim()
       : String(params.q || "").toLowerCase().trim();
-    const filteredSearch = data.filter((product: Product) => {
+    result = result.filter((product: Product) => {
       const haystack = `${product.title} ${product.description || ""} ${product.category || ""}`.toLowerCase();
       return haystack.includes(q);
     });
-    return filteredSearch;
   }
 
-  return data;
+  return result;
 };
 
 export default filteredData;

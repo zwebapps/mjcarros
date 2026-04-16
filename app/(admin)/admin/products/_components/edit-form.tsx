@@ -6,6 +6,7 @@ import { type SizeProduct, type createData } from "./edit-product";
 import Image from "next/image";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 
@@ -30,6 +31,7 @@ type InitialType = {
   files: File[];
   isFeatured: boolean;
   isSold?: boolean;
+  negotiable?: boolean;
   productSizes?: SizeProduct[];
   categoryId: string;
   discount?: number;
@@ -63,8 +65,6 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     mileage,
     condition,
   } = data;
-  // Handle both S3 and local storage URLs
-  const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
 
   const initialState = {
     title,
@@ -74,6 +74,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     files: [],
     isFeatured: featured,
     isSold: (data as any).sold || false,
+    negotiable: (data as any).negotiable || false,
     productSizes: productSizes,
     categoryId,
     discount,
@@ -90,6 +91,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [checkbox, setCheckBox] = useState<boolean>(featured);
   const [soldCheckbox, setSoldCheckbox] = useState<boolean>((data as any).sold || false);
+  const [negotiableCheckbox, setNegotiableCheckbox] = useState<boolean>((data as any).negotiable || false);
   const [previewImage, setPreviewImage] = useState<string[]>();
   const [dataForm, setDataForm] = useState<InitialType>(initialState);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -101,15 +103,22 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const handleSoldCheckboxChange = () => {
     setSoldCheckbox((prevCheck) => !prevCheck);
   };
+  const handleNegotiableCheckboxChange = () => {
+    setNegotiableCheckbox((prevCheck) => !prevCheck);
+  };
 
   useEffect(() => {
     setCheckBox(featured);
     setSoldCheckbox((data as any).sold || false);
+    setNegotiableCheckbox((data as any).negotiable || false);
   }, [featured]);
 
+  // Only reset gallery from server when switching products. Do not depend on `imageURLs`
+  // reference — React Query refetches would wipe locally uploaded URLs before Save.
+  const productKey = data._id || data.id || "";
   useEffect(() => {
     setPreviewImage(imageURLs);
-  }, [imageURLs]);
+  }, [productKey]);
 
   useEffect(() => {
     setDataForm({
@@ -120,6 +129,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       files: [],
       isFeatured: featured,
       isSold: (data as any).sold || false,
+      negotiable: (data as any).negotiable || false,
       productSizes,
       categoryId,
       discount,
@@ -197,6 +207,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     const formData = new FormData(e.currentTarget);
     formData.append("isFeatured", checkbox.toString());
     formData.append("isSold", soldCheckbox.toString());
+    formData.append("negotiable", negotiableCheckbox.toString());
     // Include the current image list (filter out blobs). Always append, even if empty
     if (previewImage) {
       const validImages = previewImage.filter((img) => !img.startsWith('blob:'));
@@ -217,7 +228,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       for (const file of Array.from(files)) {
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('folder', 'products');
+        fd.append('folder', 'product');
         const res = await fetch('/api/upload', { 
           method: 'POST', 
           headers: token ? { Authorization: `Bearer ${token}` } : undefined, 
@@ -390,6 +401,21 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
           <div>Mark vehicle as sold (hidden from cart)</div>
         </div>
       </div>
+      <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+        <div>
+          <input
+            type="checkbox"
+            id="negotiable"
+            name="negotiable"
+            checked={negotiableCheckbox}
+            onChange={handleNegotiableCheckboxChange}
+          />
+        </div>
+        <div className="space-y-1 leading-none">
+          <p className="font-semibold">Negotiable</p>
+          <div>Mark price as negotiable</div>
+        </div>
+      </div>
       <label htmlFor="image">Change Product Image</label>
       <Input
         type="file"
@@ -400,27 +426,8 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       />
       <div className="flex gap-2 flex-wrap">
         {previewImage?.map((preview, index) => {
-          const isHttp = /^https?:\/\//.test(preview);
           const isBlobOrData = /^(blob:|data:)/.test(preview);
-          const isLocalUpload = preview.startsWith('/uploads/');
-          
-          let imagePath = preview;
-          
-          if (isHttp || isBlobOrData) {
-            // Direct URLs (S3, blob, data URLs)
-            imagePath = preview;
-          } else if (isLocalUpload) {
-            // Local uploads - use as is
-            imagePath = preview;
-          } else if (baseUrl) {
-            // S3 URLs that need base URL
-            const cleaned = preview.replace(/^\/+/, "");
-            imagePath = `${baseUrl}/${cleaned}`;
-          } else {
-            // Fallback to relative path
-            const cleaned = preview.replace(/^\/+/, "");
-            imagePath = `/${cleaned}`;
-          }
+          const imagePath = isBlobOrData ? preview : resolvePublicImageSrc(preview);
           
           return (
             <div key={`preview-${index}-${preview.slice(-10)}`} className="relative">

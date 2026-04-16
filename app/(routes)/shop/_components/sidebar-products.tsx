@@ -2,114 +2,125 @@ import { MongoClient } from "mongodb";
 import SidebarItems from "./sidebar-items";
 import PriceInput from "./price-input";
 import { Product as UIProduct } from "@/types";
-import { getMongoDbUri ,getMongoDbName} from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import {
+  sortCategoriesForDisplay,
+  DEFAULT_CATEGORY_ORDER,
+} from "@/lib/default-categories";
 
-const MONGODB_URI = getMongoDbUri();
-const dbName = getMongoDbName();
-console.log("-------------DB Name-------------------");
-console.log(dbName);
-console.log("-------------DB Name-------------------");
 const SidebarProducts = async () => {
-  // During build time, return fallback data if DB is not available
-  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_AVAILABLE) {
-    const fallbackCategories = [
-      { id: "1", category: "Luxury", count: 15 },
-      { id: "2", category: "Sports", count: 12 },
-      { id: "3", category: "SUV", count: 20 },
-      { id: "4", category: "Electric", count: 8 },
-    ];
-    const fallbackProducts: UIProduct[] = [];
-    
-    return (
-      <div className="w-1/6 max-sm:w-full p-4 flex flex-col gap-y-4">
-        <div>
-          <p className="font-semibold mt-1 mb-2">Category</p>
-          <SidebarItems categories={fallbackCategories} totalCount={55} />
-        </div>
-        <div>
-          <PriceInput data={fallbackProducts} />
-        </div>
-      </div>
-    );
-  }
+  let client: MongoClient | undefined;
 
-  let client;
-  
   try {
-    client = new MongoClient(MONGODB_URI, {
+    const uri = getMongoDbUri();
+    const dbNameResolved = getMongoDbName();
+    client = new MongoClient(uri, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-    
+
     await client.connect();
-    const db = client.db(dbName);
-    const categoriesCollection = db.collection('categories');
-    const productsCollection = db.collection('products');
-    
+    const db = client.db(dbNameResolved);
+    const categoriesCollection = db.collection("categories");
+    const productsCollection = db.collection("products");
+
     const [dbCategories, dbProducts] = await Promise.all([
       categoriesCollection.find({}).toArray(),
       productsCollection.find({}).toArray(),
     ]);
 
     const products: UIProduct[] = dbProducts.map((p) => ({
-      id: p._id.toString(),
+      id: p._id ? p._id.toString() : "",
       title: p.title,
       description: p.description,
       price: p.price,
       finalPrice: p.finalPrice || undefined,
       discount: p.discount || undefined,
       featured: p.featured,
-      imageURLs: p.imageURLs,
+      sold: !!p.sold,
+      imageURLs: p.imageURLs || [],
       category: p.category,
       categoryId: p.categoryId,
-      createdAt: p.createdAt.toISOString(),
-      updatedAt: p.updatedAt.toISOString(),
+      createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: p.updatedAt ? new Date(p.updatedAt).toISOString() : new Date().toISOString(),
     }));
 
-    // Compute counts per category based on products
-    const categoryToCount: Record<string, number> = products.reduce((acc, product) => {
-      const key = product.category;
+    const availableProducts = products.filter((product) => !product.sold);
+
+    const categoryToCount: Record<string, number> = availableProducts.reduce((acc, product) => {
+      const key = String(product.category || "").trim();
+      if (!key) return acc;
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const categoriesWithCount = dbCategories.map((c) => ({
-      id: c._id.toString(),
-      category: c.category,
-      count: categoryToCount[c.category] || 0,
-    }));
+    // Distinct category labels from the full catalog (including sold). Otherwise when every car is sold,
+    // `categoryToCount` is empty and the sidebar showed no rows while the price slider still had data.
+    const namesFromAllProducts = new Set<string>();
+    for (const product of products) {
+      const key = String(product.category || "").trim();
+      if (key) namesFromAllProducts.add(key);
+    }
+
+    // Union: DB categories, categories seen on any product (any stock), and available-only counts.
+    const byName = new Map<string, { id: string; category: string; count: number }>();
+    for (const c of dbCategories) {
+      const name = String(c.category || "").trim();
+      if (!name) continue;
+      byName.set(name, {
+        id: c._id?.toString?.() ? c._id.toString() : name,
+        category: name,
+        count: categoryToCount[name] || 0,
+      });
+    }
+    for (const name of Object.keys(categoryToCount)) {
+      if (!byName.has(name)) {
+        byName.set(name, { id: name, category: name, count: categoryToCount[name] || 0 });
+      }
+    }
+    for (const name of namesFromAllProducts) {
+      if (!byName.has(name)) {
+        byName.set(name, { id: name, category: name, count: categoryToCount[name] || 0 });
+      }
+    }
+
+    // Nothing in DB and no product.category strings — still show default taxonomy so the nav isn't empty.
+    if (byName.size === 0) {
+      for (const name of DEFAULT_CATEGORY_ORDER) {
+        byName.set(name, { id: name, category: name, count: 0 });
+      }
+    }
+
+    const categoriesWithCount = Array.from(byName.values());
+
+    const sortedCategories = sortCategoriesForDisplay(categoriesWithCount);
 
     return (
       <div className="w-1/6 max-sm:w-full p-4 flex flex-col gap-y-4">
         <div>
           <p className="font-semibold mt-1 mb-2">Category</p>
-          <SidebarItems categories={categoriesWithCount} totalCount={products.length} />
+          <SidebarItems
+            categories={sortedCategories}
+            totalCount={availableProducts.length}
+          />
         </div>
         <div>
-          <PriceInput data={products} />
+          <PriceInput data={availableProducts} />
         </div>
       </div>
     );
   } catch (error) {
-    console.error('Error fetching sidebar data:', error);
-    // Return fallback data on error
-    const fallbackCategories = [
-      { id: "1", category: "Luxury", count: 15 },
-      { id: "2", category: "Sports", count: 12 },
-      { id: "3", category: "SUV", count: 20 },
-      { id: "4", category: "Electric", count: 8 },
-    ];
-    const fallbackProducts: UIProduct[] = [];
-    
+    console.error("Error fetching sidebar data:", error);
+    // Degrade gracefully: empty sidebar instead of failing the page
     return (
       <div className="w-1/6 max-sm:w-full p-4 flex flex-col gap-y-4">
         <div>
           <p className="font-semibold mt-1 mb-2">Category</p>
-          <SidebarItems categories={fallbackCategories} totalCount={55} />
+          <SidebarItems categories={[]} totalCount={0} />
         </div>
         <div>
-          <p>Price filter unavailable</p>
+          <PriceInput data={[]} />
         </div>
       </div>
     );

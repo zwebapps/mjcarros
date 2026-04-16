@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { writeBufferToPublicUploads } from "@/lib/public-uploads";
 
 const MONGODB_URI = getMongoDbUri();
+
+function slugifyCategory(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "");
+}
 
 export async function GET(request: NextRequest) {
   let client;
@@ -48,8 +57,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { billboard, billboardId, category, categorySizes } = body;
+    const contentType = request.headers.get("content-type") || "";
+    let billboard = "";
+    let billboardId = "";
+    let category = "";
+    let categorySizes: any[] = [];
+    let uploadedImageUrl: string | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("file") as File | null;
+      billboard = String(form.get("billboard") || "");
+      billboardId = String(form.get("billboardId") || "");
+      category = String(form.get("category") || "");
+      const rawSizes = form.get("categorySizes");
+      if (rawSizes) {
+        try {
+          categorySizes = JSON.parse(String(rawSizes));
+        } catch {
+          categorySizes = [];
+        }
+      }
+      if (file) {
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const safeExt = (file.name.split(".").pop() || "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase();
+        const slug = slugifyCategory(category);
+        const rel = `category/${slug || Date.now()}.${safeExt || "jpg"}`;
+        uploadedImageUrl = await writeBufferToPublicUploads(rel, bytes);
+      }
+    } else {
+      const body = await request.json();
+      ({ billboard, billboardId, category, categorySizes } = body || {});
+    }
 
     if (!billboard || !billboardId || !category) {
       return NextResponse.json(
@@ -68,6 +107,15 @@ export async function POST(request: NextRequest) {
     await client.connect();
     const db = client.db(getMongoDbName());
     const categoriesCollection = db.collection('categories');
+    const billboardsCollection = db.collection('billboards');
+
+    // If an image was uploaded with the category, update the selected billboard imageURL to local uploads.
+    if (uploadedImageUrl && ObjectId.isValid(billboardId)) {
+      await billboardsCollection.updateOne(
+        { _id: new ObjectId(billboardId) },
+        { $set: { imageURL: uploadedImageUrl, updatedAt: new Date() } }
+      );
+    }
     
     const categoryData = {
       billboard,

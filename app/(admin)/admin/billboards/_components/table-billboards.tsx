@@ -22,9 +22,6 @@ type createData = {
 export default function TableBillboards() {
   const [currentPage, setCurrentPage] = useState(0);
   const productsPerPage = 5;
-  // Use environment variable for S3 base URL
-  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "https://your-s3-bucket.s3.region.amazonaws.com";
-
   const queryClient = useQueryClient();
 
   // Temporarily using static data to stop infinite loading

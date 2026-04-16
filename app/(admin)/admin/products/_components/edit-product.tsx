@@ -41,11 +41,12 @@ const EditProduct = () => {
   const productId = params?.productId as string | undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["product"],
+    queryKey: ["product", productId],
+    enabled: !!productId,
     queryFn: async () => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
+
       const { data } = await axios.get(`/api/product/edit/${productId}`, { headers });
       return data as createData;
     },

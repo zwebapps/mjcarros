@@ -18,14 +18,19 @@ services:
 
   nextjs:
     container_name: nextjs
+    image: mjcarros-ecommerce-nextjs:simple
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8080:3000"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
+      DOCKER: "true"
+      # Overrides `.env` DATABASE_URL when it points at localhost — app must use the `mongodb` service name.
+      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE:-mjcarros}
     depends_on:
       - mongodb
     volumes:

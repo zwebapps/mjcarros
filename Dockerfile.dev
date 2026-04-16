@@ -1,36 +1,13 @@
-# Base stage
-FROM node:18-bullseye AS base
+# Dev image: install deps once; source is bind-mounted at runtime (see docker-compose.dev.yml).
+FROM node:18-bullseye
 WORKDIR /app
 
-# Install dependencies
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
-# Copy source code
-COPY . .
-
-# Build the app without connecting to DB
-# (skip getStaticProps database queries)
-ENV SKIP_DB_BUILD=true
-ENV NEXT_PUBLIC_SKIP_DB_BUILD=true
-RUN npm run build
-
-# Runner stage
-FROM node:18-bullseye AS runner
-WORKDIR /app
-
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=development
-ENV HOST=0.0.0.0
-ENV PORT=3000
-
-# Copy built app
-COPY --from=base /app/.next ./.next
-COPY --from=base /app/public ./public
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/package.json ./package.json
-COPY --from=base /app/scripts ./scripts
-
 EXPOSE 3000
 
-CMD ["npm", "start"]
-
+# Default; compose overrides with explicit -H for Docker networking.
+CMD ["npx", "next", "dev", "-H", "0.0.0.0", "-p", "3000"]

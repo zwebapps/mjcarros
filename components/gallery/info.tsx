@@ -34,6 +34,11 @@ const Info: React.FC<InfoProps> = ({ data }) => {
             Featured
           </span>
         )}
+        {data.negotiable && (
+          <span className="ml-2 inline-block bg-emerald-100 text-emerald-700 text-sm px-3 py-1 rounded-full font-medium">
+            Negotiable
+          </span>
+        )}
       </div>
 
       {/* Pricing */}
@@ -48,14 +53,28 @@ const Info: React.FC<InfoProps> = ({ data }) => {
                 -{data?.discount}%
               </div>
             </div>
-            <p className="text-2xl text-gray-900 font-semibold mt-1">
-              {formatCurrency(Number(data.finalPrice), 'EUR')}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-2xl text-gray-900 font-semibold">
+                {formatCurrency(Number(data.finalPrice), 'EUR')}
+              </p>
+              {data.negotiable && (
+                <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
+                  Negotiable
+                </span>
+              )}
+            </div>
           </div>
         ) : (
-          <p className="text-2xl text-gray-900 font-semibold">
-            {formatCurrency(Number(data?.price), 'EUR')}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-2xl text-gray-900 font-semibold">
+              {formatCurrency(Number(data?.price), 'EUR')}
+            </p>
+            {data.negotiable && (
+              <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
+                Negotiable
+              </span>
+            )}
+          </div>
         )}
       </div>
 

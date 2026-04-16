@@ -61,11 +61,11 @@ const banners = [
   }
 ];
 
-// Build categories dynamically from products
+// Build categories dynamically (count from products, image from billboards)
 async function getCategoriesWithCounts() {
   let client;
   try {
-    const { MongoClient } = await import('mongodb');
+    const { MongoClient, ObjectId } = await import('mongodb');
     const { getMongoDbUri, getMongoDbName } = await import('@/lib/mongodb-connection');
     const MONGODB_URI = getMongoDbUri();
     client = new MongoClient(MONGODB_URI, {
@@ -77,26 +77,66 @@ async function getCategoriesWithCounts() {
     await client.connect();
     const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
-    
-    const products = await productsCollection.find({}).sort({ category: 1 }).toArray();
-    
-    const map = new Map<string, { count: number; image?: string }>();
+
+    const categoriesCollection = db.collection('categories');
+    const billboardsCollection = db.collection('billboards');
+
+    const [products, categories] = await Promise.all([
+      productsCollection.find({}).project({ category: 1 }).toArray(),
+      categoriesCollection.find({}).project({ category: 1, billboardId: 1 }).toArray(),
+    ]);
+
+    const counts = new Map<string, number>();
     for (const p of products) {
-      const key = (p.category || "").trim();
-      const current = map.get(key) || { count: 0, image: undefined };
-      current.count += 1;
-      if (!current.image && Array.isArray(p.imageURLs) && p.imageURLs.length > 0) {
-        current.image = p.imageURLs[0] ? `${p.imageURLs[0]}?w=400&h=300&fit=crop` : "/logo.png";
-      }
-      map.set(key, current);
+      const key = String(p.category || '').trim();
+      if (!key) continue;
+      counts.set(key, (counts.get(key) || 0) + 1);
     }
-    
-    // Convert to array and provide fallback images
-    const fallback = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200&h=150&fit=crop";
-    return Array.from(map.entries())
-      .map(([name, { count, image }]) => ({ name, count, image: image || fallback }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
+
+    const billboardIdByCategory = new Map<string, string>();
+    for (const c of categories) {
+      const key = String(c.category || '').trim();
+      const bbId = c.billboardId ? String(c.billboardId) : '';
+      if (key && bbId) billboardIdByCategory.set(key, bbId);
+    }
+
+    const billboardIds = Array.from(new Set(Array.from(billboardIdByCategory.values())));
+    const billboards = billboardIds.length
+      ? await billboardsCollection
+          .find({ _id: { $in: billboardIds.map((id) => new ObjectId(id)) } })
+          .project({ imageURL: 1 })
+          .toArray()
+      : [];
+
+    const billboardImageById = new Map<string, string>();
+    for (const b of billboards) {
+      billboardImageById.set(String(b._id), String((b as any).imageURL || ''));
+    }
+
+    const fallback = "/placeholder-image.svg";
+    const slugify = (s: string) =>
+      s
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9_-]/g, "");
+
+    const rows = Array.from(counts.entries()).map(([name, count]) => {
+      const bbId = billboardIdByCategory.get(name) || '';
+      const billboardImage = (bbId && billboardImageById.get(bbId)) || "";
+      const isPlaceholder =
+        !billboardImage ||
+        billboardImage.includes("/placeholder-image.");
+
+      // If billboard image is still placeholder, use your local category images:
+      // public/uploads/category/<lowercase>.jpg  →  /uploads/category/<lowercase>.jpg
+      const localCategoryImage = `/uploads/category/${slugify(name)}.jpg`;
+
+      const image = isPlaceholder ? localCategoryImage : billboardImage;
+      return { name, count, image };
+    });
+
+    return rows.sort((a, b) => b.count - a.count).slice(0, 8);
   } catch (error) {
     console.error('Error fetching categories:', error);
     // Return an empty list on error to avoid static/fake counts

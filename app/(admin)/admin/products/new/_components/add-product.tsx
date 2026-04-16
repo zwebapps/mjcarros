@@ -26,6 +26,7 @@ type initialState = {
   files: File[];
   isFeatured: boolean;
   isSold: boolean;
+  isNegotiable: boolean;
   categoryId: string;
   // sizes removed
   discount?: string;
@@ -52,6 +53,7 @@ const AddProduct = () => {
     files: [],
     isFeatured: false,
     isSold: false,
+    isNegotiable: false,
     // sizes removed
     discount: "",
     modelName: "",
@@ -126,7 +128,7 @@ const AddProduct = () => {
       for (const file of Array.from(files)) {
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('folder', 'products');
+        fd.append('folder', 'product');
         const res = await fetch('/api/upload', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : undefined, body: fd });
         if (!res.ok) throw new Error('Upload failed');
         const data = await res.json();
@@ -147,6 +149,9 @@ const AddProduct = () => {
   };
   const handleSoldChange = (isChecked: boolean) => {
     setDataForm((prevData) => ({ ...prevData, isSold: isChecked }));
+  };
+  const handleNegotiableChange = (isChecked: boolean) => {
+    setDataForm((prevData) => ({ ...prevData, isNegotiable: isChecked }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -198,6 +203,7 @@ const AddProduct = () => {
       files: dataForm.files,
       featured: dataForm.isFeatured,
       sold: dataForm.isSold,
+      negotiable: dataForm.isNegotiable,
       category: dataForm.category,
       // no sizes
       categoryId: dataForm.categoryId,
@@ -390,6 +396,21 @@ const AddProduct = () => {
             </select>
           </div>
         </div>
+      <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+        <div>
+          <input
+            type="checkbox"
+            id="isNegotiable"
+            name="isNegotiable"
+            checked={dataForm.isNegotiable}
+            onChange={(e) => handleNegotiableChange(e.target.checked)}
+          />
+        </div>
+        <div className="space-y-1 leading-none">
+          <p className="font-semibold">Negotiable</p>
+          <div>Mark price as negotiable</div>
+        </div>
+      </div>
         {/* sizes UI removed */}
         <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
           <div>

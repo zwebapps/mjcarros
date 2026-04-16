@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Image from "next/image";
 import toast from 'react-hot-toast';
 import { useSearchParams } from "next/navigation";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
 interface OrderItemProduct {
   _id?: string;
@@ -26,6 +27,17 @@ interface Order {
   isPaid: boolean;
   createdAt: string;
   orderItems: OrderItem[];
+}
+
+function normalizeOrderImage(raw: string): string {
+  if (!raw) return '/logo.png';
+  if (/^https?:\/\//.test(raw)) {
+    if (raw.includes('images.unsplash.com') && !raw.includes('?')) {
+      return `${raw}?w=600&h=400&fit=crop&auto=format`;
+    }
+    return raw;
+  }
+  return resolvePublicImageSrc(raw);
 }
 
 export default function GuestOrdersPage() {
@@ -147,21 +159,8 @@ export default function GuestOrdersPage() {
           <h2 className="text-xl font-semibold mb-4">Your Orders</h2>
           <div className="space-y-6">
             {orders.map((order) => {
-              const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
-              const normalize = (src: string): string => {
-                if (!src) return '/logo.png';
-                if (/^https?:\/\//.test(src)) {
-                  if (src.includes('images.unsplash.com') && !src.includes('?')) {
-                    return `${src}?w=600&h=400&fit=crop&auto=format`;
-                  }
-                  return src;
-                }
-                if (src.startsWith('/uploads/')) return src;
-                if (baseUrl) return `${baseUrl}/${src.replace(/^\/+/, '')}`;
-                return `/${src.replace(/^\/+/, '')}`;
-              };
-
-              const primaryImage = normalize(order.orderItems[0]?.product?.imageURLs?.[0] || '');
+              const raw = order.orderItems[0]?.product?.imageURLs?.[0] || '';
+              const primaryImage = normalizeOrderImage(raw);
               const dateStr = new Date(order.createdAt).toLocaleString();
               return (
                 <div key={order._id} className="border rounded p-4">
@@ -196,7 +195,7 @@ export default function GuestOrdersPage() {
                       {/* Items list */}
                       <ul className="mt-4 divide-y">
                         {order.orderItems.map((item) => {
-                          const image = normalize(item.product?.imageURLs?.[0] || "");
+                          const image = normalizeOrderImage(item.product?.imageURLs?.[0] || '');
                           const qty = item.quantity ?? 1;
                           const soldOut = qty === 0;
                           return (

@@ -54,11 +54,11 @@ const ProductItem = () => {
       <Container>
         <div className="px-4 py-10 sm:px-6 lg:px-16">
           <Link href="/shop" className="flex items-center mb-5 gap-x-1">
-            <ArrowLeft className="w-5 h-5" />
-            <p className="text-md font-semibold">Back to shop</p>
+            <ArrowLeft className="w-5 h-5 shrink-0" />
+            <p className="text-md font-semibold leading-none">Back to shop</p>
           </Link>
           <div className="lg:grid lg:grid-cols-[500px_minmax(400px,_1fr)_100px] lg:items-start lg:gap-x-8">
-            <Gallery images={productQuery.data?.imageURLs} />
+            <Gallery images={productQuery.data?.imageURLs} sold={productQuery.data?.sold} negotiable={productQuery.data?.negotiable} />
             <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
               <Info data={productQuery?.data} />
             </div>

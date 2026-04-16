@@ -9,10 +9,17 @@
     "lint": "next lint",
     "generate-template": "node scripts/generate-excel-template.js",
     "setup-admin": "node scripts/setup-admin.js",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "test:voucher": "tsx scripts/test-voucher-local.ts",
+    "test:order-backup": "tsx scripts/test-order-backup.ts",
+    "migrate:s3": "tsx scripts/migrate-s3-to-uploads.ts",
+    "docker:up": "docker compose up --build",
+    "docker:up:detached": "docker compose up --build -d",
+    "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "docker:dev:detached": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up --build -d"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.884.0",
     "@headlessui/react": "^2.2.7",
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
@@ -65,6 +72,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.19.2",
     "typescript": "^5.2.2"
   }
 }

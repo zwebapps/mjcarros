@@ -1,102 +1,59 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import fs from 'fs/promises';
+import path from 'path';
 
-// Initialize S3 client
-const s3Client = new S3Client({
-  region: process.env.AWS_DEFAULT_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
+const backupRoot = () => path.join(process.cwd(), 'data', 'order-backups');
 
-interface OrderWithDetails {
-  _id: string;
-  id: string;
-  orderNumber: number;
-  isPaid: boolean;
-  userEmail: string;
-  phone: string;
-  address: string;
-  paymentMethod: string;
-  createdAt: Date;
-  updatedAt: Date;
-  orderItems: {
-    productId: string;
-    productName: string;
-    quantity: number;
-    price: number;
-    product: {
-      id: string;
-      title: string;
-      price: number;
-      modelName: string;
-      year: number;
-      color: string;
-      mileage: number;
-      fuelType: string;
-      imageURLs: string[];
-    };
-  }[];
-  // Computed fields
-  totalPrice: number;
-  userName: string;
-}
-
-// Helper function to compute total price
 function computeTotalPrice(order: any): number {
   if (order.totalPrice) return order.totalPrice;
-  return order.orderItems?.reduce((total: number, item: any) => {
-    const price = item.product?.price || 0;
-    const quantity = item.quantity || 1;
-    return total + (price * quantity);
-  }, 0) || 0;
+  return (
+    order.orderItems?.reduce((total: number, item: any) => {
+      const price = item.product?.price || 0;
+      const quantity = item.quantity || 1;
+      return total + price * quantity;
+    }, 0) || 0
+  );
 }
 
-// Helper function to get user name
 function getUserName(order: any): string {
   if (order.userName) return order.userName;
   return order.userEmail || 'Unknown Customer';
 }
 
+/** Persist order JSON under `data/order-backups/` (not web-exposed). */
 export async function backupOrderToS3(order: any): Promise<void> {
   try {
-    // Check if S3 is configured
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.S3_ORDERS_BUCKET) {
-      console.log('⚠️  S3 not configured for order backup. Skipping backup.');
-      return;
-    }
+    const root = backupRoot();
+    const orderId = String(order._id || order.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    const dir = path.join(root, 'orders', orderId);
+    await fs.mkdir(dir, { recursive: true });
 
-    const bucketName = process.env.S3_ORDERS_BUCKET;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const orderId = order._id || order.id;
-    const fileName = `orders/${orderId}/order-${timestamp}.json`;
+    const filePath = path.join(dir, `order-${timestamp}.json`);
 
-    // Compute missing fields
     const totalPrice = computeTotalPrice(order);
     const userName = getUserName(order);
 
-    // Prepare order data for backup
     const orderBackup = {
       backupInfo: {
         timestamp: new Date().toISOString(),
         orderId: order._id || order.id,
         backupType: 'order_creation',
-        version: '1.0'
+        version: '1.0',
       },
       order: {
         id: order._id || order.id,
         phone: order.phone,
         address: order.address,
         isPaid: order.isPaid,
-        totalPrice: totalPrice,
+        totalPrice,
         userEmail: order.userEmail,
-        userName: userName,
+        userName,
         createdAt: order.createdAt,
-        updatedAt: order.updatedAt
+        updatedAt: order.updatedAt,
       },
       customer: {
         email: order.userEmail,
-        name: userName
+        name: userName,
       },
       items: order.orderItems.map((item: any) => ({
         id: item.id,
@@ -110,8 +67,8 @@ export async function backupOrderToS3(order: any): Promise<void> {
           color: item.product.color,
           mileage: item.product.mileage,
           fuelType: item.product.fuelType,
-          imageURLs: item.product.imageURLs
-        }
+          imageURLs: item.product.imageURLs,
+        },
       })),
       summary: {
         totalItems: order.orderItems.length,
@@ -119,42 +76,24 @@ export async function backupOrderToS3(order: any): Promise<void> {
         totalValue: totalPrice,
         customerEmail: order.userEmail,
         customerName: userName,
-        orderDate: order.createdAt
-      }
+        orderDate: order.createdAt,
+      },
     };
 
-    // Upload to S3
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: fileName,
-      Body: JSON.stringify(orderBackup, null, 2),
-      ContentType: 'application/json',
-      Metadata: {
-        orderId: order._id || order.id,
-        customerEmail: order.userEmail || '',
-        orderDate: order.createdAt.toISOString(),
-        totalPrice: totalPrice.toString()
-      }
-    });
+    await fs.writeFile(filePath, JSON.stringify(orderBackup, null, 2), 'utf8');
 
-    await s3Client.send(command);
-
-    console.log(`✅ Order backup successful: s3://${bucketName}/${fileName}`);
+    console.log(`✅ Order backup saved: ${filePath}`);
     console.log(`📦 Order ID: ${order._id || order.id}`);
     console.log(`👤 Customer: ${userName} (${order.userEmail})`);
-    console.log(`💰 Total: $${totalPrice}`);
-    console.log(`📋 Items: ${order.orderItems.length} products`);
-
   } catch (error) {
     console.error('❌ Order backup failed:', error);
-    // Don't throw error - backup failure shouldn't break order creation
   }
 }
 
 export function logOrderCreation(order: any): void {
   const totalPrice = computeTotalPrice(order);
   const userName = getUserName(order);
-  
+
   console.log('\n🎉 NEW ORDER CREATED');
   console.log('==================');
   console.log(`📦 Order ID: ${order._id || order.id}`);
@@ -165,7 +104,7 @@ export function logOrderCreation(order: any): void {
   console.log(`💳 Payment Status: ${order.isPaid ? 'PAID' : 'PENDING'}`);
   console.log(`📅 Order Date: ${order.createdAt.toISOString()}`);
   console.log('\n📋 Order Items:');
-  
+
   order.orderItems.forEach((item: any, index: number) => {
     console.log(`   ${index + 1}. ${item.productName || 'Unknown Product'}`);
     console.log(`      Product ID: ${item.productId}`);
@@ -173,36 +112,25 @@ export function logOrderCreation(order: any): void {
     console.log(`      Quantity: ${item.quantity || 1}`);
     console.log('');
   });
-  
+
   console.log('==================\n');
 }
 
-// Utility function to restore orders from S3 (for disaster recovery)
 export async function listOrderBackups(): Promise<string[]> {
   try {
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.S3_ORDERS_BUCKET) {
-      throw new Error('S3 not configured');
+    const ordersDir = path.join(backupRoot(), 'orders');
+    const ids = await fs.readdir(ordersDir, { withFileTypes: true });
+    const keys: string[] = [];
+    for (const d of ids) {
+      if (!d.isDirectory()) continue;
+      const sub = path.join(ordersDir, d.name);
+      const files = await fs.readdir(sub);
+      for (const f of files) {
+        if (f.endsWith('.json')) keys.push(`orders/${d.name}/${f}`);
+      }
     }
-
-    const { S3Client, ListObjectsV2Command } = await import('@aws-sdk/client-s3');
-    const s3Client = new S3Client({
-      region: process.env.AWS_DEFAULT_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
-
-    const command = new ListObjectsV2Command({
-      Bucket: process.env.S3_ORDERS_BUCKET,
-      Prefix: 'orders/'
-    });
-
-    const response = await s3Client.send(command);
-    return response.Contents?.map(obj => obj.Key || '') || [];
-
-  } catch (error) {
-    console.error('Error listing order backups:', error);
+    return keys;
+  } catch {
     return [];
   }
 }

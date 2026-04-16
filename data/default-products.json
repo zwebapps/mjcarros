@@ -1,0 +1,117 @@
+[
+  {
+    "seedKey": "default-showroom-luxury-1",
+    "category": "Luxury",
+    "title": "Executive Luxury Sedan",
+    "description": "Premium leather interior, adaptive cruise, panoramic roof. Full service history and single owner.",
+    "price": 42900,
+    "finalPrice": 42900,
+    "discount": 0,
+    "featured": true,
+    "sold": false,
+    "negotiable": true,
+    "imageURLs": [
+      "https://images.unsplash.com/photo-1563720223185-11003d516935?w=1200&h=900&fit=crop"
+    ],
+    "modelName": "Executive",
+    "year": 2023,
+    "stockQuantity": 1,
+    "color": "Midnight Black",
+    "fuelType": "Petrol",
+    "transmission": "Automatic",
+    "mileage": 18500,
+    "condition": "used"
+  },
+  {
+    "seedKey": "default-showroom-sports-1",
+    "category": "Sports",
+    "title": "Roadster Sport",
+    "description": "Rear-wheel drive, sport suspension, low miles. Track-ready with daily comfort.",
+    "price": 58900,
+    "finalPrice": 54900,
+    "discount": 7,
+    "featured": true,
+    "sold": false,
+    "negotiable": false,
+    "imageURLs": [
+      "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=1200&h=900&fit=crop"
+    ],
+    "modelName": "Roadster S",
+    "year": 2022,
+    "stockQuantity": 1,
+    "color": "Rosso Corsa",
+    "fuelType": "Petrol",
+    "transmission": "Manual",
+    "mileage": 9200,
+    "condition": "used"
+  },
+  {
+    "seedKey": "default-showroom-suv-1",
+    "category": "SUV",
+    "title": "Family Adventure SUV",
+    "description": "Seven seats, AWD, towing package. Ideal for road trips and winter driving.",
+    "price": 36500,
+    "finalPrice": 36500,
+    "discount": 0,
+    "featured": false,
+    "sold": false,
+    "negotiable": true,
+    "imageURLs": [
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=1200&h=900&fit=crop"
+    ],
+    "modelName": "TrailMax",
+    "year": 2021,
+    "stockQuantity": 2,
+    "color": "Silver",
+    "fuelType": "Diesel",
+    "transmission": "Automatic",
+    "mileage": 42000,
+    "condition": "used"
+  },
+  {
+    "seedKey": "default-showroom-electric-1",
+    "category": "Electric",
+    "title": "City EV Hatch",
+    "description": "Long range battery, fast charging, low running costs. Perfect commuter.",
+    "price": 31900,
+    "finalPrice": 29900,
+    "discount": 6,
+    "featured": true,
+    "sold": false,
+    "negotiable": false,
+    "imageURLs": [
+      "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1200&h=900&fit=crop"
+    ],
+    "modelName": "EV Urban",
+    "year": 2024,
+    "stockQuantity": 3,
+    "color": "Pearl White",
+    "fuelType": "Electric",
+    "transmission": "Automatic",
+    "mileage": 3500,
+    "condition": "new"
+  },
+  {
+    "seedKey": "default-showroom-sedan-1",
+    "category": "Sedan",
+    "title": "Comfort Sedan",
+    "description": "Spacious cabin, excellent fuel economy, full safety package.",
+    "price": 21900,
+    "finalPrice": 21900,
+    "discount": 0,
+    "featured": false,
+    "sold": false,
+    "negotiable": true,
+    "imageURLs": [
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1200&h=900&fit=crop"
+    ],
+    "modelName": "ComfortLine",
+    "year": 2020,
+    "stockQuantity": 1,
+    "color": "Graphite Grey",
+    "fuelType": "Petrol",
+    "transmission": "Automatic",
+    "mileage": 58000,
+    "condition": "used"
+  }
+]

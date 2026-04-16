@@ -3,7 +3,7 @@ import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import ProductCard from "@/components/ui/product-card";
 import { MongoClient } from "mongodb";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection"; 
 
 interface CategoryPageProps {
   params: { category: string };
@@ -42,6 +42,7 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
       discount: dbProduct.discount || undefined,
       featured: dbProduct.featured,
       sold: !!dbProduct.sold,
+      negotiable: !!dbProduct.negotiable,
       imageURLs: dbProduct.imageURLs,
       category: dbProduct.category,
       categoryId: dbProduct.categoryId,
@@ -53,7 +54,8 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
       (p) => p.category.toLowerCase() === params.category.toLowerCase()
     );
 
-    const displayed = filteredData(searchParams || {}, [...inCategory]);
+    const inStock = inCategory.filter((p) => !p.sold);
+    const displayed = filteredData(searchParams || {}, [...inStock]);
 
     if (displayed.length === 0) {
       return (

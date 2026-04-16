@@ -40,6 +40,7 @@ const ShopPage = async ({
       discount: dbProduct.discount || undefined,
       featured: dbProduct.featured,
       sold: !!dbProduct.sold,
+      negotiable: !!dbProduct.negotiable,
       imageURLs: dbProduct.imageURLs || [],
       category: dbProduct.category,
       categoryId: dbProduct.categoryId,
@@ -55,7 +56,8 @@ const ShopPage = async ({
       );
     }
 
-    const displayed = filteredData(searchParams || {}, [...products]);
+    const available = products.filter((p) => !p.sold);
+    const displayed = filteredData(searchParams || {}, [...available]);
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-10">

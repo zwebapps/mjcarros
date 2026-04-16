@@ -5,7 +5,7 @@ import { ObjectId } from "mongodb";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
 import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
-import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
+import { uploadOrderVoucherToS3 } from "@/lib/voucher-storage";
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2023-10-16" }) : (null as unknown as Stripe);

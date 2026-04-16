@@ -36,10 +36,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Environment variables
+# Environment variables (never commit real secrets)
 .env.local
 .env.local.*
 .env.build
-.gitignore
-.gitignore
 .env.docker
+prd.env
+.env.production
+
+# Local uploads & backups (keep structure in Docker volume)
+public/uploads/*
+!public/uploads/.gitkeep
+data/order-backups/

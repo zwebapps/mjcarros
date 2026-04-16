@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
 const NewBillboard = () => {
   const router = useRouter();
@@ -26,7 +27,6 @@ const NewBillboard = () => {
     image: "",
   });
 
-  const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
 
   const { data } = useQuery({
     queryKey: ["billboard"],
@@ -40,14 +40,10 @@ const NewBillboard = () => {
   useEffect(() => {
     if (id && data?.imageURL) {
       const src = String(data.imageURL);
-      const url = src.startsWith("http")
-        ? src
-        : baseUrl
-        ? `${baseUrl}/${src.replace(/^\/+/, "")}`
-        : src;
+      const url = /^https?:\/\//.test(src) ? src : resolvePublicImageSrc(src);
       setImagePreview(url);
     }
-  }, [id, data?.imageURL, baseUrl]);
+  }, [id, data?.imageURL]);
 
   const handleFileChange = (e: any) => {
     const selectedFile = e.target.files[0];

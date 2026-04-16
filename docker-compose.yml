@@ -20,6 +20,8 @@ services:
 
   nextjs:
     container_name: nextjs
+    # Tag so `docker compose up --build` always refreshes the app image when sources change.
+    image: mjcarros-ecommerce-nextjs:local
     build:
       context: .
       dockerfile: Dockerfile
@@ -28,8 +30,10 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV:${NODE_ENV}
-      - MONGO_URI:${MONGO_URI}
+      - NODE_ENV=${NODE_ENV:-production}
+      - DOCKER=true
+      # App must reach Mongo by Compose service name + container port (not localhost / host port).
+      - DATABASE_URL=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE:-mjcarros}
     depends_on:
       - mongodb
     networks:

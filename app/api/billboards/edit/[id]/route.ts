@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { writeBufferToPublicUploads } from "@/lib/public-uploads";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -77,23 +78,57 @@ export async function PUT(
 
     console.log('✅ Admin authorization verified for billboard edit');
 
-    const body = await request.json();
-    const { billboard, imageURL } = body;
+    const contentType = request.headers.get("content-type") || "";
+    let billboard = "";
+    let imageURL = "";
 
-    if (!billboard || !imageURL) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("file") as File | null;
+      const rawBillboard = form.get("billboard");
+      billboard = typeof rawBillboard === "string" ? rawBillboard : String(rawBillboard || "");
+      try {
+        billboard = JSON.parse(billboard);
+      } catch {
+        /* ignore */
+      }
+      if (!billboard) {
+        return NextResponse.json({ error: "Missing billboard" }, { status: 400 });
+      }
+
+      if (file) {
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, "-");
+        imageURL = await writeBufferToPublicUploads(`category/${Date.now()}-${safeName}`, bytes);
+      } else {
+        // keep existing image if no new file uploaded
+        client = new MongoClient(MONGODB_URI, {
+          maxPoolSize: 10,
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 45000,
+        });
+        await client.connect();
+        const db = client.db(getMongoDbName());
+        const billboardsCollection = db.collection('billboards');
+        const existing = await billboardsCollection.findOne({ _id: new ObjectId(params.id) });
+        imageURL = String((existing as any)?.imageURL || "");
+      }
+    } else {
+      const body = await request.json();
+      ({ billboard, imageURL } = body || {});
+      if (!billboard || !imageURL) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
     }
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
+    if (!client) {
+      client = new MongoClient(MONGODB_URI, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      await client.connect();
+    }
     const db = client.db(getMongoDbName());
     const billboardsCollection = db.collection('billboards');
 

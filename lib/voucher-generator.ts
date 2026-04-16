@@ -1,4 +1,5 @@
 import { getDisplayOrderNumber } from "./order-number-generator";
+import { resolvePublicImageSrc } from "./resolve-image-src";
 
 export interface OrderWithItems {
   _id: string;
@@ -52,7 +53,6 @@ export function generateVoucherHTML(order: OrderWithItems): string {
   }, 0);
 
   const voucherNumber = `VCH-${order._id || order.id}-${Date.now()}`;
-  const baseUrl = (process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/$/, "");
   const normalize = (src: string): string => {
     if (!src) return '/logo.png';
     if (/^https?:\/\//.test(src)) {
@@ -61,9 +61,7 @@ export function generateVoucherHTML(order: OrderWithItems): string {
       }
       return src;
     }
-    if (src.startsWith('/uploads/')) return src;
-    if (baseUrl) return `${baseUrl}/${src.replace(/^\/+/, '')}`;
-    return `/${src.replace(/^\/+/, '')}`;
+    return resolvePublicImageSrc(src);
   };
 
   return `

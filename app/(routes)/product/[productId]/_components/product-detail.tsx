@@ -49,6 +49,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
         }
         
         // Transform the database product to match the Product interface
+        const rawImages = data.product.imageURLs;
+        const imageURLs: string[] = Array.isArray(rawImages)
+          ? rawImages.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0)
+          : rawImages != null && String(rawImages).trim() !== ""
+            ? [String(rawImages)]
+            : [];
+
         const transformedProduct: Product = {
           id: data.product._id?.toString(),
           title: data.product.title,
@@ -58,7 +65,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           discount: data.product.discount || undefined,
           featured: data.product.featured,
           sold: !!data.product.sold,
-          imageURLs: data.product.imageURLs || [],
+          negotiable: !!data.product.negotiable,
+          imageURLs,
           category: data.product.category,
           categoryId: data.product.categoryId,
           createdAt: data.product.createdAt,
@@ -66,6 +74,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
         };
 
         // Transform related products
+        const mapImages = (p: any): string[] => {
+          const raw = p?.imageURLs;
+          if (Array.isArray(raw)) {
+            return raw.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0);
+          }
+          return raw != null && String(raw).trim() !== "" ? [String(raw)] : [];
+        };
+
         const transformedRelatedProducts: Product[] = (data.relatedProducts || []).map((dbProduct: any) => ({
           id: dbProduct._id?.toString(),
           title: dbProduct.title,
@@ -75,7 +91,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           discount: dbProduct.discount || undefined,
           featured: dbProduct.featured,
           sold: !!dbProduct.sold,
-          imageURLs: dbProduct.imageURLs || [],
+          negotiable: !!dbProduct.negotiable,
+          imageURLs: mapImages(dbProduct),
           category: dbProduct.category,
           categoryId: dbProduct.categoryId,
           createdAt: dbProduct.createdAt,
@@ -140,12 +157,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
         <Container>
           <div className="px-4 py-10 sm:px-6 lg:px-16">
             <Link href="/shop" className="flex items-center mb-5 gap-x-1">
-              <ArrowLeft className="w-5 h-5" />
-              <p className="text-md font-semibold">Back to shop</p>
+              <ArrowLeft className="w-5 h-5 shrink-0" />
+              <p className="text-md font-semibold leading-none">Back to shop</p>
             </Link>
             
             <div className="lg:grid lg:grid-cols-[500px_minmax(400px,_1fr)_100px] lg:items-start lg:gap-x-8">
-              <Gallery images={product.imageURLs} sold={product.sold} />
+              <Gallery
+                images={product.imageURLs}
+                sold={product.sold}
+                negotiable={!!product.negotiable}
+              />
               <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
                 <Info data={product} />
               </div>

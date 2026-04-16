@@ -1,8 +1,22 @@
 "use client";
 import { SearchIcon } from "lucide-react";
 import { Input } from "./ui/input";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+function shopHrefWithQuery(searchQueryString: string): string {
+  return searchQueryString ? `/shop?${searchQueryString}` : "/shop";
+}
+
+/** Avoid `router.replace` when the href is unchanged — a no-op replace still re-fetches RSC and can flash/remount the shop layout (sidebar). */
+function currentShopHref(
+  pathname: string | null,
+  searchParams: ReturnType<typeof useSearchParams>
+): string | null {
+  if (pathname !== "/shop") return null;
+  const qs = searchParams?.toString();
+  return qs ? `/shop?${qs}` : "/shop";
+}
 
 const NavbarSearch = () => {
   const [search, setSearch] = useState<string>("");
@@ -11,6 +25,7 @@ const NavbarSearch = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchStr = searchParams?.get("q") || "";
+  const searchParamsKey = useMemo(() => searchParams?.toString() ?? "", [searchParams]);
 
   const handleSearchChange = async () => {
     const current = new URLSearchParams(Array.from(searchParams?.entries() || []));
@@ -23,9 +38,11 @@ const NavbarSearch = () => {
     }
 
     const searchq = current.toString();
-    const query = searchq ? `?${searchq}` : "";
+    const nextHref = shopHrefWithQuery(searchq);
+    const cur = currentShopHref(pathname, searchParams);
+    if (cur !== null && nextHref === cur) return;
 
-    await router.replace(`/shop${query}`);
+    await router.replace(nextHref);
   };
 
   const handleKeyDown = (e: any) => {
@@ -54,11 +71,14 @@ const NavbarSearch = () => {
         current.delete("q");
       }
       const searchq = current.toString();
-      const query = searchq ? `?${searchq}` : "";
-      router.replace(`/shop${query}`);
+      const nextHref = shopHrefWithQuery(searchq);
+      const cur = currentShopHref(pathname, searchParams);
+      if (cur !== null && nextHref === cur) return;
+
+      router.replace(nextHref);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, pathname, searchParams, router]);
+  }, [search, pathname, searchParamsKey, router, searchParams]);
 
   return (
     <div className="flex mx-auto relative">

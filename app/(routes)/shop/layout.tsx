@@ -2,6 +2,12 @@ import SidebarProducts from "./_components/sidebar-products";
 import SortItems from "./_components/sort-items";
 import Footer from "@/components/footer";
 
+// Layout must be dynamic too: if only `page.tsx` sets force-dynamic, Next can still
+// statically prerender this layout at build time (empty Mongo → empty categories).
+// Direct visits to `/shop` then show no categories; client nav to `/shop/[cat]` can look fine.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <>

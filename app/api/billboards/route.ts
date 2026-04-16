@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { writeBufferToPublicUploads } from "@/lib/public-uploads";
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -48,14 +49,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { billboard, imageURL } = body;
+    const contentType = request.headers.get("content-type") || "";
+    let billboard = "";
+    let imageURL = "";
 
-    if (!billboard || !imageURL) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("file") as File | null;
+      const rawBillboard = form.get("billboard");
+      billboard = typeof rawBillboard === "string" ? rawBillboard : String(rawBillboard || "");
+      // existing UI sends JSON.stringify(value)
+      try {
+        billboard = JSON.parse(billboard);
+      } catch {
+        /* ignore */
+      }
+      if (!file || !billboard) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, "-");
+      imageURL = await writeBufferToPublicUploads(`category/${Date.now()}-${safeName}`, bytes);
+    } else {
+      const body = await request.json();
+      ({ billboard, imageURL } = body || {});
+      if (!billboard || !imageURL) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
     }
 
     // Connect to MongoDB

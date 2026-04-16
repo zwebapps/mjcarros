@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
 interface Product {
   _id?: string;
@@ -15,6 +16,7 @@ interface Product {
   category: string;
   featured?: boolean;
   sold?: boolean;
+  negotiable?: boolean;
 }
 
 interface ProductCardProps {
@@ -25,15 +27,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
   const product = data;
   const displayPrice = product.finalPrice || product.price;
   const hasDiscount = product.discount && product.discount > 0;
+  const isNegotiable = !!product.negotiable;
   
   const isSold = !!product.sold;
+  const raw = product.imageURLs?.[0];
+  const thumbSrc = raw
+    ? resolvePublicImageSrc(raw)
+    : "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop";
+
   return (
     <Link href={`/product/${product._id || product.id}`}>
       <div className="bg-white group cursor-pointer rounded-lg border border-gray-200 hover:shadow-xl transition-all duration-300 hover:border-gray-300 h-full flex flex-col overflow-hidden">
-        {/* Edge-to-edge image */}
+        {/* Edge-to-edge image — must be absolute /uploads/... or full URL; bare `uploads/...` breaks under /product/[id] */}
         <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
           <img
-            src={product.imageURLs[0] || "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop"}
+            src={thumbSrc}
             alt={product.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
@@ -85,6 +93,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
                   <div className="text-[1.25rem] font-semibold text-gray-900">
                     {formatCurrency(displayPrice, 'EUR')}
                   </div>
+                )}
+                {isNegotiable && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
+                    Negotiable
+                  </span>
                 )}
               </div>
             </div>

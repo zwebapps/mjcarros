@@ -4,7 +4,7 @@ import { backupOrderToS3, logOrderCreation } from "@/lib/order-backup";
 import { sendMail } from "@/lib/mail";
 import { generateOrderConfirmationEmail } from "@/lib/email-templates";
 import { generatePDFVoucher } from "@/lib/pdf-voucher-generator";
-import { uploadOrderVoucherToS3 } from "@/lib/voucher-s3";
+import { uploadOrderVoucherToS3 } from "@/lib/voucher-storage";
 import { generateOrderNumber } from "@/lib/order-number-generator";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 

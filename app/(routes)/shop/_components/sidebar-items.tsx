@@ -19,6 +19,12 @@ interface SidebarItemsProps {
 const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) => {
   const pathName = usePathname();
   const router = useRouter();
+  const toSlug = (s: string) =>
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9_-]/g, "");
 
   const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selectedCategory = event.target.value;
@@ -40,7 +46,10 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) =
         >
           <option value="/shop">All ({totalCount ?? 0})</option>
           {categories?.map((category) => (
-            <option key={category._id || category.id} value={`/shop/${category.category}`}>
+            <option
+              key={category._id || category.id}
+              value={`/shop/${encodeURIComponent(toSlug(category.category))}`}
+            >
               {category.category.charAt(0).toUpperCase() + category.category.slice(1)} ({category.count ?? 0})
             </option>
           ))}
@@ -59,10 +68,13 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) =
           </p>
         </Link>
         {categories?.map((category) => (
-          <Link key={category._id || category.id} href={`/shop/${category.category}`}>
+          <Link
+            key={category._id || category.id}
+            href={`/shop/${encodeURIComponent(toSlug(category.category))}`}
+          >
             <p
               className={`text-sm font-medium transition-colors ${
-                pathName === `/shop/${category.category}`
+                pathName === `/shop/${encodeURIComponent(toSlug(category.category))}`
                   ? "text-amber-600"
                   : "text-gray-600 hover:text-amber-600"
               }`}

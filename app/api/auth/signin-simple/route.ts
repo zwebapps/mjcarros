@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-
-const MONGODB_URI = getMongoDbUri();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
+import { generateToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   let client;
-  
+  let MONGODB_URI: string;
+  try {
+    MONGODB_URI = getMongoDbUri();
+  } catch (e) {
+    console.error('MongoDB configuration error:', e);
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
   try {
     console.log('🔐 Simple signin request received');
     
@@ -60,12 +63,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate token
-    const token = jwt.sign({
+    const token = generateToken({
       userId: user._id?.toString() || '',
       email: user.email,
-      role: user.role
-    }, JWT_SECRET, { expiresIn: '7d' });
+      role: user.role,
+    });
 
     // Return user data (without password) and token
     const { password: _, ...userWithoutPassword } = user;

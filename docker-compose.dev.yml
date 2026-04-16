@@ -1,0 +1,22 @@
+# Development: hot reload like `npm run dev`, same MongoDB + named volumes as base compose.
+# Usage: npm run docker:dev   (or: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build)
+version: "3.9"
+
+services:
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: mjcarros-ecommerce-nextjs:dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - ./public/uploads:/app/public/uploads:rw
+    command: npx next dev -H 0.0.0.0 -p 3000
+    environment:
+      DOCKER: "true"
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+      # Inside the stack, DB is always the `mongodb` service — not localhost.
+      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE:-mjcarros}

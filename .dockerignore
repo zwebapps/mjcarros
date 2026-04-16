@@ -1,0 +1,26 @@
+# Dependencies & build output (reinstalled/built in image)
+node_modules
+.next
+out
+
+# Git & editor
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+
+# Local env (compose passes vars / env_file)
+.env
+.env.*
+!.env.example
+
+# Test & misc
+coverage
+*.log
+npm-debug.log*
+
+# Uploads & local data (mounted at runtime)
+public/uploads/*
+!public/uploads/.gitkeep
+data/order-backups

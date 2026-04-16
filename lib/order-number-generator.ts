@@ -1,6 +1,5 @@
 import { MongoClient } from 'mongodb';
-
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
+import { getMongoDbUri, getMongoDbName } from './mongodb-connection';
 
 /**
  * Generates the next sequential order number
@@ -10,17 +9,14 @@ export async function generateOrderNumber(): Promise<number> {
   let client;
   
   try {
-    client = new MongoClient(MONGODB_URI, {
+    const uri = getMongoDbUri();
+    const dbName = getMongoDbName();
+    client = new MongoClient(uri, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
 
-    const dbName = process.env.MONGO_DATABASE;
-    console.log("-------------DB Name-------------------");
-    console.log(dbName);
-    console.log("-------------DB Name-------------------");
-    
     await client.connect();
     const db = client.db(dbName);
     const ordersCollection = db.collection('orders');

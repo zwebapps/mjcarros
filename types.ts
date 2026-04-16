@@ -9,6 +9,7 @@ export interface Product {
   discount?: number;
   featured: boolean;
   sold?: boolean;
+  negotiable?: boolean;
   imageURLs: string[];
   categoryId: string;
   createdAt?: string;
@@ -50,6 +51,7 @@ export interface RequestData {
   files: File[];
   featured: boolean;
   sold?: boolean;
+  negotiable?: boolean;
   category: string;
   categoryId: string;
   discount?: number;

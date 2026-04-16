@@ -29,9 +29,6 @@ type createData = {
 export default function ProductTable() {
   const [currentPage, setCurrentPage] = useState(0);
   const productsPerPage = 5;
-  // Use environment variable for S3 base URL
-  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "https://your-s3-bucket.s3.region.amazonaws.com";
-
   const queryClient = useQueryClient();
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
@@ -122,7 +119,13 @@ export default function ProductTable() {
                   <div className="flex-shrink-0 h-10 w-10">
                     <img
                       className="h-10 w-10 rounded-full object-cover"
-                      src={product.imageURLs[0] ? `${product.imageURLs[0]}?w=400&h=300&fit=crop` : "/logo.png"}
+                      src={
+                        product.imageURLs[0]
+                          ? product.imageURLs[0].includes('images.unsplash.com')
+                            ? `${String(product.imageURLs[0]).split('?')[0]}?w=400&h=300&fit=crop`
+                            : product.imageURLs[0]
+                          : '/logo.png'
+                      }
                       alt={product.title}
                       onError={(e) => { const img = e.currentTarget as HTMLImageElement; img.onerror = null; img.src = "/logo.png"; }}
                     />

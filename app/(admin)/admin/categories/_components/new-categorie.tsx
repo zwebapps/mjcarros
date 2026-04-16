@@ -39,6 +39,7 @@ const NewCategorie = () => {
   const [formData, setFormData] = useState<initialState>(initialState);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [billboards, setBillboards] = useState<Billboard[]>([]);
+  const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (categoryId) {
@@ -115,19 +116,41 @@ const NewCategorie = () => {
 
     setIsLoading(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+      // If an image is selected, send multipart/form-data so the backend can save it to `public/uploads/category/`.
+      if (file) {
+        const fd = new FormData();
+        fd.append("category", formData.category);
+        fd.append("billboard", formData.billboard);
+        fd.append("billboardId", formData.billboardId);
+        fd.append("file", file);
+        if (categoryId) {
+          await axios.put(`/api/categories/edit/${categoryId}`, fd, { headers });
+          setIsLoading(false);
+          toast.success("Category succesfully edited.");
+          router.push("/admin/categories");
+        } else {
+          await axios.post("/api/categories", fd, { headers });
+          setIsLoading(false);
+          toast.success("Category created.");
+          router.push("/admin/categories");
+        }
+        return;
+      }
+
       if (categoryId) {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-        const res = await axios.put(
+        await axios.put(
           `/api/categories/edit/${categoryId}`,
           formData,
-          { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+          { headers }
         );
         setIsLoading(false);
         toast.success("Category succesfully edited.");
         router.push("/admin/categories");
       } else {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-        const res = await axios.post("/api/categories", formData, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+        await axios.post("/api/categories", formData, { headers });
         setIsLoading(false);
         toast.success("Category created.");
         router.push("/admin/categories");
@@ -197,6 +220,19 @@ const NewCategorie = () => {
               )}
             </select>
           </div>
+        </div>
+        <div className="mt-4">
+          <label htmlFor="file" className="font-semibold">
+            Category Image (saved to /uploads/category/)
+          </label>
+          <Input
+            type="file"
+            id="file"
+            name="file"
+            accept="image/*"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="w-64 max-md:w-full"
+          />
         </div>
         <Button
           disabled={isLoading}

@@ -1,0 +1,7 @@
+[
+  { "name": "Luxury", "description": "Luxury vehicles" },
+  { "name": "Sports", "description": "High-performance sports cars" },
+  { "name": "SUV", "description": "Sports Utility Vehicles" },
+  { "name": "Electric", "description": "Electric vehicles" },
+  { "name": "Sedan", "description": "Four-door passenger cars" }
+]

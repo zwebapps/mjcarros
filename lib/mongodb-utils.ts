@@ -1,14 +1,14 @@
 import { MongoClient, ObjectId } from 'mongodb';
+import { getMongoDbUri, getMongoDbName } from './mongodb-connection';
 
-const MONGODB_URI = process.env.DATABASE_URL || 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros';
-const dbName = process.env.MONGO_DATABASE;
 // MongoDB utility functions to replace Prisma operations
 export class MongoDBUtils {
   private static client: MongoClient | null = null;
 
   static async getClient(): Promise<MongoClient> {
     if (!this.client) {
-      this.client = new MongoClient(MONGODB_URI, {
+      const uri = getMongoDbUri();
+      this.client = new MongoClient(uri, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
@@ -20,7 +20,7 @@ export class MongoDBUtils {
 
   static async getDb() {
     const client = await this.getClient();
-    return client.db(dbName);
+    return client.db(getMongoDbName());
   }
 
   // Generic find operations

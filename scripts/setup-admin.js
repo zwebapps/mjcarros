@@ -1,42 +1,92 @@
-const { MongoClient } = require('mongodb');
+const path = require('path');
+const fs = require('fs');
+const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
+
+const DEFAULT_CATEGORIES_FALLBACK = [
+  { name: 'Luxury', description: 'Luxury vehicles' },
+  { name: 'Sports', description: 'High-performance sports cars' },
+  { name: 'SUV', description: 'Sports Utility Vehicles' },
+  { name: 'Electric', description: 'Electric vehicles' },
+  { name: 'Sedan', description: 'Four-door passenger cars' },
+];
+
+const defaultCategoriesPath = path.join(__dirname, '..', 'data', 'default-categories.json');
+let defaultCategoriesSeed;
+try {
+  defaultCategoriesSeed = JSON.parse(fs.readFileSync(defaultCategoriesPath, 'utf8'));
+} catch (e) {
+  console.warn('⚠️ Using inline default categories (could not read data/default-categories.json):', e.message);
+  defaultCategoriesSeed = DEFAULT_CATEGORIES_FALLBACK;
+}
+
+const defaultProductsPath = path.join(__dirname, '..', 'data', 'default-products.json');
+let defaultProductsSeed;
+try {
+  defaultProductsSeed = JSON.parse(fs.readFileSync(defaultProductsPath, 'utf8'));
+} catch (e) {
+  console.warn('⚠️ Using empty default products list (could not read data/default-products.json):', e.message);
+  defaultProductsSeed = [];
+}
 
 const dbName = process.env.MONGO_DATABASE || 'mjcarrosdb';
 
+const mongoClientOptions = {
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 15000,
+  socketTimeoutMS: 45000,
+};
+
+/** Mongo may not accept connections for several seconds after the container starts. */
+async function connectWithRetry(uri, attempts = 15, delayMs = 3000) {
+  let lastErr;
+  for (let i = 1; i <= attempts; i += 1) {
+    try {
+      const c = new MongoClient(uri, mongoClientOptions);
+      await c.connect();
+      return c;
+    } catch (e) {
+      lastErr = e;
+      console.warn(`⚠️ Mongo connect attempt ${i}/${attempts} failed: ${e.message}`);
+      if (i < attempts) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 // Use different connection strings for Docker vs local development
 const isDocker = process.env.NODE_ENV === 'production' || process.env.DOCKER === 'true';
-console.log("--------------------------------");
-console.log(isDocker, process.env);
-console.log("--------------------------------");
 // Fix malformed DATABASE_URL that might have duplicate key names
 let databaseUrl = process.env.DATABASE_URL;
 if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
   databaseUrl = databaseUrl.replace('DATABASE_URL=', '');
 }
 
-const MONGODB_URI = databaseUrl || 
-  (isDocker 
-    ? `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@mongodb:27017/${dbName}?authSource=${dbName}`
-    : `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@localhost:27017/${dbName}?authSource=${dbName}`
-  );
+const MONGODB_URI =
+  databaseUrl ||
+  (process.env.MONGO_ROOT_USERNAME && process.env.MONGO_ROOT_PASSWORD
+    ? isDocker
+      ? `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@mongodb:27017/${dbName}?authSource=${dbName}`
+      : `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@localhost:27017/${dbName}?authSource=${dbName}`
+    : null);
 
-  console.log("--------------------------------");
-  console.log(MONGODB_URI);
-  console.log("--------------------------------");
 async function setupAdmin() {
   let client;
   
   try {
     console.log('🚀 Setting up MJ Carros Admin System...\n');
 
-    // Connect to MongoDB
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
+    if (!MONGODB_URI) {
+      console.error(
+        '❌ Set DATABASE_URL or both MONGO_ROOT_USERNAME and MONGO_ROOT_PASSWORD in the environment.'
+      );
+      process.exit(1);
+    }
+
+    // Connect to MongoDB (retry while mongod finishes startup)
+    client = await connectWithRetry(MONGODB_URI);
     console.log('✅ Connected to MongoDB');
     
     const db = client.db(dbName);
@@ -50,6 +100,11 @@ async function setupAdmin() {
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
     const adminName = process.env.ADMIN_NAME;
+
+    if (!adminEmail || !adminPassword || !adminName) {
+      console.error('❌ Set ADMIN_EMAIL, ADMIN_PASSWORD, and ADMIN_NAME in the environment.');
+      process.exit(1);
+    }
 
     const existingAdmin = await usersCollection.findOne({
       email: adminEmail
@@ -99,41 +154,37 @@ async function setupAdmin() {
       console.log(`✅ Admin user created: ${adminEmail}`);
     }
 
-    // 1.5. Create Test User (optional)
-    console.log('\n1️⃣.5️⃣ Creating test user...');
-    const testEmail = 'test@mjcarros.com';
-    const testPassword = 'Test123!';
-    const testName = 'Test User';
-    
-    const existingTestUser = await usersCollection.findOne({ email: testEmail });
-    
-    if (!existingTestUser) {
-      const hashedTestPassword = await bcrypt.hash(testPassword, 12);
-      const testUser = {
-        email: testEmail,
-        password: hashedTestPassword,
-        name: testName,
-        role: 'USER',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      await usersCollection.insertOne(testUser);
-      console.log(`✅ Test user created: ${testEmail}`);
+    // 1.5. Create Test User (optional — only if TEST_USER_PASSWORD is set, dev/staging)
+    const testPassword = process.env.TEST_USER_PASSWORD;
+    const testEmail = process.env.TEST_USER_EMAIL || 'test@mjcarros.com';
+    const testName = process.env.TEST_USER_NAME || 'Test User';
+
+    if (testPassword) {
+      console.log('\n1️⃣.5️⃣ Creating test user (TEST_USER_PASSWORD is set)...');
+      const existingTestUser = await usersCollection.findOne({ email: testEmail });
+
+      if (!existingTestUser) {
+        const hashedTestPassword = await bcrypt.hash(testPassword, 12);
+        const testUser = {
+          email: testEmail,
+          password: hashedTestPassword,
+          name: testName,
+          role: 'USER',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        await usersCollection.insertOne(testUser);
+        console.log(`✅ Test user created: ${testEmail}`);
+      } else {
+        console.log(`✅ Test user already exists: ${testEmail}`);
+      }
     } else {
-      console.log(`✅ Test user already exists: ${testEmail}`);
+      console.log('\n1️⃣.5️⃣ Skipping test user (set TEST_USER_PASSWORD to create one).');
     }
 
-    // 2. Create Default Categories
+    // 2. Create Default Categories (shared list: data/default-categories.json)
     console.log('\n2️⃣ Creating default categories...');
-    const defaultCategories = [
-      { name: 'SUV', description: 'Sports Utility Vehicles' },
-      { name: 'Sedan', description: 'Four-door passenger cars' },
-      { name: 'Sports', description: 'High-performance sports cars' },
-      { name: 'Electric', description: 'Electric vehicles' },
-      { name: 'Luxury', description: 'Luxury vehicles' }
-    ];
-
-    for (const categoryData of defaultCategories) {
+    for (const categoryData of defaultCategoriesSeed) {
       const existingCategory = await categoriesCollection.findOne({
         category: categoryData.name
       });
@@ -142,7 +193,7 @@ async function setupAdmin() {
         // Create a default billboard for the category
         const billboardData = {
           billboard: `${categoryData.name} Category`,
-          imageURL: '/placeholder-image.jpg', // Use local placeholder instead of external service
+          imageURL: '/placeholder-image.svg', // Use local placeholder instead of external service
           createdAt: new Date(),
           updatedAt: new Date()
         };
@@ -162,20 +213,72 @@ async function setupAdmin() {
       }
     }
 
+    // 2.5 Default showroom vehicles (idempotent via seedKey; users can add more in admin)
+    console.log('\n2️⃣.5️⃣ Seeding default products...');
+    const productsCollection = db.collection('products');
+    for (const p of defaultProductsSeed) {
+      if (!p.seedKey || !p.category || !p.title) {
+        console.warn('⚠️ Skipping invalid default product entry (missing seedKey, category, or title)');
+        continue;
+      }
+      const already = await productsCollection.findOne({ seedKey: p.seedKey });
+      if (already) {
+        console.log(`✅ Default product already exists: ${p.title}`);
+        continue;
+      }
+      const catDoc = await categoriesCollection.findOne({ category: p.category });
+      if (!catDoc) {
+        console.warn(`⚠️ Skip "${p.title}": category "${p.category}" not found`);
+        continue;
+      }
+      const categoryId = catDoc._id.toString();
+      const newId = new ObjectId();
+      const productCode = `PRD-${newId.toHexString().slice(-6).toUpperCase()}`;
+      const now = new Date();
+      const productDoc = {
+        _id: newId,
+        seedKey: p.seedKey,
+        productCode,
+        title: p.title,
+        description: p.description || '',
+        imageURLs: Array.isArray(p.imageURLs) && p.imageURLs.length ? p.imageURLs : ['/placeholder-image.svg'],
+        category: p.category,
+        categoryId,
+        price: Number(p.price) || 0,
+        finalPrice: p.finalPrice !== undefined ? Number(p.finalPrice) : Number(p.price) || 0,
+        discount: p.discount !== undefined ? Number(p.discount) : 0,
+        featured: !!p.featured,
+        sold: !!p.sold,
+        negotiable: !!p.negotiable,
+        modelName: p.modelName || '',
+        year: p.year ? Number(p.year) : 0,
+        stockQuantity: p.stockQuantity !== undefined ? Number(p.stockQuantity) : 1,
+        color: p.color || '',
+        fuelType: p.fuelType || '',
+        transmission: p.transmission || '',
+        mileage: p.mileage !== undefined && p.mileage !== null ? Number(p.mileage) : null,
+        condition: p.condition || 'used',
+        createdAt: now,
+        updatedAt: now,
+      };
+      await productsCollection.insertOne(productDoc);
+      console.log(`✅ Seeded default product: ${p.title}`);
+    }
+
     // 3. Create Sample Billboards
     console.log('\n3️⃣ Creating sample billboards...');
     const sampleBillboards = [
       {
         billboard: 'Premium Collection',
-        imageURL: '/placeholder-image.jpg' // Use local placeholder instead of external service
+        imageURL: '/placeholder-image.svg' // Use local placeholder instead of external service
       },
       {
         billboard: 'New Arrivals',
-        imageURL: '/placeholder-image.jpg' // Use local placeholder instead of external service
+        imageURL: '/placeholder-image.svg' // Use local placeholder instead of external service
       },
       {
         billboard: 'Luxury Vehicles',
-        imageURL: '/placeholder-image.jpg' // Use local placeholder instead of external service
+        imageURL: '/placeholder-image.svg' // Use local placeholder instead of external service
       }
     ];
 
@@ -223,11 +326,12 @@ async function setupAdmin() {
     console.log('\n🎉 Admin setup completed successfully!');
     console.log('\n📋 Summary:');
     console.log(`   👤 Admin User: ${adminUser.email}`);
-    console.log(`   🔑 Admin Password: ${adminPassword}`);
     console.log(`   📧 Admin Name: ${adminUser.name}`);
-    console.log(`   👤 Test User: ${testEmail}`);
-    console.log(`   🔑 Test Password: ${testPassword}`);
-    console.log(`   🏷️  Categories: ${defaultCategories.length} created`);
+    if (testPassword) {
+      console.log(`   👤 Test User: ${testEmail} (password set via TEST_USER_PASSWORD — not logged)`);
+    }
+    console.log(`   🏷️  Categories: ${defaultCategoriesSeed.length} in seed list`);
+    console.log(`   🚗 Default showroom cars: ${defaultProductsSeed.length} in seed list (skipped if already present)`);
     console.log(`   🖼️  Billboards: ${sampleBillboards.length} created`);
     console.log(`   📞 Contact Page: Configured`);
     
@@ -240,7 +344,7 @@ async function setupAdmin() {
     console.log('   • Change the default admin password after first login');
     console.log('   • Update contact page information in admin settings');
     console.log('   • Replace placeholder billboard images with real ones');
-    console.log('   • Add your first products using the bulk upload feature');
+    console.log('   • Add more vehicles in admin or bulk upload; defaults use seedKey and will not duplicate');
 
   } catch (error) {
     console.error('❌ Error setting up admin:', error);
