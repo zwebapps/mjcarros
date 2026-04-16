@@ -440,7 +440,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
                 onError={(e) => {
                   console.warn(`Failed to load image: ${imagePath}`);
                   const img = e.currentTarget as HTMLImageElement;
-                  img.src = '/logo.png'; // Fallback image
+                  img.src = '/placeholder-image.svg';
                 }}
               />
               <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center cursor-pointer"

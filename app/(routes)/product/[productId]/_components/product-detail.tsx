@@ -10,6 +10,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Footer from "@/components/footer";
 import Spinner from "@/components/Spinner";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
 interface ProductDetailProps {
   productId: string;
@@ -50,11 +51,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
         
         // Transform the database product to match the Product interface
         const rawImages = data.product.imageURLs;
-        const imageURLs: string[] = Array.isArray(rawImages)
-          ? rawImages.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0)
-          : rawImages != null && String(rawImages).trim() !== ""
-            ? [String(rawImages)]
-            : [];
+        const imageURLs: string[] = (
+          Array.isArray(rawImages)
+            ? rawImages.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0)
+            : rawImages != null && String(rawImages).trim() !== ""
+              ? [String(rawImages)]
+              : []
+        ).map((u) => resolvePublicImageSrc(String(u)));
 
         const transformedProduct: Product = {
           id: data.product._id?.toString(),
@@ -76,10 +79,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
         // Transform related products
         const mapImages = (p: any): string[] => {
           const raw = p?.imageURLs;
-          if (Array.isArray(raw)) {
-            return raw.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0);
-          }
-          return raw != null && String(raw).trim() !== "" ? [String(raw)] : [];
+          const list =
+            Array.isArray(raw)
+              ? raw.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0)
+              : raw != null && String(raw).trim() !== ""
+                ? [String(raw)]
+                : [];
+          return list.map((u) => resolvePublicImageSrc(String(u)));
         };
 
         const transformedRelatedProducts: Product[] = (data.relatedProducts || []).map((dbProduct: any) => ({

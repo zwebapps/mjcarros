@@ -4,7 +4,6 @@ import { Trash2, Edit } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Spinner from "@/components/Spinner";
-import Image from "next/image";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { useState } from "react";
@@ -12,6 +11,7 @@ import ReactPaginate from "react-paginate";
 import formatDate, { sortByDate } from "@/app/utils/formateDate";
 import TitleHeader from "@/app/(admin)/_components/title-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
 type createData = {
   title: string;
@@ -121,13 +121,17 @@ export default function ProductTable() {
                       className="h-10 w-10 rounded-full object-cover"
                       src={
                         product.imageURLs[0]
-                          ? product.imageURLs[0].includes('images.unsplash.com')
+                          ? String(product.imageURLs[0]).includes('images.unsplash.com')
                             ? `${String(product.imageURLs[0]).split('?')[0]}?w=400&h=300&fit=crop`
-                            : product.imageURLs[0]
-                          : '/logo.png'
+                            : resolvePublicImageSrc(String(product.imageURLs[0]))
+                          : '/placeholder-image.svg'
                       }
                       alt={product.title}
-                      onError={(e) => { const img = e.currentTarget as HTMLImageElement; img.onerror = null; img.src = "/logo.png"; }}
+                      onError={(e) => {
+                        const img = e.currentTarget as HTMLImageElement;
+                        img.onerror = null;
+                        img.src = '/placeholder-image.svg';
+                      }}
                     />
                   </div>
                 </td>

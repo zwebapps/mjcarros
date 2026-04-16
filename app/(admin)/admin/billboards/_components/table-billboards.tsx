@@ -4,13 +4,13 @@ import { Trash2, Edit } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Spinner from "@/components/Spinner";
-import Image from "next/image";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { useState } from "react";
 import ReactPaginate from "react-paginate";
 import formatDate, { sortByDate } from "@/app/utils/formateDate";
 import TitleHeader from "@/app/(admin)/_components/title-header";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
 type createData = {
   label: string;
@@ -117,7 +117,11 @@ export default function TableBillboards() {
                   <div className="flex-shrink-0 h-10 w-10">
                     <img
                       className="h-10 w-10 rounded-full object-cover bg-gray-200"
-                      src={billboard.imageURL && billboard.imageURL !== '' ? billboard.imageURL : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23e5e7eb'/%3E%3Ctext x='20' y='25' text-anchor='middle' fill='%23374151' font-size='12'%3E📷%3C/text%3E%3C/svg%3E"}
+                      src={
+                        billboard.imageURL && billboard.imageURL !== ''
+                          ? resolvePublicImageSrc(billboard.imageURL)
+                          : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23e5e7eb'/%3E%3Ctext x='20' y='25' text-anchor='middle' fill='%23374151' font-size='12'%3E📷%3C/text%3E%3C/svg%3E"
+                      }
                       alt={billboard.label || "Billboard"}
                       onError={(e) => {
                         // Prevent infinite loop by only setting fallback once

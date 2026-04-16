@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import SimpleMDE from "react-simplemde-editor";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import "easymde/dist/easymde.min.css";
 
 type Category = {
@@ -469,8 +470,13 @@ const AddProduct = () => {
         {isUploading && <p className="text-sm text-gray-500">Uploading...</p>}
         {galleryPreviews.length > 0 && (
           <div className="flex gap-2 mt-2 flex-wrap">
-            {galleryPreviews.map((url, idx) => (
-              <img key={idx} src={url} alt={`Gallery ${idx}`} className="w-[100px] h-[100px] object-cover rounded" />
+              {galleryPreviews.map((url, idx) => (
+              <img
+                key={idx}
+                src={/^(blob:|data:)/.test(url) ? url : resolvePublicImageSrc(url)}
+                alt={`Gallery ${idx + 1}`}
+                className="w-[100px] h-[100px] object-cover rounded"
+              />
             ))}
           </div>
         )}
