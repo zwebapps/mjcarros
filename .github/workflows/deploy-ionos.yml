@@ -1,51 +1,35 @@
-# Deploy to an IONOS VPS (or any Linux host) with Docker + Docker Compose.
-#
-# Prerequisites:
-# 1. Server: Docker Engine + Compose plugin installed; repo cloned once; `.env` created from `.env.example`.
-# 2. GitHub repo → Settings → Secrets and variables → Actions (Secrets):
-#    - VPS_HOST     (server IP or hostname)
-#    - VPS_USER     (e.g. root or deploy)
-#    - VPS_SSH_KEY  (private key PEM; matching public key in ~/.ssh/authorized_keys on server)
-# 3. Deploy path on the VPS (either tab works):
-#    - Repository **Variable**: VPS_APP_DIR or IONOS_APP_DIR
-#    - OR repository **Secret**: VPS_APP_DIR or IONOS_APP_DIR (same names; use if you already put the path under Secrets)
-#    Value = absolute path where the repo is cloned (e.g. /var/www/mjcarros)
-#
-# Data persistence: `docker-compose.ionos.yml` uses named volumes for MongoDB and for `public/uploads`.
-
-name: Deploy (IONOS / VPS)
+name: Deploy to VPS
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: ["main"]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      # Variables first, then Secrets (IONOS_APP_DIR as Secret was invisible to vars.* before this fix)
-      APP_DEPLOY_PATH: ${{ vars.VPS_APP_DIR || vars.IONOS_APP_DIR || secrets.VPS_APP_DIR || secrets.IONOS_APP_DIR }}
 
     steps:
-      - name: Validate deploy path
-        run: |
-          if [ -z "$APP_DEPLOY_PATH" ]; then
-            echo "::error::Set VPS_APP_DIR or IONOS_APP_DIR as a repository **Variable** or **Secret** (clone path on VPS, e.g. /var/www/mjcarros)."
-            exit 1
-          fi
-
-      - name: Deploy over SSH
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: APP_DIR,${{ vars.VPS_APP_DIR || vars.IONOS_APP_DIR || secrets.VPS_APP_DIR || secrets.IONOS_APP_DIR }},GIT_BRANCH,${{ github.ref_name }}
-          script_stop: true
           script: |
-            set -euo pipefail
-            cd "$APP_DIR"
-            git pull origin "$GIT_BRANCH"
+            set -e
+
+            cd /var/www/mjcarros
+
+            echo "Pulling latest code..."
+            git pull origin main
+
+            echo "Stopping old containers..."
+            docker compose -f docker-compose.prod.yml down
+
+            echo "Building and starting containers..."
             docker compose -f docker-compose.prod.yml up -d --build
+
+            echo "Cleaning unused images..."
+            docker image prune -f
+
+            echo "Deploy complete."
