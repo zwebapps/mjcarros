@@ -1,0 +1,64 @@
+# Production-style stack for a VPS (e.g. IONOS Cloud Server) with CI/CD.
+# - MongoDB data: named volume `mongodb_data` (survives image rebuilds & git pull)
+# - Uploads: named volume `uploads_data` → /app/public/uploads (NOT wiped on redeploy)
+#
+# Usage on the server (after cloning repo and creating `.env` from `.env.example`):
+#   docker compose -f docker-compose.ionos.yml up -d --build
+#
+# GitHub Actions can SSH in and run the same command (see .github/workflows/deploy-ionos.yml).
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: mjcarros-mongodb
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_NAME: ${ADMIN_NAME}
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init-simple.js:/docker-entrypoint-initdb.d/mongo-init-simple.js:ro
+    # Do not publish 27017 publicly on a VPS; DB is reachable only inside the Compose network.
+    networks:
+      - mjcarros
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mjcarros-ecommerce-nextjs:ionos
+    container_name: mjcarros-nextjs
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      # Reverse proxy (nginx/Caddy) on the host can forward 443 → this port
+      - "${IONOS_HTTP_PORT:-8080}:3000"
+    environment:
+      NODE_ENV: production
+      DOCKER: "true"
+      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE}
+    depends_on:
+      - mongodb
+    networks:
+      - mjcarros
+    volumes:
+      # Named volume: uploads persist independently of git clone path or new image layers
+      - uploads_data:/app/public/uploads
+
+networks:
+  mjcarros:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  uploads_data:
