@@ -69,7 +69,9 @@ export function getMongoDbUri(): string {
 }
 
 export function getMongoDbName(): string {
-  // If DATABASE_URL provided, try to parse db name from path
+  if (process.env.MONGO_DATABASE) {
+    return process.env.MONGO_DATABASE;
+  }
   let databaseUrl = process.env.DATABASE_URL;
   if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
     databaseUrl = databaseUrl.replace('DATABASE_URL=', '');
@@ -78,11 +80,26 @@ export function getMongoDbName(): string {
     try {
       const url = new URL(databaseUrl);
       const pathname = url.pathname || '';
-      const db = pathname.replace(/^\//, '') || '';
+      const db = pathname.replace(/^\//, '').split('/')[0] || '';
       if (db) return db;
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   }
-  return process.env.MONGO_DATABASE || 'mjcarros';
+  if (allowMissingDbEnvForBuild()) {
+    try {
+      const uri = getMongoDbUri();
+      const u = new URL(uri);
+      const seg = u.pathname?.replace(/^\//, '').split('/')[0];
+      if (seg) return seg;
+    } catch {
+      /* ignore */
+    }
+    return 'buildtime';
+  }
+  throw new Error(
+    'Missing MONGO_DATABASE or DATABASE_URL with a database path in the environment.'
+  );
 }
 
 /** Which DB name the app uses (from DATABASE_URL path or MONGO_DATABASE). Safe to log. */

@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
-const dbName = process.env.MONGO_DATABASE;
-console.log("-------------DB Name-------------------");
-console.log(dbName);
-console.log("-------------DB Name-------------------");
+const dbName = getMongoDbName();
 export async function POST(request: NextRequest) {
   // During build time, return mock response
   if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_AVAILABLE) {

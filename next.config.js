@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    // ESLint 9 + eslint-config-next 15 pass removed flags to `next lint`; ignore during CI/Docker build until toolchain is aligned.
+    ignoreDuringBuilds: true,
+  },
   images: {
     // Disable built-in optimizer to avoid _next/image "url parameter is not allowed" issues in Docker
     unoptimized: true,

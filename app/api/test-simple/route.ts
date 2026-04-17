@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 
-import { getMongoDbUri } from "@/lib/mongodb-connection";
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -29,11 +29,7 @@ export async function GET(request: NextRequest) {
     
     await client.connect();
     console.log('✅ Connected to MongoDB');
-    const dbName = process.env.MONGO_DATABASE;
-    console.log("-------------DB Name-------------------");
-    console.log(dbName);
-    console.log("-------------DB Name-------------------");
-    const db = client.db(dbName);
+    const db = client.db(getMongoDbName());
     const usersCollection = db.collection('users');
     
     const userCount = await usersCollection.countDocuments();

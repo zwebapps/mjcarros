@@ -36,6 +36,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "font-awesome": "^4.7.0",
+    "jose": "^6.2.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.312.0",
     "moment": "^2.30.1",

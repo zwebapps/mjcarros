@@ -4,13 +4,10 @@ export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 import { MongoClient } from 'mongodb';
 import * as XLSX from 'xlsx';
 import { extractTokenFromHeader, verifyToken } from '@/lib/auth';
-import { getMongoDbUri } from '@/lib/mongodb-connection';
+import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
 
 const MONGODB_URI = getMongoDbUri();
-const dbName = process.env.MONGO_DATABASE;
-console.log("-------------DB Name-------------------");
-console.log(dbName);
-console.log("-------------DB Name-------------------");
+const dbName = getMongoDbName();
 
 
 export async function POST(request: NextRequest) {

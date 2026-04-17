@@ -1,98 +1,72 @@
+// Import the mail functions
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
-async function testEmail() {
-  try {
-    console.log('📧 Testing Gmail SMTP Configuration...\n');
-
-    // Check environment variables
-    const requiredVars = ['EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS', 'EMAIL_FROM'];
-    const missingVars = requiredVars.filter(varName => !process.env[varName]);
-    
-    if (missingVars.length > 0) {
-      console.log('❌ Missing environment variables:');
-      missingVars.forEach(varName => console.log(`   - ${varName}`));
-      console.log('\n💡 Add these to your .env file:');
-      console.log('EMAIL_HOST=smtp.gmail.com');
-      console.log('EMAIL_PORT=587');
-      console.log('EMAIL_USER=your-gmail@gmail.com');
-      console.log('EMAIL_PASS=your-app-password');
-      console.log('EMAIL_FROM="MJ Carros <your-gmail@gmail.com>"');
-      return;
-    }
-
-    console.log('✅ Environment variables found:');
-    console.log(`   Host: ${process.env.EMAIL_HOST}`);
-    console.log(`   Port: ${process.env.EMAIL_PORT}`);
-    console.log(`   User: ${process.env.EMAIL_USER}`);
-    console.log(`   From: ${process.env.EMAIL_FROM}`);
-    console.log('');
-
-    // Create transporter
-    const transporter = nodemailer.createTransporter({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+// Load environment variables from .env.local
+function loadEnvFile() {
+  const envPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const lines = envContent.split('\n');
+    lines.forEach(line => {
+      const [key, ...valueParts] = line.split('=');
+      if (key && valueParts.length > 0) {
+        process.env[key.trim()] = valueParts.join('=').trim();
       }
     });
-
-    console.log('🔗 Testing SMTP connection...');
-    
-    // Verify connection
-    await transporter.verify();
-    console.log('✅ SMTP connection successful!');
-
-    // Send test email
-    const testEmail = process.env.EMAIL_USER; // Send to yourself
-    console.log(`📤 Sending test email to: ${testEmail}`);
-
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to: testEmail,
-      subject: 'MJ Carros - Email Test',
-      html: `
-        <h2>🎉 Email Configuration Test</h2>
-        <p>Congratulations! Your Gmail SMTP is working correctly.</p>
-        <p><strong>Configuration Details:</strong></p>
-        <ul>
-          <li>Host: ${process.env.EMAIL_HOST}</li>
-          <li>Port: ${process.env.EMAIL_PORT}</li>
-          <li>User: ${process.env.EMAIL_USER}</li>
-          <li>From: ${process.env.EMAIL_FROM}</li>
-        </ul>
-        <p>Your MJ Carros application can now send:</p>
-        <ul>
-          <li>Order confirmation emails</li>
-          <li>Contact form notifications</li>
-          <li>Admin notifications</li>
-        </ul>
-        <p><em>This is an automated test email from MJ Carros.</em></p>
-      `
-    });
-
-    console.log('✅ Test email sent successfully!');
-    console.log(`📧 Message ID: ${info.messageId}`);
-    console.log('\n🎉 Gmail SMTP configuration is working perfectly!');
-    console.log('\n📋 Next steps:');
-    console.log('   1. Check your Gmail inbox for the test email');
-    console.log('   2. Your app can now send order confirmations and contact form emails');
-    console.log('   3. Test the contact form on your website');
-
-  } catch (error) {
-    console.error('❌ Email test failed:', error.message);
-    console.log('\n🔧 Troubleshooting:');
-    console.log('   1. Make sure you have 2-Factor Authentication enabled on Gmail');
-    console.log('   2. Generate an App Password (not your regular Gmail password)');
-    console.log('   3. Check that all environment variables are set correctly');
-    console.log('   4. Verify the App Password is 16 characters (no spaces)');
-    console.log('\n💡 Gmail App Password setup:');
-    console.log('   - Go to Google Account → Security → 2-Step Verification');
-    console.log('   - Click "App passwords" → Generate password for "Mail"');
-    console.log('   - Use the generated password (not your Gmail password)');
   }
 }
 
-// Run the test
+loadEnvFile();
+
+const host = process.env.EMAIL_HOST || '';
+const port = Number(process.env.EMAIL_PORT || 587);
+const user = process.env.EMAIL_USER || '';
+const pass = process.env.EMAIL_PASS || '';
+const fromAddress = process.env.EMAIL_FROM || 'MJ Carros <no-reply@mjcarros.com>';
+
+const hasEmailConfig = !!(host && user && pass);
+
+const transporter = hasEmailConfig
+  ? nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } })
+  : null;
+
+async function sendMail(to, subject, html) {
+  if (!transporter) return { skipped: true };
+  await transporter.sendMail({ from: fromAddress, to, subject, html });
+  return { ok: true };
+}
+
+async function testEmail() {
+  console.log('📧 Testing email configuration...');
+  console.log('Email config available:', hasEmailConfig);
+  
+  if (!hasEmailConfig) {
+    console.log('❌ Email configuration is missing. Please set:');
+    console.log('   EMAIL_HOST=smtp.gmail.com');
+    console.log('   EMAIL_PORT=587');
+    console.log('   EMAIL_USER=mjcarros@gmail.com');
+    console.log('   EMAIL_PASS=tfdr wimc kiiq afff');
+    console.log('   EMAIL_FROM=MJ Carros <mjcarros@gmail.com>');
+    return;
+  }
+
+  try {
+    const result = await sendMail(
+      'test@example.com',
+      'Test Email from MJ Carros',
+      '<h2>Test Email</h2><p>This is a test email to verify email configuration.</p>'
+    );
+    
+    if (result.skipped) {
+      console.log('⚠️  Email sending was skipped (no configuration)');
+    } else if (result.ok) {
+      console.log('✅ Email sent successfully!');
+    }
+  } catch (error) {
+    console.error('❌ Email sending failed:', error.message);
+  }
+}
+
 testEmail();

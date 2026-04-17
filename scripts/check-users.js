@@ -1,23 +1,5 @@
 const { MongoClient } = require('mongodb');
-
-// Get MongoDB connection string
-function getMongoDbUri() {
-  let databaseUrl = process.env.DATABASE_URL;
-  
-  // Fix malformed DATABASE_URL that might have duplicate key names
-  if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
-    databaseUrl = databaseUrl.replace('DATABASE_URL=', '');
-  }
-
-  // Use different connection strings for Docker vs local development
-  const isDocker = process.env.NODE_ENV === 'production' || process.env.DOCKER === 'true';
-  
-  return databaseUrl || 
-    (isDocker 
-      ? 'mongodb://mjcarros:786Password@mongodb:27017/mjcarros?authSource=mjcarros'
-      : 'mongodb://mjcarros:786Password@localhost:27017/mjcarros?authSource=mjcarros'
-    );
-}
+const { getMongoDbUri } = require('./mongo-uri');
 
 async function checkUsers() {
   let client;
@@ -36,7 +18,7 @@ async function checkUsers() {
     await client.connect();
     console.log('✅ Connected to MongoDB');
     
-    const db = client.db('mjcarros');
+    const db = client.db(process.env.MONGO_DATABASE || 'mjcarros');
     const usersCollection = db.collection('users');
     
     // Get all users

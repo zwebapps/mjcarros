@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken, extractTokenFromHeader } from './lib/auth';
+import { verifyTokenMiddleware, extractTokenFromHeader } from './lib/auth-middleware';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = [
     '/',
@@ -59,7 +59,7 @@ export function middleware(request: NextRequest) {
     );
   }
 
-  const payload = verifyToken(token);
+  const payload = await verifyTokenMiddleware(token);
   if (!payload) {
     if (request.nextUrl.pathname.startsWith('/admin')) {
       return NextResponse.redirect(new URL('/sign-in', request.url));
