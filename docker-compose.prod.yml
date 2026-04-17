@@ -3,6 +3,8 @@ services:
     image: mongo:latest
     container_name: mongodb
     restart: unless-stopped
+    env_file:
+    - .env
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
@@ -29,6 +31,8 @@ services:
   nextjs:
     container_name: nextjs
     image: mjcarros-ecommerce-nextjs:prod
+    env_file:
+    - .env
     build:
       context: .
       dockerfile: Dockerfile
