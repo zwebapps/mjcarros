@@ -1,0 +1,41 @@
+# Deploy to an IONOS VPS (or any Linux host) with Docker + Docker Compose.
+#
+# Prerequisites:
+# 1. Server: Docker Engine + Compose plugin installed; repo cloned once; `.env` created from `.env.example`.
+# 2. GitHub repo → Settings → Secrets and variables → Actions (Secrets):
+#    - VPS_HOST     (server IP or hostname)
+#    - VPS_USER     (e.g. root or deploy)
+#    - VPS_SSH_KEY  (private key PEM; matching public key in ~/.ssh/authorized_keys on server)
+# 3. GitHub repo → Settings → Variables:
+#    - IONOS_APP_DIR    (absolute path to this repo on the server, e.g. /opt/mjcarros-ecommerce)
+#
+# Data persistence: `docker-compose.ionos.yml` uses named volumes for MongoDB and for `public/uploads`.
+
+name: Deploy (IONOS / VPS)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Skip if variables are missing (avoids failed deploys on forks)
+    if: ${{ vars.IONOS_APP_DIR != '' }}
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: APP_DIR,${{ vars.IONOS_APP_DIR }},GIT_BRANCH,${{ github.ref_name }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "$APP_DIR"
+            git pull origin "$GIT_BRANCH"
+            docker compose -f docker-compose.prod.yml up -d --build
