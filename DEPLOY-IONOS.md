@@ -49,14 +49,17 @@ Repository **Secrets** (Settings → Secrets and variables → Actions):
 | `VPS_HOST`     | `123.45.67.89` |
 | `VPS_USER`     | `deploy`       |
 | `VPS_SSH_KEY`  | Private SSH key (full PEM) |
+| `VPS_SSH_KEY_PASSPHRASE` | Only if that key was created **with** a passphrase; omit for unencrypted deploy keys |
 
-Repository **Variables** (same settings page, “Variables” tab):
+If the workflow log shows `this private key is passphrase protected`, add **`VPS_SSH_KEY_PASSPHRASE`** with the key’s passphrase, **or** generate a **new** deploy key **without** a passphrase (`ssh-keygen -N ""`) and put its private key in `VPS_SSH_KEY` (CI cannot prompt for a passphrase).
 
-| Name            | Example                  |
-|-----------------|--------------------------|
-| `IONOS_APP_DIR` | `/opt/mjcarros-ecommerce` |
+**Deploy path** (pick **Variables** or **Secrets** — the workflow reads both):
 
-**Required:** If `IONOS_APP_DIR` is not set, the workflow is skipped.
+| Name | Where | Example value |
+|------|--------|-----------------|
+| `VPS_APP_DIR` **or** `IONOS_APP_DIR` | **Variables** tab *or* **Secrets** tab | `/var/www/mjcarros` |
+
+If you already store `IONOS_APP_DIR` under **Secrets** (with `VPS_HOST`, etc.), you do **not** need to duplicate it as a Variable; the workflow uses `secrets.IONOS_APP_DIR` / `secrets.VPS_APP_DIR` when Variables are empty.
 
 On each push to `main`, the workflow SSHs into the server, `git pull`, and runs:
 
@@ -73,3 +76,7 @@ Uploads and Mongo data stay in Docker volumes; only the app image rebuilds.
 
 - Do not commit `.env`. Keep secrets only on the server and in GitHub Secrets where relevant.
 - If you previously used a **bind mount** `./public/uploads`, migrate files into the named volume once (copy into the running container’s `/app/public/uploads` or `docker cp`).
+
+
+## Testing
+s
