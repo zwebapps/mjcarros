@@ -59,6 +59,44 @@ async function connectWithRetry(uri, attempts = 15, delayMs = 3000) {
 const isDocker = process.env.NODE_ENV === 'production' || process.env.DOCKER === 'true';
 const { getMongoDbUri } = require('./mongo-uri');
 
+/** Hide credentials in URIs for logs (never print raw passwords). */
+function redactMongoUri(uri) {
+  if (!uri || typeof uri !== 'string') return String(uri);
+  try {
+    const u = new URL(uri);
+    if (u.username) u.username = '(user)';
+    if (u.password) u.password = '(redacted)';
+    return u.toString();
+  } catch {
+    return uri.replace(/\/\/(?:[^@/]*@)/, '//(user):(redacted)@');
+  }
+}
+
+function maskSecret(v) {
+  if (v == null || v === '') return '[empty]';
+  const s = String(v);
+  return `[set, length=${s.length}]`;
+}
+
+/** Log env used for Mongo so auth failures can be diagnosed without exposing secrets. */
+function logMongoConnectionDebug(resolvedUri) {
+  console.log('--- Mongo connection debug (passwords not shown) ---');
+  console.log('NODE_ENV:', process.env.NODE_ENV ?? '[unset]');
+  console.log('DOCKER:', process.env.DOCKER ?? '[unset]');
+  console.log('MONGO_HOST:', process.env.MONGO_HOST ?? '[unset]');
+  console.log('MONGO_PORT:', process.env.MONGO_PORT ?? '[unset]');
+  console.log('MONGO_DATABASE:', process.env.MONGO_DATABASE ?? '[unset]');
+  console.log('MONGO_AUTH_SOURCE:', process.env.MONGO_AUTH_SOURCE ?? '[unset]');
+  console.log('MONGO_USERNAME:', process.env.MONGO_USERNAME ?? '[unset]');
+  console.log('MONGO_PASSWORD:', maskSecret(process.env.MONGO_PASSWORD));
+  console.log('DATABASE_URL (raw env, redacted):', process.env.DATABASE_URL ? redactMongoUri(process.env.DATABASE_URL) : '[unset]');
+  console.log('MONGO_ROOT_USERNAME:', process.env.MONGO_ROOT_USERNAME ?? '[unset]');
+  console.log('MONGO_ROOT_PASSWORD:', maskSecret(process.env.MONGO_ROOT_PASSWORD));
+  console.log('Resolved URI (redacted):', redactMongoUri(resolvedUri));
+  console.log('DB name used (MONGO_DATABASE):', dbName);
+  console.log('----------------------------------------------------\n');
+}
+
 /** Prefer mongo-uri.js (URL-encoded passwords). Root user authenticates against `admin`, not app DB. */
 function resolveMongoUri() {
   try {
@@ -93,6 +131,8 @@ async function setupAdmin() {
       );
       process.exit(1);
     }
+
+    logMongoConnectionDebug(MONGODB_URI);
 
     // Connect to MongoDB (retry while mongod finishes startup)
     client = await connectWithRetry(MONGODB_URI);

@@ -48,8 +48,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      # mongo-init creates MONGO_USERNAME in DB MONGO_DATABASE — authSource must be that DB (same string)
-      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_DATABASE}
+      # DATABASE_URL is built in app/mongo-uri.js from MONGO_* (URL-encoded; do not rely on .env localhost or raw passwords in a URI)
       DOCKER: "true"
       MONGO_USERNAME: ${MONGO_USERNAME}
       MONGO_PASSWORD: ${MONGO_PASSWORD}

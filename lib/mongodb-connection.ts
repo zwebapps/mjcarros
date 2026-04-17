@@ -44,7 +44,33 @@ export function skipMongoConnectionDuringBuild(): boolean {
   return allowMissingDbEnvForBuild();
 }
 
+/** Build URI in Docker from MONGO_* with encoded credentials (Compose/.env DATABASE_URL breaks on @ : % $ in passwords). */
+function buildMongoUriFromDockerEnv(): string | null {
+  const password = process.env.MONGO_PASSWORD;
+  const database = process.env.MONGO_DATABASE;
+  if (!password || !database || !String(database).trim()) {
+    return null;
+  }
+  const username = process.env.MONGO_USERNAME || 'mjcarros';
+  const rawHost = process.env.MONGO_HOST || 'mongodb';
+  const host = !isRunningInDocker() && rawHost === 'mongodb' ? '127.0.0.1' : rawHost;
+  const port = process.env.MONGO_PORT || '27017';
+  const authSource = process.env.MONGO_AUTH_SOURCE || database;
+  const u = encodeURIComponent(username);
+  const p = encodeURIComponent(password);
+  return `mongodb://${u}:${p}@${host}:${port}/${encodeURIComponent(database)}?authSource=${encodeURIComponent(authSource)}`;
+}
+
 export function getMongoDbUri(): string {
+  // In Docker, always prefer MONGO_* built URI so we use host `mongodb`, correct authSource, and encoded passwords.
+  // .env DATABASE_URL often points at 127.0.0.1 and/or breaks on special characters in passwords.
+  if (isRunningInDocker()) {
+    const fromParts = buildMongoUriFromDockerEnv();
+    if (fromParts) {
+      return fromParts;
+    }
+  }
+
   // Fix malformed DATABASE_URL that might have duplicate key names
   let databaseUrl = process.env.DATABASE_URL;
 
@@ -73,7 +99,9 @@ export function getMongoDbUri(): string {
   const port = process.env.MONGO_PORT || '27017';
   const database = process.env.MONGO_DATABASE || 'mjcarros';
   const authSource = process.env.MONGO_AUTH_SOURCE || 'mjcarros';
-  return `mongodb://${username}:${password}@${host}:${port}/${database}?authSource=${authSource}`;
+  const u = encodeURIComponent(username);
+  const p = encodeURIComponent(password);
+  return `mongodb://${u}:${p}@${host}:${port}/${encodeURIComponent(database)}?authSource=${encodeURIComponent(authSource)}`;
 }
 
 export function getMongoDbName(): string {
