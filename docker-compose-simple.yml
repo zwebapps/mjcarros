@@ -1,3 +1,4 @@
+# Minimal / alternate stack — not the default for production (use docker-compose.prod.yml).
 # Fixed project + volume names so MongoDB data survives `docker compose down` / `up`.
 name: mjcarros
 

@@ -1,3 +1,4 @@
+# Local / dev stack only (replSet, no mongo-init script). Do NOT use for production — use docker-compose.prod.yml.
 # Fixed project + volume names so MongoDB data survives `docker compose down` / `up`.
 name: mjcarros
 

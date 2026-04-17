@@ -24,6 +24,7 @@ jobs:
             git pull origin main
 
             echo "Stopping old containers..."
+            # Production must use docker-compose.prod.yml (mongo-init + setup-admin in nextjs)
             docker compose -f docker-compose.prod.yml down
 
             echo "Building and starting containers..."

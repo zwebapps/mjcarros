@@ -1,4 +1,5 @@
 # Development: hot reload like `npm run dev`, same MongoDB + named volumes as base compose.
+# Production: use docker-compose.prod.yml (not this file).
 # Usage: npm run docker:dev   (or: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build)
 version: "3.9"
 

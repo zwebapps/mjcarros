@@ -150,31 +150,25 @@ For image uploads, configure your AWS S3 bucket:
 
 The project includes both development and production Docker configurations:
 
-#### Development
+#### Development (hot reload)
 ```bash
-# Start development environment
-docker compose up -d
-
-# Create admin user and initial data
-docker compose run --rm setup-admin
-
-# Access the application
-# Frontend: http://localhost:8080
-# MongoDB: localhost:27018
+npm run docker:dev
+# or: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-#### Production
+#### Local stack without prod init (not recommended for real data)
 ```bash
-# Start production environment
-docker compose -f docker-compose.prod.yml up -d
-
-# Create admin user and initial data
-docker compose -f docker-compose.prod.yml run --rm setup-admin
-
-# Access the application
-# Frontend: http://localhost:8080
-# MongoDB: localhost:27018
+npm run docker:local
 ```
+
+#### Production (VPS / CI — always use this file)
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+# Admin seed runs inside the nextjs container on start (see docker-compose.prod.yml command).
+```
+
+- **Frontend (prod compose):** `http://localhost:8080` (host **8080** → container **3000**).
+- **MongoDB:** `localhost:27017` when published in compose.
 
 #### Images and uploads
 Uploaded images are stored locally under `public/uploads/` and served from `/uploads/...`.

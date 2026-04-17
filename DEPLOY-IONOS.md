@@ -21,14 +21,16 @@ cp .env.example .env
 
 Ensure `.env` includes strong passwords and `NEXT_PUBLIC_APP_URL` pointing at your real HTTPS URL.
 
-Start the stack:
+Start the stack (**production uses `docker-compose.prod.yml`** — includes `mongo-init-simple.js` and app startup):
 
 ```bash
-docker compose -f docker-compose.ionos.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-- **`mongodb_data`** volume: database files.
-- **`uploads_data`** volume: user images under `/app/public/uploads` in the container (served as `/uploads/...`).
+Ensure `public/uploads` exists on the server (bind-mounted for product images).
+
+- **`mjcarros_mongodb_data`** volume: database files (see `docker-compose.prod.yml`).
+- Optional: `docker-compose.ionos.yml` uses a named **`uploads_data`** volume instead of a host bind mount if you prefer that layout.
 
 To inspect volumes:
 
@@ -38,7 +40,7 @@ docker volume ls | grep mjcarros
 
 ## 3. HTTPS (recommended)
 
-Point DNS for your domain to the server IP. Use **Certbot** (Let’s Encrypt) or IONOS certificates, then put **nginx** (or Caddy) in front of the app. See `deploy/nginx-ionos.conf.example` — it proxies to `127.0.0.1:8080`, which matches `IONOS_HTTP_PORT` default in `docker-compose.ionos.yml`.
+Point DNS for your domain to the server IP. Use **Certbot** (Let’s Encrypt) or IONOS certificates, then put **nginx** (or Caddy) in front of the app. See `deploy/nginx-ionos.conf.example` — it proxies to `127.0.0.1:8080` (prod compose maps **8080:3000**).
 
 ## 4. GitHub Actions pipeline
 
@@ -63,13 +65,13 @@ If you already store `IONOS_APP_DIR` under **Secrets** (with `VPS_HOST`, etc.), 
 
 On each push to `main`, the workflow SSHs into the server, `git pull`, and runs:
 
-`docker compose -f docker-compose.ionos.yml up -d --build`
+`docker compose -f docker-compose.prod.yml up -d --build`
 
 Uploads and Mongo data stay in Docker volumes; only the app image rebuilds.
 
 ## 5. Backups
 
-- **MongoDB:** schedule `mongodump` (host can run a cron job with `docker exec mjcarros-mongodb ...` or backup the `mongodb_data` volume path under `/var/lib/docker/volumes/`.
+- **MongoDB:** schedule `mongodump` (e.g. `docker exec mongodb ...` with prod compose) or backup the `mjcarros_mongodb_data` volume under `/var/lib/docker/volumes/`.
 - **Uploads:** backup the `uploads_data` volume the same way, or `docker run --rm -v uploads_data:/data alpine tar czf - /data` (volume name is prefixed by project name; use `docker volume ls`).
 
 ## 6. Notes
@@ -79,4 +81,5 @@ Uploads and Mongo data stay in Docker volumes; only the app image rebuilds.
 
 
 ## Testing
-s
+
+Use staging credentials only; do not commit `.env`.

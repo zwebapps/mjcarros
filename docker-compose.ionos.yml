@@ -1,3 +1,4 @@
+# Optional IONOS variant (named uploads volume). Default production deploy: docker-compose.prod.yml + GitHub Actions.
 # Production-style stack for a VPS (e.g. IONOS Cloud Server) with CI/CD.
 # - MongoDB data: named volume (survives `docker compose down`; only `down -v` wipes it)
 # - Uploads: named volume → /app/public/uploads (NOT wiped on redeploy)
