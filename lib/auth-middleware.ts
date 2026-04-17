@@ -2,7 +2,8 @@
  * Edge-safe JWT helpers for `middleware.ts` only.
  * Do not import `lib/auth.ts` from middleware — it pulls bcrypt/jsonwebtoken (Node-only).
  */
-import { jwtVerify } from "jose";
+// Subpath import avoids the main `jose` barrel (JWE → deflate → CompressionStream) which Edge warns on.
+import { jwtVerify } from "jose/jwt/verify";
 import type { JWTPayload } from "./auth";
 
 export function extractTokenFromHeader(authHeader: string | null | undefined): string | null {
