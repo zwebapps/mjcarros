@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   mongodb:
     image: mongo:latest
@@ -21,6 +19,12 @@ services:
     volumes:
       - mongodb_data:/data/db
       - ./mongo-init-simple.js:/docker-entrypoint-initdb.d/mongo-init-simple.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
 
   nextjs:
     container_name: nextjs
@@ -31,7 +35,8 @@ services:
     ports:
       - "8080:3000"
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       # mongo-init creates MONGO_USERNAME in DB MONGO_DATABASE — authSource must be that DB (same string)
@@ -73,8 +78,6 @@ services:
       - ./public/uploads:/app/public/uploads:rw
     command: >
       sh -c "
-        echo '⏳ Waiting for MongoDB...' &&
-        sleep 15 &&
         echo '👤 Creating admin user...' &&
         npm run setup-admin &&
         echo '🚀 Starting Next.js...' &&

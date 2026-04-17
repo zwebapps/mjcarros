@@ -27,6 +27,12 @@ services:
     volumes:
       - mongodb_data:/data/db
       - ./mongo-init-simple.js:/docker-entrypoint-initdb.d/mongo-init-simple.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
     # Do not publish 27017 publicly on a VPS; DB is reachable only inside the Compose network.
     networks:
       - mjcarros
@@ -48,7 +54,8 @@ services:
       DOCKER: "true"
       DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - mjcarros
     volumes:

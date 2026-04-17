@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   mongodb:
     image: mongo:latest
@@ -15,6 +13,12 @@ services:
     volumes:
       - mongodb_data:/data/db
     command: mongod --replSet rs0 --bind_ip_all
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
     networks:
       - mongo_network
 
@@ -35,7 +39,8 @@ services:
       # App must reach Mongo by Compose service name + container port (not localhost / host port).
       - DATABASE_URL=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE:-mjcarros}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - mongo_network
     volumes:
