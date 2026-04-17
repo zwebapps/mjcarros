@@ -34,15 +34,15 @@ services:
       - mongodb
     environment:
       NODE_ENV: production
-      # Inside the container, DB host must be the service name, not 127.0.0.1
-      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE:-mjCarrosProduction}
+      # mongo-init creates MONGO_USERNAME in DB MONGO_DATABASE — authSource must be that DB (same string)
+      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_DATABASE}
       DOCKER: "true"
-      MONGO_USERNAME: ${MONGO_USERNAME:-mjcarros}
+      MONGO_USERNAME: ${MONGO_USERNAME}
       MONGO_PASSWORD: ${MONGO_PASSWORD}
       MONGO_HOST: ${MONGO_HOST:-mongodb}
       MONGO_PORT: ${MONGO_PORT:-27017}
-      MONGO_DATABASE: ${MONGO_DATABASE:-mjcarros}
-      MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE:-mjcarros}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@mjcarros.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_NAME: ${ADMIN_NAME:-Administrator}

@@ -56,27 +56,36 @@ async function connectWithRetry(uri, attempts = 15, delayMs = 3000) {
   throw lastErr;
 }
 
-// Use different connection strings for Docker vs local development
 const isDocker = process.env.NODE_ENV === 'production' || process.env.DOCKER === 'true';
-// Fix malformed DATABASE_URL that might have duplicate key names
-let databaseUrl = process.env.DATABASE_URL;
-if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
-  databaseUrl = databaseUrl.replace('DATABASE_URL=', '');
+const { getMongoDbUri } = require('./mongo-uri');
+
+/** Prefer mongo-uri.js (URL-encoded passwords). Root user authenticates against `admin`, not app DB. */
+function resolveMongoUri() {
+  try {
+    return getMongoDbUri();
+  } catch {
+    const ru = process.env.MONGO_ROOT_USERNAME;
+    const rp = process.env.MONGO_ROOT_PASSWORD;
+    if (!ru || !rp) return null;
+    const host = isDocker ? 'mongodb' : '127.0.0.1';
+    const u = encodeURIComponent(ru);
+    const p = encodeURIComponent(rp);
+    return `mongodb://${u}:${p}@${host}:27017/admin?authSource=admin`;
+  }
 }
 
-const MONGODB_URI =
-  databaseUrl ||
-  (process.env.MONGO_ROOT_USERNAME && process.env.MONGO_ROOT_PASSWORD
-    ? isDocker
-      ? `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@mongodb:27017/${dbName}?authSource=${dbName}`
-      : `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@localhost:27017/${dbName}?authSource=${dbName}`
-    : null);
+const MONGODB_URI = resolveMongoUri();
 
 async function setupAdmin() {
   let client;
   
   try {
     console.log('🚀 Setting up MJ Carros Admin System...\n');
+
+    if (!dbName || !String(dbName).trim()) {
+      console.error('❌ Set MONGO_DATABASE in the environment (same DB name as in DATABASE_URL / mongo-init).');
+      process.exit(1);
+    }
 
     if (!MONGODB_URI) {
       console.error(
