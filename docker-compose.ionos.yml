@@ -1,6 +1,7 @@
 # Production-style stack for a VPS (e.g. IONOS Cloud Server) with CI/CD.
-# - MongoDB data: named volume `mongodb_data` (survives image rebuilds & git pull)
-# - Uploads: named volume `uploads_data` → /app/public/uploads (NOT wiped on redeploy)
+# - MongoDB data: named volume (survives `docker compose down`; only `down -v` wipes it)
+# - Uploads: named volume → /app/public/uploads (NOT wiped on redeploy)
+name: mjcarros
 #
 # Usage on the server (after cloning repo and creating `.env` from `.env.example`):
 #   docker compose -f docker-compose.ionos.yml up -d --build
@@ -68,4 +69,6 @@ networks:
 
 volumes:
   mongodb_data:
+    name: mjcarros_mongodb_data
   uploads_data:
+    name: mjcarros_uploads_data
