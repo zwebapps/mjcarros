@@ -10,8 +10,13 @@ export const revalidate = 0;
 async function getFeaturedProducts() {
   let client: any;
   try {
+    const { skipMongoConnectionDuringBuild, getMongoDbUri, getMongoDbName } = await import(
+      '@/lib/mongodb-connection'
+    );
+    if (skipMongoConnectionDuringBuild()) {
+      return [] as any[];
+    }
     const { MongoClient } = await import('mongodb');
-    const { getMongoDbUri, getMongoDbName } = await import('@/lib/mongodb-connection');
     const MONGODB_URI = getMongoDbUri();
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,
@@ -65,8 +70,13 @@ const banners = [
 async function getCategoriesWithCounts() {
   let client;
   try {
+    const { skipMongoConnectionDuringBuild, getMongoDbUri, getMongoDbName } = await import(
+      '@/lib/mongodb-connection'
+    );
+    if (skipMongoConnectionDuringBuild()) {
+      return [];
+    }
     const { MongoClient, ObjectId } = await import('mongodb');
-    const { getMongoDbUri, getMongoDbName } = await import('@/lib/mongodb-connection');
     const MONGODB_URI = getMongoDbUri();
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,

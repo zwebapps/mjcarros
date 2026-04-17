@@ -2,13 +2,34 @@ import { MongoClient } from "mongodb";
 import SidebarItems from "./sidebar-items";
 import PriceInput from "./price-input";
 import { Product as UIProduct } from "@/types";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import {
+  getMongoDbUri,
+  getMongoDbName,
+  skipMongoConnectionDuringBuild,
+} from "@/lib/mongodb-connection";
 import {
   sortCategoriesForDisplay,
   DEFAULT_CATEGORY_ORDER,
 } from "@/lib/default-categories";
 
 const SidebarProducts = async () => {
+  if (skipMongoConnectionDuringBuild()) {
+    const sortedCategories = sortCategoriesForDisplay(
+      DEFAULT_CATEGORY_ORDER.map((name) => ({ id: name, category: name, count: 0 }))
+    );
+    return (
+      <div className="w-1/6 max-sm:w-full p-4 flex flex-col gap-y-4">
+        <div>
+          <p className="font-semibold mt-1 mb-2">Category</p>
+          <SidebarItems categories={sortedCategories} totalCount={0} />
+        </div>
+        <div>
+          <PriceInput data={[]} />
+        </div>
+      </div>
+    );
+  }
+
   let client: MongoClient | undefined;
 
   try {

@@ -36,6 +36,14 @@ function allowMissingDbEnvForBuild(): boolean {
   return v === '1' || v === 'true';
 }
 
+/**
+ * True during `next build` when `SKIP_DB_ENV_VALIDATION=1` (e.g. Docker) — no MongoDB is available.
+ * Server components must not call `MongoClient.connect()` in that case (avoids ECONNREFUSED to 127.0.0.1:27017).
+ */
+export function skipMongoConnectionDuringBuild(): boolean {
+  return allowMissingDbEnvForBuild();
+}
+
 export function getMongoDbUri(): string {
   // Fix malformed DATABASE_URL that might have duplicate key names
   let databaseUrl = process.env.DATABASE_URL;
