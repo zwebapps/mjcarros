@@ -6,9 +6,10 @@
 #    - VPS_HOST     (server IP or hostname)
 #    - VPS_USER     (e.g. root or deploy)
 #    - VPS_SSH_KEY  (private key PEM; matching public key in ~/.ssh/authorized_keys on server)
-# 3. GitHub repo → Settings → Secrets and variables → Actions → **Variables** (not Secrets):
-#    - VPS_APP_DIR or IONOS_APP_DIR — absolute path to this repo on the server (e.g. /var/www/mjcarros)
-#    (Secrets are NOT available as `vars.*`; the deploy path must be a Variable.)
+# 3. Deploy path on the VPS (either tab works):
+#    - Repository **Variable**: VPS_APP_DIR or IONOS_APP_DIR
+#    - OR repository **Secret**: VPS_APP_DIR or IONOS_APP_DIR (same names; use if you already put the path under Secrets)
+#    Value = absolute path where the repo is cloned (e.g. /var/www/mjcarros)
 #
 # Data persistence: `docker-compose.ionos.yml` uses named volumes for MongoDB and for `public/uploads`.
 
@@ -23,15 +24,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Variables first, then Secrets (IONOS_APP_DIR as Secret was invisible to vars.* before this fix)
+      APP_DEPLOY_PATH: ${{ vars.VPS_APP_DIR || vars.IONOS_APP_DIR || secrets.VPS_APP_DIR || secrets.IONOS_APP_DIR }}
 
     steps:
-      - name: Validate deploy path (repository Variables)
-        env:
-          APP_DIR_RESOLVED: ${{ vars.VPS_APP_DIR || vars.IONOS_APP_DIR }}
+      - name: Validate deploy path
         run: |
-          if [ -z "$APP_DIR_RESOLVED" ]; then
-            echo "::error::Set a repository **Variable** (not Secret): VPS_APP_DIR or IONOS_APP_DIR = path on the VPS where the repo is cloned."
-            echo "GitHub → Settings → Secrets and variables → Actions → **Variables** tab → New repository variable."
+          if [ -z "$APP_DEPLOY_PATH" ]; then
+            echo "::error::Set VPS_APP_DIR or IONOS_APP_DIR as a repository **Variable** or **Secret** (clone path on VPS, e.g. /var/www/mjcarros)."
             exit 1
           fi
 
@@ -41,7 +42,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: APP_DIR,${{ vars.VPS_APP_DIR || vars.IONOS_APP_DIR }},GIT_BRANCH,${{ github.ref_name }}
+          envs: APP_DIR,${{ vars.VPS_APP_DIR || vars.IONOS_APP_DIR || secrets.VPS_APP_DIR || secrets.IONOS_APP_DIR }},GIT_BRANCH,${{ github.ref_name }}
           script_stop: true
           script: |
             set -euo pipefail
