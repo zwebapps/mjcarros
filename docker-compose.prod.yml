@@ -1,91 +1,102 @@
-# Production stack (VPS / CI): mongo-init-simple creates app user + DB; nextjs runs setup-admin then start.
-# Use: docker compose -f docker-compose.prod.yml up -d --build
-# (Only `docker compose down -v` removes named volumes — avoid that unless you intend to wipe the DB.)
 name: mjcarros
 
 services:
   mongodb:
-    image: mongo:latest
+    image: mongo:7
     container_name: mongodb
     restart: unless-stopped
     env_file:
-    - .env
+      - .env
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
-      # Pass these to the init script
+
       MONGO_DATABASE: ${MONGO_DATABASE}
       MONGO_USERNAME: ${MONGO_USERNAME}
       MONGO_PASSWORD: ${MONGO_PASSWORD}
+
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_NAME: ${ADMIN_NAME}
+
     ports:
       - "27017:27017"
+
     volumes:
       - mongodb_data:/data/db
       - ./mongo-init-simple.js:/docker-entrypoint-initdb.d/mongo-init-simple.js:ro
+
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
-      interval: 5s
+      interval: 10s
       timeout: 10s
-      retries: 12
+      retries: 15
       start_period: 40s
 
   nextjs:
     container_name: nextjs
-    image: mjcarros-ecommerce-nextjs:prod
-    env_file:
-    - .env
+    restart: unless-stopped
+
     build:
       context: .
       dockerfile: Dockerfile
+
+    env_file:
+      - .env
+
     ports:
       - "8080:3000"
+
     depends_on:
       mongodb:
         condition: service_healthy
+
     environment:
       NODE_ENV: production
-      # DATABASE_URL is built in app/mongo-uri.js from MONGO_* (URL-encoded; do not rely on .env localhost or raw passwords in a URI)
       DOCKER: "true"
+
+      # Mongo
       MONGO_USERNAME: ${MONGO_USERNAME}
       MONGO_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_HOST: ${MONGO_HOST:-mongodb}
-      MONGO_PORT: ${MONGO_PORT:-27017}
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
       MONGO_DATABASE: ${MONGO_DATABASE}
       MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@mjcarros.com}
+
+      # Admin
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      ADMIN_NAME: ${ADMIN_NAME:-Administrator}
+      ADMIN_NAME: ${ADMIN_NAME}
+
+      # App
+      JWT_SECRET: ${JWT_SECRET}
+      NEXT_PUBLIC_APP_URL: http://localhost:8080
+
+      # Payments
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
-      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID}
       PAYPAL_ENV: ${PAYPAL_ENV}
-      NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${NEXT_PUBLIC_PAYPAL_CLIENT_ID}
-      JWT_SECRET: ${JWT_SECRET}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://nextjs:3000}
-      STRIPE_REDIRECT_URL: ${STRIPE_REDIRECT_URL:-http://localhost:8080}
-      NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-MJ Carros}
-      NEXT_PUBLIC_SITE_ADDRESS1: ${NEXT_PUBLIC_SITE_ADDRESS1:-178 Expensive Avenue}
-      NEXT_PUBLIC_SITE_CITY: ${NEXT_PUBLIC_SITE_CITY:-Philadelphia, 20100 PH}
-      NEXT_PUBLIC_SITE_PHONE: ${NEXT_PUBLIC_SITE_PHONE:-+1 (555) 000-0000}
-      NEXT_PUBLIC_SITE_EMAIL: ${NEXT_PUBLIC_SITE_EMAIL:-info@mjcarros.com}
-      NEXT_PUBLIC_SITE_WEB: ${NEXT_PUBLIC_SITE_WEB:-www.mjcarros.com}
+
+      # Email
       EMAIL_HOST: ${EMAIL_HOST}
       EMAIL_PORT: ${EMAIL_PORT}
       EMAIL_USER: ${EMAIL_USER}
       EMAIL_PASS: ${EMAIL_PASS}
       EMAIL_FROM: ${EMAIL_FROM}
-    # depends_on defined above; removing duplicate
+
     volumes:
+      # persistent uploads (SAFE)
       - ./public/uploads:/app/public/uploads:rw
+
     command: >
       sh -c "
+        echo '⏳ Waiting for MongoDB...' &&
+        sleep 5 &&
         echo '👤 Creating admin user...' &&
         npm run setup-admin &&
         echo '🚀 Starting Next.js...' &&
