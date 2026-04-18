@@ -80,7 +80,9 @@ function maskSecret(v) {
 
 /** Log env used for Mongo so auth failures can be diagnosed without exposing secrets. */
 function logMongoConnectionDebug(resolvedUri) {
-  console.log('--- Mongo connection debug (passwords not shown) ---');
+  console.log('--- Mongo connection debug (passwords not shown) ---');s
+  console.log('MONGODB_URI:', process.env);
+  console.log('----------------------------------------------------\n');
   console.log('NODE_ENV:', process.env.NODE_ENV ?? '[unset]');
   console.log('DOCKER:', process.env.DOCKER ?? '[unset]');
   console.log('MONGO_HOST:', process.env.MONGO_HOST ?? '[unset]');
