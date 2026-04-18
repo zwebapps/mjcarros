@@ -10,7 +10,15 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Build the app (no real DB in image build context; route modules still import `getMongoDbUri()`)
-RUN SKIP_DB_ENV_VALIDATION=1 npm run build
+# NODE_OPTIONS: reduce OOM during typecheck (exit 137 / "silent" failure). JWT_SECRET: satisfy any build-time imports.
+RUN set -e && \
+  echo "=== next build: start ===" && \
+  export NODE_OPTIONS="--max-old-space-size=6144" && \
+  export SKIP_DB_ENV_VALIDATION=1 && \
+  export JWT_SECRET="${JWT_SECRET:-docker-build-placeholder-not-used-at-runtime}" && \
+  export NEXT_TELEMETRY_DISABLED=1 && \
+  npm run build && \
+  echo "=== next build: done ==="
 
 # Runner stage
 FROM node:18-bullseye AS runner
