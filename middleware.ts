@@ -99,7 +99,11 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - uploads/ (files under public/uploads — skip middleware so Next serves static assets, not HTML 404)
+     *
+     * The (?!...) only applies to the *start* of the path after the first slash, so /shop, /admin,
+     * /product/… are unchanged. Only paths like /uploads/product/x.jpg skip middleware.
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|uploads/).*)',
   ],
 };
