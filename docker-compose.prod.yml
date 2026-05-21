@@ -37,6 +37,7 @@ services:
   nextjs:
     container_name: nextjs
     restart: unless-stopped
+    image: mjcarros-nextjs:prod
 
     build:
       context: .

@@ -9,14 +9,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Build on GitHub (more RAM). VPS builds often OOM (exit 137) during `next build`.
+      - name: Build Docker image
+        run: docker build -t mjcarros-nextjs:prod .
+
+      - name: Save image archive
+        run: docker save mjcarros-nextjs:prod | gzip -1 > mjcarros-nextjs.tar.gz
+
+      - name: Upload image to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: mjcarros-nextjs.tar.gz
+          target: /var/www/mjcarros/
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          # Default is 10m; prod deploy runs `docker compose up --build` (Next.js build on VPS).
-          command_timeout: 45m
+          command_timeout: 15m
           script: |
             set -e
 
@@ -25,12 +43,15 @@ jobs:
             echo "Pulling latest code..."
             git pull origin main
 
+            echo "Loading prebuilt image..."
+            gunzip -c mjcarros-nextjs.tar.gz | docker load
+            rm -f mjcarros-nextjs.tar.gz
+
             echo "Stopping old containers..."
-            # Production must use docker-compose.prod.yml (mongo-init + setup-admin in nextjs)
             docker compose -f docker-compose.prod.yml down
 
-            echo "Building and starting containers..."
-            docker compose -f docker-compose.prod.yml up -d --build
+            echo "Starting containers (no on-server build)..."
+            docker compose -f docker-compose.prod.yml up -d
 
             echo "Cleaning unused images..."
             docker image prune -f
