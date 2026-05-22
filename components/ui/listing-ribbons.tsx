@@ -19,6 +19,18 @@ export function SaleRibbon({ className }: RibbonProps) {
   );
 }
 
+/** Diagonal corner ribbon — yellow for sold vehicles */
+export function SoldRibbon({ className }: RibbonProps) {
+  return (
+    <span
+      className={cn("listing-ribbon listing-ribbon-sold", className)}
+      aria-label="Sold"
+    >
+      Sold
+    </span>
+  );
+}
+
 /** Diagonal corner ribbon — orange for negotiable pricing */
 export function NegotiableRibbon({ className }: RibbonProps) {
   return (

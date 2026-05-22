@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import filteredData from "@/app/utils/filteredData";
+import { sortSoldLast } from "@/lib/shop-products";
 import { Product } from "@/types";
 import ShopProductCard from "@/components/ui/shop-product-card";
 import { MongoClient } from "mongodb";
@@ -54,8 +55,7 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
       (p) => p.category.toLowerCase() === params.category.toLowerCase()
     );
 
-    const inStock = inCategory.filter((p) => !p.sold);
-    const displayed = filteredData(searchParams || {}, [...inStock]);
+    const displayed = sortSoldLast(filteredData(searchParams || {}, [...inCategory]));
 
     if (displayed.length === 0) {
       return (

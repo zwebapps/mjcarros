@@ -1,5 +1,6 @@
 import ShopProductCard from "@/components/ui/shop-product-card";
 import filteredData from "@/app/utils/filteredData";
+import { sortSoldLast } from "@/lib/shop-products";
 import { Product } from "@/types";
 import { MongoClient } from "mongodb";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
@@ -56,8 +57,7 @@ const ShopPage = async ({
       );
     }
 
-    const available = products.filter((p) => !p.sold);
-    const displayed = filteredData(searchParams || {}, [...available]);
+    const displayed = sortSoldLast(filteredData(searchParams || {}, [...products]));
 
     return (
       <div className="shop-grid-catalog">

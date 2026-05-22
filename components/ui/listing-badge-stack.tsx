@@ -14,11 +14,9 @@ export function ListingBadgeStack({
   sold,
   className,
 }: ListingBadgeStackProps) {
-  if (sold) return null;
-
   const label = category?.trim();
   const showCategory = !!label;
-  const showFeatured = !!featured;
+  const showFeatured = !!featured && !sold;
 
   if (!showCategory && !showFeatured) return null;
 

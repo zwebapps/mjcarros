@@ -1,5 +1,7 @@
 export type SiteTheme = "clean" | "charcoal";
 
+export const DEFAULT_SITE_THEME: SiteTheme = "charcoal";
+
 export const THEME_STORAGE_KEY = "mjcarros-theme";
 
 export const THEMES: {
@@ -26,14 +28,14 @@ export const THEMES: {
 ];
 
 export function getStoredTheme(): SiteTheme {
-  if (typeof window === "undefined") return "clean";
+  if (typeof window === "undefined") return DEFAULT_SITE_THEME;
   try {
     const v = localStorage.getItem(THEME_STORAGE_KEY);
     if (v === "clean" || v === "charcoal") return v;
   } catch {
     /* ignore */
   }
-  return "clean";
+  return DEFAULT_SITE_THEME;
 }
 
 export function applyTheme(theme: SiteTheme) {

@@ -5,7 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import { cn } from "@/lib/utils";
 import { ListingBadgeStack } from "@/components/ui/listing-badge-stack";
-import { NegotiableRibbon, SaleRibbon } from "@/components/ui/listing-ribbons";
+import { NegotiableRibbon, SaleRibbon, SoldRibbon } from "@/components/ui/listing-ribbons";
 
 interface Product {
   _id?: string;
@@ -50,11 +50,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
           {isSold && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/65">
-              <span className="rounded-md bg-foreground px-5 py-2 text-sm font-bold tracking-wide text-background">
-                SOLD
-              </span>
-            </div>
+            <>
+              <SoldRibbon />
+              <div className="pointer-events-none absolute inset-0 bg-black/40" />
+            </>
           )}
 
           <ListingBadgeStack

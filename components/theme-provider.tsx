@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import {
   applyTheme,
+  DEFAULT_SITE_THEME,
   getStoredTheme,
   type SiteTheme,
 } from "@/lib/theme";
@@ -16,7 +17,7 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<SiteTheme>("clean");
+  const [theme, setThemeState] = useState<SiteTheme>(DEFAULT_SITE_THEME);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -32,7 +33,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme: mounted ? theme : "clean", setTheme }}>
+    <ThemeContext.Provider
+      value={{ theme: mounted ? theme : DEFAULT_SITE_THEME, setTheme }}
+    >
       {children}
       <ThemeSwitcher floating />
     </ThemeContext.Provider>

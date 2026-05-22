@@ -5,7 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import { cn } from "@/lib/utils";
 import { ListingBadgeStack } from "@/components/ui/listing-badge-stack";
-import { NegotiableRibbon, SaleRibbon } from "@/components/ui/listing-ribbons";
+import { NegotiableRibbon, SaleRibbon, SoldRibbon } from "@/components/ui/listing-ribbons";
 
 interface Product {
   _id?: string;
@@ -29,7 +29,6 @@ const ShopProductCard: React.FC<ShopProductCardProps> = ({ data }) => {
   const product = data;
   const displayPrice = product.finalPrice || product.price;
   const hasDiscount = product.discount && product.discount > 0;
-  const isNegotiable = !!product.negotiable;
   const isSold = !!product.sold;
   const raw = product.imageURLs?.[0];
   const thumbSrc = raw
@@ -41,24 +40,27 @@ const ShopProductCard: React.FC<ShopProductCardProps> = ({ data }) => {
       <article
         className={cn(
           "group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm",
-          "transition-shadow duration-200 hover:shadow-md"
+          "transition-shadow duration-200 hover:shadow-md",
+          isSold && "opacity-95"
         )}
       >
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <img
             src={thumbSrc}
             alt={product.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]",
+              isSold && "grayscale-[35%]"
+            )}
           />
           {isSold && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/65">
-              <span className="rounded bg-brand px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-foreground">
-                Sold
-              </span>
-            </div>
+            <>
+              <SoldRibbon />
+              <div className="pointer-events-none absolute inset-0 bg-black/40" />
+            </>
           )}
           {hasDiscount && !isSold && <SaleRibbon />}
-          {isNegotiable && !isSold && <NegotiableRibbon />}
+          {product.negotiable && !isSold && <NegotiableRibbon />}
           <ListingBadgeStack
             category={product.category}
             featured={product.featured}
@@ -73,7 +75,7 @@ const ShopProductCard: React.FC<ShopProductCardProps> = ({ data }) => {
         </div>
 
         <div className="border-t border-border bg-card px-3 py-3 text-center">
-          {hasDiscount ? (
+          {hasDiscount && !isSold ? (
             <div className="flex flex-col items-center gap-0.5">
               <span className="text-xl font-bold tabular-nums text-primary sm:text-2xl">
                 {formatCurrency(displayPrice, "EUR")}
@@ -83,7 +85,12 @@ const ShopProductCard: React.FC<ShopProductCardProps> = ({ data }) => {
               </span>
             </div>
           ) : (
-            <span className="text-xl font-bold tabular-nums text-primary sm:text-2xl">
+            <span
+              className={cn(
+                "text-xl font-bold tabular-nums sm:text-2xl",
+                isSold ? "text-muted-foreground" : "text-primary"
+              )}
+            >
               {formatCurrency(displayPrice, "EUR")}
             </span>
           )}

@@ -41,8 +41,9 @@ export const metadata: Metadata = {
 
 const themeInitScript = `
 (function(){try{var t=localStorage.getItem('mjcarros-theme');
-document.documentElement.setAttribute('data-theme',t==='charcoal'?'charcoal':'clean');}catch(e){
-document.documentElement.setAttribute('data-theme','clean');}})();
+if(t==='clean'||t==='charcoal'){document.documentElement.setAttribute('data-theme',t);}
+else{document.documentElement.setAttribute('data-theme','charcoal');}}catch(e){
+document.documentElement.setAttribute('data-theme','charcoal');}})();
 `;
 
 export default function RootLayout({
@@ -52,7 +53,7 @@ export default function RootLayout({
 }) {
   return (
     <ReactQueryProvider>
-      <html lang="en" suppressHydrationWarning data-theme="clean">
+      <html lang="en" suppressHydrationWarning data-theme="charcoal">
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         </head>

@@ -65,7 +65,7 @@ export async function getShopSidebarData(): Promise<ShopSidebarPayload> {
 
     const availableProducts = products.filter((product) => !product.sold);
 
-    const categoryToCount: Record<string, number> = availableProducts.reduce(
+    const categoryToCount: Record<string, number> = products.reduce(
       (acc, product) => {
         const key = String(product.category || "").trim();
         if (!key) return acc;
@@ -112,7 +112,7 @@ export async function getShopSidebarData(): Promise<ShopSidebarPayload> {
 
     return {
       categories: sortedCategories,
-      totalCount: availableProducts.length,
+      totalCount: products.length,
       products: availableProducts,
     };
   } finally {
