@@ -1,13 +1,16 @@
 import { Navbar } from "@/components/navbar";
+import Footer from "@/components/footer";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <>
-      <div className="min-h-full h-full w-full">
+    <ThemeProvider>
+      <div className="min-h-full h-full w-full flex flex-col">
         <Navbar />
-        {children}
+        <main className="flex-1">{children}</main>
+        <Footer />
       </div>
-    </>
+    </ThemeProvider>
   );
 };
 

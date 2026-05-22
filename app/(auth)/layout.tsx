@@ -1,14 +1,7 @@
-import Footer from "@/components/footer";
-import { Navbar } from "@/components/navbar";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const layout = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <>
-      <Navbar />
-      {children}
-      <Footer />
-    </>
-  );
+  return <ThemeProvider>{children}</ThemeProvider>;
 };
 
 export default layout;

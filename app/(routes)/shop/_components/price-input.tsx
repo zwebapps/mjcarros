@@ -77,8 +77,22 @@ const PriceInput = ({ data }: PriceInputProps) => {
         const urlString = pathName.substring("/shop/".length);
         const categoryProducts = await getCategoryProducts(urlString);
         computeFromProducts(categoryProducts as unknown as Product[]);
-      } else {
-        computeFromProducts(data || []);
+        return;
+      }
+      if (data && data.length > 0) {
+        computeFromProducts(data);
+        return;
+      }
+      try {
+        const res = await fetch("/api/shop/sidebar", { cache: "no-store" });
+        if (res.ok) {
+          const json = await res.json();
+          computeFromProducts((json.products ?? []) as Product[]);
+        } else {
+          computeFromProducts([]);
+        }
+      } catch {
+        computeFromProducts([]);
       }
     };
 
@@ -86,11 +100,13 @@ const PriceInput = ({ data }: PriceInputProps) => {
   }, [pathName, data, searchParamsKey, searchParams]);
 
   return (
-    <div className="range-container mt-2">
+    <div className="range-container">
       <div className="range-label flex justify-between">
         <div className="flex flex-col gap-y-1">
-          <p className="font-semibold">Price</p>
-          <span className="font-serif">€{value?.toFixed(2)}</span>
+          <p className="shop-filter-label mb-0">Price</p>
+          <span className="text-lg font-bold tabular-nums text-primary">
+            €{value?.toFixed(0)}
+          </span>
         </div>
       </div>
       <input
@@ -104,7 +120,7 @@ const PriceInput = ({ data }: PriceInputProps) => {
           setValue(n);
           void handleSortChange(e.target.value, maxPrice);
         }}
-        className=" accent-neutral-800 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+        className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-lg bg-muted accent-primary"
       />
     </div>
   );

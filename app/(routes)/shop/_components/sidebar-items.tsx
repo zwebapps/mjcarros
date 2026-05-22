@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { ChangeEvent } from "react";
+import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 
 interface CategoryWithCount {
   _id?: string;
@@ -35,13 +37,14 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) =
     }
   };
 
+  const isAllActive = pathName === "/shop";
+
   return (
     <div className="space-y-3">
-      {/* Mobile selector */}
       <div className="lg:hidden">
         <select
           onChange={handleSelectChange}
-          className="w-full p-2 border border-gray-300 rounded-md text-sm"
+          className="w-full rounded-md border border-border bg-card p-2.5 text-sm font-medium text-foreground"
           value={pathName?.startsWith("/shop/") ? pathName : "/shop"}
         >
           <option value="/shop">All ({totalCount ?? 0})</option>
@@ -56,36 +59,43 @@ const SidebarItems: React.FC<SidebarItemsProps> = ({ categories, totalCount }) =
         </select>
       </div>
 
-      {/* Desktop links */}
-      <div className="hidden lg:block space-y-2">
-        <Link href="/shop">
-          <p
-            className={`text-sm font-medium transition-colors ${
-              pathName === "/shop" ? "text-amber-600" : "text-gray-600 hover:text-amber-600"
-            }`}
+      <nav className="shop-category-list hidden lg:flex" aria-label="Shop categories">
+        <Link href="/shop" className="block">
+          <span
+            className={cn(
+              "shop-category-item",
+              isAllActive && "shop-category-item-active"
+            )}
           >
-            All <span className="text-amber-600">({totalCount ?? 0})</span>
-          </p>
+            <span>All</span>
+            <span className="shop-category-count">({totalCount ?? 0})</span>
+            {isAllActive && <ChevronRight className="h-4 w-4 shrink-0 opacity-90" aria-hidden />}
+          </span>
         </Link>
-        {categories?.map((category) => (
-          <Link
-            key={category._id || category.id}
-            href={`/shop/${encodeURIComponent(toSlug(category.category))}`}
-          >
-            <p
-              className={`text-sm font-medium transition-colors ${
-                pathName === `/shop/${encodeURIComponent(toSlug(category.category))}`
-                  ? "text-amber-600"
-                  : "text-gray-600 hover:text-amber-600"
-              }`}
-            >
-              {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
-              {" "}
-              <span className="text-amber-600">({category.count ?? 0})</span>
-            </p>
-          </Link>
-        ))}
-      </div>
+        {categories?.map((category) => {
+          const href = `/shop/${encodeURIComponent(toSlug(category.category))}`;
+          const active = pathName === href;
+          const label =
+            category.category.charAt(0).toUpperCase() + category.category.slice(1);
+
+          return (
+            <Link key={category._id || category.id} href={href} className="block">
+              <span
+                className={cn(
+                  "shop-category-item",
+                  active && "shop-category-item-active"
+                )}
+              >
+                <span className="truncate">{label}</span>
+                <span className="shop-category-count shrink-0">({category.count ?? 0})</span>
+                {active && (
+                  <ChevronRight className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                )}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 };

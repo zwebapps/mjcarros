@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Star } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
+import { cn } from "@/lib/utils";
+import { ListingBadgeStack } from "@/components/ui/listing-badge-stack";
+import { NegotiableRibbon, SaleRibbon } from "@/components/ui/listing-ribbons";
 
 interface Product {
   _id?: string;
@@ -27,87 +29,70 @@ const ProductCard: React.FC<ProductCardProps> = ({ data }) => {
   const product = data;
   const displayPrice = product.finalPrice || product.price;
   const hasDiscount = product.discount && product.discount > 0;
-  const isNegotiable = !!product.negotiable;
-  
   const isSold = !!product.sold;
   const raw = product.imageURLs?.[0];
   const thumbSrc = raw
     ? resolvePublicImageSrc(raw)
-    : "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop";
+    : "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1200&h=750&fit=crop";
 
   return (
-    <Link href={`/product/${product._id || product.id}`}>
-      <div className="bg-white group cursor-pointer rounded-lg border border-gray-200 hover:shadow-xl transition-all duration-300 hover:border-gray-300 h-full flex flex-col overflow-hidden">
-        {/* Edge-to-edge image — must be absolute /uploads/... or full URL; bare `uploads/...` breaks under /product/[id] */}
-        <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
+    <Link href={`/product/${product._id || product.id}`} className="block h-full">
+      <article
+        className={cn(
+          "group flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card",
+          "transition-all duration-300 hover:border-primary/50 hover:shadow-card-hover"
+        )}
+      >
+        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
           <img
             src={thumbSrc}
             alt={product.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
           {isSold && (
-            <div className="absolute inset-0 bg-yellow-400/40 flex items-center justify-center">
-              <span className="bg-yellow-400 text-black font-bold px-4 py-1 rounded shadow">SOLD</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/65">
+              <span className="rounded-md bg-foreground px-5 py-2 text-sm font-bold tracking-wide text-background">
+                SOLD
+              </span>
             </div>
           )}
-          
-          {/* Category Badge */}
-          <div className="absolute top-3 right-3 bg-black text-orange-400 text-xs px-2 py-1 rounded-full font-medium shadow-sm">
-            {product.category}
-          </div>
-          
-          {/* Featured Badge */}
-          {product.featured && !isSold && (
-            <div className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-amber-500 text-black text-xs px-2 py-1 rounded-full font-medium shadow-sm">
-              Featured
-            </div>
-          )}
-          
-          {/* Discount Badge */}
-          {hasDiscount && !isSold && (
-            <div className="absolute bottom-3 left-3 bg-red-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-sm">
-              -{product.discount}%
-            </div>
-          )}
+
+          <ListingBadgeStack
+            category={product.category}
+            featured={product.featured}
+            sold={isSold}
+            className="right-3 top-3"
+          />
+
+          {hasDiscount && !isSold && <SaleRibbon />}
+          {product.negotiable && !isSold && <NegotiableRibbon />}
         </div>
-        
-        {/* Content */}
-        <div className="p-4 flex-grow flex flex-col">
-          <h3 className="font-semibold text-[1.05rem] tracking-tight text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2 leading-snug">
+
+        <div className="flex flex-grow flex-col p-5 sm:p-6">
+          <h3 className="line-clamp-2 text-lg font-semibold leading-snug tracking-tight text-card-foreground transition-colors group-hover:text-primary sm:text-xl">
             {product.title}
           </h3>
-          
-          <div className="mt-auto">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-baseline space-x-2">
-                {hasDiscount ? (
-                  <>
-                    <div className="text-[1.25rem] font-semibold text-red-600">
-                      {formatCurrency(displayPrice, 'EUR')}
-                    </div>
-                    <div className="text-sm text-gray-500 line-through">
-                      {formatCurrency(product.price, 'EUR')}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-[1.25rem] font-semibold text-gray-900">
-                    {formatCurrency(displayPrice, 'EUR')}
-                  </div>
-                )}
-                {isNegotiable && (
-                  <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                    Negotiable
+
+          <div className="mt-auto pt-4">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              {hasDiscount ? (
+                <>
+                  <span className="text-2xl font-bold tabular-nums tracking-tight text-destructive sm:text-[1.65rem]">
+                    {formatCurrency(displayPrice, "EUR")}
                   </span>
-                )}
-              </div>
-            </div>
-            
-            <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-              {product.category}
+                  <span className="text-base text-muted-foreground line-through tabular-nums">
+                    {formatCurrency(product.price, "EUR")}
+                  </span>
+                </>
+              ) : (
+                <span className="text-2xl font-bold tabular-nums tracking-tight text-primary sm:text-[1.65rem]">
+                  {formatCurrency(displayPrice, "EUR")}
+                </span>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      </article>
     </Link>
   );
 };

@@ -51,6 +51,47 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        nav: {
+          DEFAULT: "hsl(var(--nav))",
+          foreground: "hsl(var(--nav-foreground))",
+        },
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          foreground: "hsl(var(--brand-foreground))",
+        },
+        negotiable: {
+          DEFAULT: "hsl(var(--negotiable))",
+          foreground: "hsl(var(--negotiable-foreground))",
+        },
+        surface: "hsl(var(--surface))",
+        "surface-warm": "hsl(var(--surface-warm))",
+      },
+      boxShadow: {
+        card: "0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)",
+        "card-hover": "0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.08)",
+      },
+      fontFamily: {
+        sans: [
+          "var(--font-sans)",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "sans-serif",
+        ],
+        hero: [
+          "var(--font-hero)",
+          "Impact",
+          "Haettenschweiler",
+          "Arial Narrow Bold",
+          "sans-serif",
+        ],
+        "hero-accent": [
+          "var(--font-hero-accent)",
+          "var(--font-sans)",
+          "sans-serif",
+        ],
       },
       borderRadius: {
         lg: "var(--radius)",

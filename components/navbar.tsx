@@ -4,10 +4,24 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, User, LogOut, LogIn } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  LogOut,
+  LogIn,
+  Menu,
+} from "lucide-react";
 import useCart from "@/hooks/use-cart";
-// import { NavbarActions } from "./navbar-actions";
 import NavbarSearch from "./navbar-search";
+import Logo from "./Logo";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -16,156 +30,262 @@ interface User {
   role: string;
 }
 
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/shop", label: "Shop" },
+  { href: "/featured", label: "Featured" },
+  { href: "/contact", label: "Contact" },
+] as const;
+
+function NavLink({
+  href,
+  label,
+  active,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className={cn(
+        "nav-link",
+        active
+          ? "nav-link-active"
+          : "text-nav-foreground/85 hover:bg-primary/15 hover:text-primary"
+      )}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const cart = useCart();
 
+  const ordersHref = user ? "/orders" : "/orders/guest";
+  const ordersLabel = user ? "Orders" : "Track orders";
+
   useEffect(() => {
-    // Check for user in localStorage on component mount
-    const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem("user");
     if (userData) {
       try {
         setUser(JSON.parse(userData));
       } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('user');
-        localStorage.removeItem('authToken');
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("user");
+        localStorage.removeItem("authToken");
       }
     }
     setIsLoading(false);
   }, []);
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   const handleSignOut = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem("user");
+    localStorage.removeItem("authToken");
     setUser(null);
-    // Optionally redirect to home page
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
-  const isActive = (path: string) => {
-    return pathname === path;
-  };
+  const isActive = (path: string) => pathname === path;
 
   if (isLoading) {
     return (
-      <div className="border-b bg-orange-500">
-        <div className="flex h-16 items-center px-4">
-          <div className="animate-pulse bg-orange-200 h-8 w-32 rounded"></div>
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-nav text-nav-foreground backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
+          <Logo />
+          <div className="ml-auto h-9 w-28 animate-pulse rounded-lg bg-muted" />
         </div>
-      </div>
+      </header>
     );
   }
 
+  const authBlock = (
+    <>
+      {user ? (
+        <>
+          <span className="hidden max-w-[8rem] truncate text-sm text-nav-foreground/80 xl:inline">
+            {user.name}
+          </span>
+          {user.role === "ADMIN" && (
+            <Link href="/admin">
+              <Button size="sm" variant="brand" className="shrink-0">
+                Admin
+              </Button>
+            </Link>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="shrink-0 text-nav-foreground hover:bg-white/10 hover:text-primary"
+            onClick={handleSignOut}
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </>
+      ) : (
+        <>
+          <Link href="/sign-in" className="shrink-0">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="hidden text-nav-foreground hover:bg-white/10 hover:text-primary sm:inline-flex"
+            >
+              <LogIn className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden whitespace-nowrap md:inline">Sign in</span>
+            </Button>
+          </Link>
+          <Link href="/sign-up" className="shrink-0">
+            <Button size="sm" variant="default">
+              <User className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden whitespace-nowrap md:inline">Sign up</span>
+            </Button>
+          </Link>
+        </>
+      )}
+    </>
+  );
+
   return (
-    <div className="border-b bg-orange-500">
-      <div className="flex h-16 items-center px-4">
-        <div className="flex items-center space-x-4 lg:space-x-6">
-          <Link
-            href="/"
-            className={`group text-sm font-medium transition-colors ${
-              isActive("/") ? "text-black" : "text-black/80 hover:text-black"
-            }`}
-          >
-            <span className="relative inline-block">
-              Home
-              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
-            </span>
-          </Link>
-          <Link
-            href="/shop"
-            className={`group text-sm font-medium transition-colors ${
-              isActive("/shop") ? "text-black" : "text-black/80 hover:text-black"
-            }`}
-          >
-            <span className="relative inline-block">
-              Shop
-              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
-            </span>
-          </Link>
-          <Link
-            href="/featured"
-            className={`group text-sm font-medium transition-colors ${
-              isActive("/featured") ? "text-black" : "text-black/80 hover:text-black"
-            }`}
-          >
-            <span className="relative inline-block">
-              Featured
-              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
-            </span>
-          </Link>
-          <Link
-            href="/contact"
-            className={`group text-sm font-medium transition-colors ${
-              isActive("/contact") ? "text-black" : "text-black/80 hover:text-black"
-            }`}
-          >
-            <span className="relative inline-block">
-              Contact
-              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
-            </span>
-          </Link>
-          <Link
-            href={user ? "/orders" : "/orders/guest"}
-            className={`group text-sm font-medium transition-colors ${
-              isActive("/orders") ? "text-black" : "text-black/80 hover:text-black"
-            }`}
-          >
-            <span className="relative inline-block">
-              {user ? "Orders" : "Track Orders"}
-              <span className="absolute left-0 -bottom-0.5 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full" />
-            </span>
-          </Link>
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-nav text-nav-foreground backdrop-blur-md supports-[backdrop-filter]:bg-nav/95">
+      {/* Mobile-first: logo + actions */}
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:h-16 sm:gap-3 sm:px-6 lg:px-8">
+        <div className="shrink-0">
+          <Logo />
         </div>
-        <div className="ml-auto flex items-center space-x-4">
-          <NavbarSearch />
-          <Link href="/cart">
-            <Button size="sm" variant="ghost" className="text-black hover:text-black/80">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="ml-2 text-sm font-medium">
+
+        {/* Desktop: inline nav (single line, no wrap) */}
+        <nav
+          className="hidden min-w-0 flex-1 items-center gap-0.5 lg:flex lg:gap-1"
+          aria-label="Main"
+        >
+          {navLinks.map(({ href, label }) => (
+            <NavLink
+              key={href}
+              href={href}
+              label={label}
+              active={isActive(href)}
+            />
+          ))}
+          <NavLink
+            href={ordersHref}
+            label={ordersLabel}
+            active={isActive(ordersHref)}
+          />
+        </nav>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="hidden lg:block">
+            <NavbarSearch onDarkNav />
+          </div>
+
+          <Link href="/cart" className="shrink-0">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="px-2 text-nav-foreground hover:bg-white/10 hover:text-primary sm:px-3"
+            >
+              <ShoppingCart className="h-5 w-5 shrink-0" />
+              <span className="ml-1 text-sm font-medium tabular-nums leading-none">
                 {cart.items.length}
               </span>
             </Button>
           </Link>
-          {user ? (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-black">
-                Hello, {user.name}
-              </span>
-              {user.role === 'ADMIN' && (
-                <Link href="/admin">
-                  <Button
-                    size="sm"
-                    className="bg-black text-white hover:bg-white hover:text-black border border-black"
-                  >
-                    Admin
-                  </Button>
-                </Link>
-              )}
-              <Button size="sm" variant="ghost" className="text-black hover:text-black/80" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4" />
+
+          <div className="hidden items-center gap-1.5 sm:flex">{authBlock}</div>
+
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 border-white/25 px-2.5 text-nav-foreground hover:bg-white/10 lg:hidden"
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
               </Button>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Link href="/sign-in">
-                <Button size="sm" variant="ghost" className="text-black hover:text-black/80">
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/sign-up">
-                <Button size="sm" className="bg-black text-white hover:bg-black/90">
-                  <User className="h-4 w-4 mr-2" />
-                  Sign Up
-                </Button>
-              </Link>
-            </div>
-          )}
+            </SheetTrigger>
+            <SheetContent side="right" className="flex w-[min(100vw-2rem,20rem)] flex-col gap-0 p-0">
+              <SheetHeader className="border-b border-border px-4 py-4 text-left">
+                <SheetTitle className="text-base font-semibold">Menu</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+                <NavbarSearch />
+                <nav className="flex flex-col gap-1" aria-label="Mobile">
+                  {navLinks.map(({ href, label }) => (
+                    <NavLink
+                      key={href}
+                      href={href}
+                      label={label}
+                      active={isActive(href)}
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+                  ))}
+                  <NavLink
+                    href={ordersHref}
+                    label={ordersLabel}
+                    active={isActive(ordersHref)}
+                    onNavigate={() => setMenuOpen(false)}
+                  />
+                </nav>
+                <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
+                  {user ? (
+                    <>
+                      <p className="truncate text-sm text-muted-foreground">{user.name}</p>
+                      {user.role === "ADMIN" && (
+                        <Link href="/admin" onClick={() => setMenuOpen(false)}>
+                          <Button className="w-full" size="sm" variant="brand">
+                            Admin
+                          </Button>
+                        </Link>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleSignOut}
+                      >
+                        Sign out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/sign-in" onClick={() => setMenuOpen(false)}>
+                        <Button variant="outline" size="sm" className="w-full">
+                          Sign in
+                        </Button>
+                      </Link>
+                      <Link href="/sign-up" onClick={() => setMenuOpen(false)}>
+                        <Button size="sm" className="w-full">
+                          Sign up
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
-    </div>
+
+      {/* Mobile / tablet search */}
+      <div className="border-t border-white/10 px-4 py-2.5 lg:hidden">
+        <NavbarSearch onDarkNav />
+      </div>
+    </header>
   );
 }

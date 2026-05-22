@@ -1,22 +1,21 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ui/product-card";
+import { HeroCarousel } from "@/components/home/hero-carousel";
 
-// Ensure this page is always rendered dynamically and never statically cached
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Fetch featured products dynamically from MongoDB
 async function getFeaturedProducts() {
   let client: any;
   try {
     const { skipMongoConnectionDuringBuild, getMongoDbUri, getMongoDbName } = await import(
-      '@/lib/mongodb-connection'
+      "@/lib/mongodb-connection"
     );
     if (skipMongoConnectionDuringBuild()) {
       return [] as any[];
     }
-    const { MongoClient } = await import('mongodb');
+    const { MongoClient } = await import("mongodb");
     const MONGODB_URI = getMongoDbUri();
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,
@@ -25,7 +24,7 @@ async function getFeaturedProducts() {
     });
     await client.connect();
     const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
+    const productsCollection = db.collection("products");
     const docs = await productsCollection
       .find({ featured: true })
       .sort({ updatedAt: -1 })
@@ -33,11 +32,11 @@ async function getFeaturedProducts() {
       .toArray();
     return docs.map((p: any) => ({
       ...p,
-      id: (p._id || '').toString(),
+      id: (p._id || "").toString(),
       imageURLs: Array.isArray(p.imageURLs) ? p.imageURLs : [],
     }));
   } catch (e) {
-    console.warn('Failed to load featured products, returning empty list');
+    console.warn("Failed to load featured products, returning empty list");
     return [] as any[];
   } finally {
     if (client) {
@@ -46,50 +45,49 @@ async function getFeaturedProducts() {
   }
 }
 
-// Dummy data for banners
 const banners = [
   {
     id: "1",
-    title: "Summer Sale",
-    subtitle: "Up to 40% off on selected vehicles",
-    image: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=400&fit=crop",
-    cta: "Shop Now",
-    link: "/shop"
+    title: "Seasonal offers",
+    subtitle: "Selected vehicles with competitive pricing",
+    image:
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=400&fit=crop",
+    cta: "View offers",
+    link: "/shop",
   },
   {
     id: "2",
-    title: "New Arrivals",
-    subtitle: "Latest 2024 models available",
-    image: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&h=400&fit=crop",
-    cta: "Explore",
-    link: "/featured"
-  }
+    title: "New arrivals",
+    subtitle: "Recently added to our showroom inventory",
+    image:
+      "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&h=400&fit=crop",
+    cta: "Explore featured",
+    link: "/featured",
+  },
 ];
 
-// Build categories dynamically (count from products, image from billboards)
 async function getCategoriesWithCounts() {
   let client;
   try {
     const { skipMongoConnectionDuringBuild, getMongoDbUri, getMongoDbName } = await import(
-      '@/lib/mongodb-connection'
+      "@/lib/mongodb-connection"
     );
     if (skipMongoConnectionDuringBuild()) {
       return [];
     }
-    const { MongoClient, ObjectId } = await import('mongodb');
+    const { MongoClient, ObjectId } = await import("mongodb");
     const MONGODB_URI = getMongoDbUri();
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-    
+
     await client.connect();
     const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-
-    const categoriesCollection = db.collection('categories');
-    const billboardsCollection = db.collection('billboards');
+    const productsCollection = db.collection("products");
+    const categoriesCollection = db.collection("categories");
+    const billboardsCollection = db.collection("billboards");
 
     const [products, categories] = await Promise.all([
       productsCollection.find({}).project({ category: 1 }).toArray(),
@@ -98,15 +96,15 @@ async function getCategoriesWithCounts() {
 
     const counts = new Map<string, number>();
     for (const p of products) {
-      const key = String(p.category || '').trim();
+      const key = String(p.category || "").trim();
       if (!key) continue;
       counts.set(key, (counts.get(key) || 0) + 1);
     }
 
     const billboardIdByCategory = new Map<string, string>();
     for (const c of categories) {
-      const key = String(c.category || '').trim();
-      const bbId = c.billboardId ? String(c.billboardId) : '';
+      const key = String(c.category || "").trim();
+      const bbId = c.billboardId ? String(c.billboardId) : "";
       if (key && bbId) billboardIdByCategory.set(key, bbId);
     }
 
@@ -120,10 +118,9 @@ async function getCategoriesWithCounts() {
 
     const billboardImageById = new Map<string, string>();
     for (const b of billboards) {
-      billboardImageById.set(String(b._id), String((b as any).imageURL || ''));
+      billboardImageById.set(String(b._id), String((b as any).imageURL || ""));
     }
 
-    const fallback = "/placeholder-image.svg";
     const slugify = (s: string) =>
       s
         .toLowerCase()
@@ -132,24 +129,18 @@ async function getCategoriesWithCounts() {
         .replace(/[^a-z0-9_-]/g, "");
 
     const rows = Array.from(counts.entries()).map(([name, count]) => {
-      const bbId = billboardIdByCategory.get(name) || '';
+      const bbId = billboardIdByCategory.get(name) || "";
       const billboardImage = (bbId && billboardImageById.get(bbId)) || "";
       const isPlaceholder =
-        !billboardImage ||
-        billboardImage.includes("/placeholder-image.");
-
-      // If billboard image is still placeholder, use your local category images:
-      // public/uploads/category/<lowercase>.jpg  →  /uploads/category/<lowercase>.jpg
+        !billboardImage || billboardImage.includes("/placeholder-image.");
       const localCategoryImage = `/uploads/category/${slugify(name)}.jpg`;
-
       const image = isPlaceholder ? localCategoryImage : billboardImage;
       return { name, count, image };
     });
 
     return rows.sort((a, b) => b.count - a.count).slice(0, 8);
   } catch (error) {
-    console.error('Error fetching categories:', error);
-    // Return an empty list on error to avoid static/fake counts
+    console.error("Error fetching categories:", error);
     return [];
   } finally {
     if (client) {
@@ -163,128 +154,121 @@ const HomePage = async () => {
     getCategoriesWithCounts(),
     getFeaturedProducts(),
   ]);
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero with background slider */}
-      <div className="relative text-white h-[70vh]">
-        <div className="absolute inset-0 overflow-hidden h-full">
-          <div className="hero-slideshow h-full w-full">
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1600&h=800&fit=crop')] bg-cover bg-center opacity-100"></div>
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=1600&h=800&fit=crop')] bg-cover bg-center opacity-0"></div>
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600&h=800&fit=crop')] bg-cover bg-center opacity-0"></div>
-          </div>
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-5xl font-bold mb-6">Your Next Car, Simplified</h1>
-            <p className="text-xl mb-8 opacity-90">Intelligent search, trusted listings, seamless checkout.</p>
-            <div className="flex justify-center space-x-4">
-              <Link href="/shop">
-                <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-400 hover:to-amber-400">Browse Cars</Button>
-              </Link>
-              <Link href="/sign-up">
-                <Button size="lg" className="bg-black text-white hover:bg-black/90">Create Account</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Categories Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Shop by Category</h2>
-          <p className="text-lg text-gray-600">Find the perfect vehicle for your needs</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {categories.map((category) => (
-            <Link key={category.name} href={`/shop/${category.name.toLowerCase()}`}>
-              <div className="group cursor-pointer">
-                <div className="relative overflow-hidden rounded-lg shadow-md group-hover:shadow-xl transition-shadow duration-300">
+  return (
+    <div className="page-canvas">
+      <HeroCarousel />
+
+      <section className="section-tint">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="section-heading mb-12">
+            <h2>Browse by category</h2>
+            <p>
+              Explore our inventory organised by vehicle type — from everyday models to
+              premium selections.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+            {categories.map((category) => (
+              <Link
+                key={category.name}
+                href={`/shop/${category.name.toLowerCase()}`}
+                className="group"
+              >
+                <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all duration-300 group-hover:border-primary/40 group-hover:shadow-card-hover">
                   <img
                     src={category.image}
                     alt={category.name}
-                    className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] sm:h-44"
                   />
-                  <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand/85 via-brand/40 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    <h3 className="font-semibold text-lg">{category.name}</h3>
-                    <p className="text-sm opacity-90">{category.count} vehicles</p>
+                    <h3 className="text-lg font-semibold tracking-tight">
+                      {category.name}
+                    </h3>
+                    <p className="text-sm text-white/85">
+                      {category.count} {category.count === 1 ? "vehicle" : "vehicles"}
+                    </p>
                   </div>
                 </div>
-              </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section-tint-alt">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="section-heading mb-12">
+            <h2>Featured inventory</h2>
+            <p>
+              A curated selection from our showroom — each vehicle prepared, priced clearly,
+              and ready for you to view.
+            </p>
+          </div>
+          <div className="product-grid">
+            {featured.map((product: any) => (
+              <ProductCard key={product.id} data={product} />
+            ))}
+          </div>
+          <div className="mt-12 text-center">
+            <Link href="/shop">
+              <Button size="lg">View full inventory</Button>
             </Link>
-          ))}
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Featured Products */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Vehicles</h2>
-          <p className="text-lg text-gray-600">Handpicked cars for our valued customers</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featured.map((product: any) => (
-            <ProductCard key={product.id} data={product} />
-          ))}
-        </div>
-        <div className="text-center mt-12">
-          <Link href="/shop">
-            <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-400 hover:to-amber-400">
-              View All Vehicles
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Promotional Banners */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
           {banners.map((banner) => (
-            <div key={banner.id} className="relative overflow-hidden rounded-xl shadow-lg">
+            <div
+              key={banner.id}
+              className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+            >
               <img
                 src={banner.image}
                 alt={banner.title}
-                className="w-full h-64 object-cover"
+                className="h-64 w-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-brand/85 via-brand/35 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-                <h3 className="text-2xl font-bold mb-2">{banner.title}</h3>
-                <p className="text-lg mb-4 opacity-90">{banner.subtitle}</p>
+                <h3 className="mb-2 text-2xl font-bold tracking-tight">{banner.title}</h3>
+                <p className="mb-4 text-base text-white/90">{banner.subtitle}</p>
                 <Link href={banner.link}>
-                  <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-100">
-                    {banner.cta}
-                  </Button>
+                  <Button size="lg">{banner.cta}</Button>
                 </Link>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* CTA Section */}
-      <div className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Find Your Dream Car?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Join thousands of satisfied customers who found their perfect vehicle with us
+      <section className="gradient-brand py-16 text-white">
+        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Your next car, direct from MJ Carros
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/90 sm:text-lg">
+            We sell our own stock — browse current vehicles, enquire online, and track your
+            order with a secure MJ Carros account.
           </p>
-          <div className="flex justify-center space-x-4">
-            <Link href="/sign-up">
-              <Button size="lg" className="bg-black text-white hover:bg-black/90">
-                Get Started
-              </Button>
-            </Link>
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link href="/shop">
-              <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-400 hover:to-amber-400">
-                Browse Inventory
+              <Button size="lg">View our stock</Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white/85 bg-transparent text-white hover:bg-white hover:text-brand"
+              >
+                Create account
               </Button>
             </Link>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

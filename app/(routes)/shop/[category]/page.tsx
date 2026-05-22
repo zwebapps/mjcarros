@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
-import ProductCard from "@/components/ui/product-card";
+import ShopProductCard from "@/components/ui/shop-product-card";
 import { MongoClient } from "mongodb";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection"; 
 
@@ -59,17 +59,19 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
 
     if (displayed.length === 0) {
       return (
-        <div className="text-center py-8">
-          <p className="text-gray-600">No products found in {params.category} category.</p>
+        <div className="px-6 py-12 text-center">
+          <p className="text-muted-foreground">
+            No vehicles in this category right now.
+          </p>
         </div>
       );
     }
 
     await client.close();
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-10">
+      <div className="shop-grid-catalog">
         {displayed.map((product: Product) => (
-          <ProductCard key={product.id} data={product} />
+          <ShopProductCard key={product.id} data={product} />
         ))}
       </div>
     );

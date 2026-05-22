@@ -80,10 +80,10 @@ const FeaturedPage = async ({
     return (
       <>
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Featured vehicles</h1>
-          <p className="text-gray-600 mt-1">Handpicked listings from our team</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Featured vehicles</h1>
+          <p className="mt-1 text-muted-foreground">Handpicked listings from our team</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-10">
+        <div className="product-grid">
           {displayed.map((product: Product) => (
             <ProductCard key={product.id} data={product} />
           ))}

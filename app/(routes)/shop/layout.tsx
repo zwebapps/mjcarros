@@ -1,6 +1,5 @@
 import SidebarProducts from "./_components/sidebar-products";
-import SortItems from "./_components/sort-items";
-import Footer from "@/components/footer";
+import ShopToolbar from "./_components/shop-toolbar";
 
 // Layout must be dynamic too: if only `page.tsx` sets force-dynamic, Next can still
 // statically prerender this layout at build time (empty Mongo → empty categories).
@@ -10,16 +9,15 @@ export const revalidate = 0;
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <>
-      <div className="min-h-full w-full py-5 sm:px-6 lg:px-12 flex max-sm:flex-col mx-auto max-w-none">
+    <div className="page-canvas min-h-full w-full">
+      <div className="shop-layout">
         <SidebarProducts />
-        <div className="flex-1 p-4 ">
-          <SortItems />
+        <div className="shop-main">
+          <ShopToolbar />
           {children}
         </div>
       </div>
-      <Footer />
-    </>
+    </div>
   );
 };
 

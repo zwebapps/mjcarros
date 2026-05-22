@@ -8,7 +8,6 @@ import ProductCard from "@/components/ui/product-card";
 import { Product } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import Footer from "@/components/footer";
 import Spinner from "@/components/Spinner";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
@@ -181,7 +180,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
                 <hr className="my-10" />
                 <div className="space-y-4">
                   <h3 className="font-semibold text-3xl">Recommended</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="product-grid">
                     {relatedProducts.map((item: Product) => (
                       <ProductCard key={item.id} data={item} />
                     ))}
@@ -192,7 +191,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           </div>
         </Container>
       </div>
-      <Footer />
     </div>
   );
 };

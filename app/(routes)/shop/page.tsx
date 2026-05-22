@@ -1,4 +1,4 @@
-import ProductCard from "@/components/ui/product-card";
+import ShopProductCard from "@/components/ui/shop-product-card";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import { MongoClient } from "mongodb";
@@ -50,8 +50,8 @@ const ShopPage = async ({
 
     if (!products || products.length === 0) {
       return (
-        <div className="text-center py-8">
-          <p className="text-gray-600">No products found.</p>
+        <div className="px-6 py-12 text-center">
+          <p className="text-muted-foreground">No vehicles in stock right now.</p>
         </div>
       );
     }
@@ -60,9 +60,9 @@ const ShopPage = async ({
     const displayed = filteredData(searchParams || {}, [...available]);
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-10">
+      <div className="shop-grid-catalog">
         {displayed.map((product: Product) => (
-          <ProductCard key={product.id} data={product} />
+          <ShopProductCard key={product.id} data={product} />
         ))}
       </div>
     );

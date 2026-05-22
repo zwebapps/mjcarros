@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 import useCart from "@/hooks/use-cart";
 import CartItem from "./_components/cart-item";
-import Footer from "@/components/footer";
 import { ShoppingCart as ShoppingCartIcon } from "lucide-react";
 import { Summary } from "./_components/summary";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -121,7 +120,6 @@ const CartPage = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };
