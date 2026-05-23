@@ -42,23 +42,3 @@ export function storeLocale(locale: Locale) {
     /* ignore */
   }
 }
-
-export type LocalizableProduct = {
-  title: string;
-  description: string;
-  titlePt?: string | null;
-  descriptionPt?: string | null;
-};
-
-/** Portuguese UI uses PT fields when set; otherwise falls back to English content from admin. */
-export function localizeProduct<T extends LocalizableProduct>(
-  product: T,
-  locale: Locale
-): T {
-  if (locale === "en") return product;
-  return {
-    ...product,
-    title: product.titlePt?.trim() || product.title,
-    description: product.descriptionPt?.trim() || product.description,
-  };
-}

@@ -12,6 +12,7 @@ import remarkGfm from "remark-gfm";
 import { formatProductDescription } from "@/lib/format-product-description";
 import { useLocale } from "@/components/locale-provider";
 import { localeToIntl } from "@/lib/i18n";
+import { useTranslatedText } from "@/hooks/use-translated-text";
 
 interface InfoProps {
   data: Product;
@@ -21,6 +22,8 @@ const Info: React.FC<InfoProps> = ({ data }) => {
   const cart = useCart();
   const { t, locale } = useLocale();
   const intlLocale = localeToIntl(locale);
+  const displayTitle = useTranslatedText(data.title, locale);
+  const displayDescription = useTranslatedText(data.description || "", locale);
 
   const onAddToCart = () => {
     cart.addItem(data);
@@ -28,7 +31,7 @@ const Info: React.FC<InfoProps> = ({ data }) => {
 
   return (
     <div className="min-w-0 max-w-full">
-      <h1 className="text-3xl font-bold text-gray-900 break-words">{data.title}</h1>
+      <h1 className="text-3xl font-bold text-gray-900 break-words">{displayTitle}</h1>
 
       {/* Category badges — flex-wrap so labels never run together on narrow widths */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -78,7 +81,7 @@ const Info: React.FC<InfoProps> = ({ data }) => {
           ].join(" ")}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-            {formatProductDescription(data?.description || "")}
+            {formatProductDescription(displayDescription)}
           </ReactMarkdown>
         </div>
       </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale } from "@/components/locale-provider";
+import { useTranslatedText } from "@/hooks/use-translated-text";
 import { formatCurrency } from "@/lib/utils";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import { cn } from "@/lib/utils";
@@ -27,6 +29,8 @@ interface ShopProductCardProps {
 
 const ShopProductCard: React.FC<ShopProductCardProps> = ({ data }) => {
   const product = data;
+  const { locale } = useLocale();
+  const displayTitle = useTranslatedText(product.title, locale);
   const displayPrice = product.finalPrice || product.price;
   const hasDiscount = product.discount && product.discount > 0;
   const isSold = !!product.sold;
@@ -47,7 +51,7 @@ const ShopProductCard: React.FC<ShopProductCardProps> = ({ data }) => {
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <img
             src={thumbSrc}
-            alt={product.title}
+            alt={displayTitle}
             className={cn(
               "h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]",
               isSold && "grayscale-[35%]"
@@ -70,7 +74,7 @@ const ShopProductCard: React.FC<ShopProductCardProps> = ({ data }) => {
 
         <div className="bg-brand px-3 py-2.5 text-center">
           <h3 className="line-clamp-2 text-sm font-bold uppercase leading-snug tracking-wide text-brand-foreground">
-            {product.title}
+            {displayTitle}
           </h3>
         </div>
 

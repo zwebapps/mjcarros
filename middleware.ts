@@ -19,6 +19,7 @@ export async function middleware(request: NextRequest) {
     '/api/paypal',
     '/api/orders/confirm',
     '/api/orders/guest',
+    '/api/translate',
     '/sign-in',
     '/sign-up'
   ];

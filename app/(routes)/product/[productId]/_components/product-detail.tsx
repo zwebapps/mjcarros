@@ -10,7 +10,7 @@ import Link from "next/link";
 import Spinner from "@/components/Spinner";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import { useLocale } from "@/components/locale-provider";
-import { localizeProduct, t as translate } from "@/lib/i18n";
+import { t as translate } from "@/lib/i18n";
 
 interface ProductDetailProps {
   productId: string;
@@ -59,8 +59,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           id: data.product._id?.toString(),
           title: data.product.title,
           description: data.product.description,
-          titlePt: data.product.titlePt,
-          descriptionPt: data.product.descriptionPt,
           price: data.product.price,
           finalPrice: data.product.finalPrice || undefined,
           discount: data.product.discount || undefined,
@@ -90,32 +88,24 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
 
         const transformedRelatedProducts: Product[] = (
           data.relatedProducts || []
-        ).map(
-          (dbProduct: Product & { _id?: string; titlePt?: string; descriptionPt?: string }) =>
-            localizeProduct(
-              {
-                id: dbProduct._id?.toString() || dbProduct.id,
-                title: dbProduct.title,
-                description: dbProduct.description,
-                titlePt: dbProduct.titlePt,
-                descriptionPt: dbProduct.descriptionPt,
-                price: dbProduct.price,
-                finalPrice: dbProduct.finalPrice || undefined,
-                discount: dbProduct.discount || undefined,
-                featured: dbProduct.featured,
-                sold: !!dbProduct.sold,
-                negotiable: !!dbProduct.negotiable,
-                imageURLs: mapImages(dbProduct),
-                category: dbProduct.category,
-                categoryId: dbProduct.categoryId,
-                createdAt: dbProduct.createdAt,
-                updatedAt: dbProduct.updatedAt,
-              },
-              locale
-            )
-        );
+        ).map((dbProduct: Product & { _id?: string }) => ({
+          id: dbProduct._id?.toString() || dbProduct.id,
+          title: dbProduct.title,
+          description: dbProduct.description,
+          price: dbProduct.price,
+          finalPrice: dbProduct.finalPrice || undefined,
+          discount: dbProduct.discount || undefined,
+          featured: dbProduct.featured,
+          sold: !!dbProduct.sold,
+          negotiable: !!dbProduct.negotiable,
+          imageURLs: mapImages(dbProduct),
+          category: dbProduct.category,
+          categoryId: dbProduct.categoryId,
+          createdAt: dbProduct.createdAt,
+          updatedAt: dbProduct.updatedAt,
+        }));
 
-        setProduct(localizeProduct(baseProduct, locale));
+        setProduct(baseProduct);
         setRelatedProducts(transformedRelatedProducts);
       } catch (err) {
         console.error("Error fetching product:", err);
@@ -129,7 +119,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
 
     setIsLoading(true);
     void fetchProduct();
-  }, [productId, locale]);
+  }, [productId]);
 
   if (isLoading) {
     return (

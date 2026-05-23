@@ -46,8 +46,6 @@ type initialState = {
   transmission?: string;
   mileage?: string;
   condition?: string;
-  titlePt?: string;
-  descriptionPt?: string;
 };
 
 const AddProduct = () => {
@@ -74,8 +72,6 @@ const AddProduct = () => {
     transmission: "",
     mileage: "",
     condition: "",
-    titlePt: "",
-    descriptionPt: "",
   };
 
   const [category, setCategory] = useState<Category[]>([]);
@@ -246,8 +242,6 @@ const AddProduct = () => {
       categoryId: dataForm.categoryId || dataForm.category,
       galleryURLs: allImageUrls,
       imageURLs: allImageUrls,
-      titlePt: dataForm.titlePt || "",
-      descriptionPt: dataForm.descriptionPt || "",
     };
 
     if (dataForm.discount !== undefined) {
@@ -360,29 +354,6 @@ const AddProduct = () => {
         {errors.description && (
           <p className="text-red-500">{errors.description}</p>
         )}
-        <div className="mt-4 rounded-md border border-dashed border-border bg-muted/30 p-4">
-          <p className="mb-3 text-sm font-semibold">Portuguese version (optional)</p>
-          <label htmlFor="titlePt">Title (PT)</label>
-          <Input
-            id="titlePt"
-            value={dataForm.titlePt || ""}
-            placeholder="Portuguese title"
-            onChange={(e) => setDataForm({ ...dataForm, titlePt: e.target.value })}
-          />
-          <label htmlFor="descriptionPt" className="mt-3 block">
-            Description (PT)
-          </label>
-          <textarea
-            id="descriptionPt"
-            rows={6}
-            className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            value={dataForm.descriptionPt || ""}
-            placeholder="Portuguese description"
-            onChange={(e) =>
-              setDataForm({ ...dataForm, descriptionPt: e.target.value })
-            }
-          />
-        </div>
         <label htmlFor="category">Choose a category</label>
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
