@@ -8,7 +8,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import SimpleMDE from "react-simplemde-editor";
-import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
+import {
+  GalleryUploadField,
+  galleryItemsToUrls,
+} from "@/components/admin/gallery-upload-field";
+import type { GalleryUploadItem } from "@/lib/admin-gallery-upload";
 import "easymde/dist/easymde.min.css";
 
 type Category = {
@@ -71,8 +75,7 @@ const AddProduct = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dataForm, setDataForm] = useState<initialState>(initialState);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [galleryItems, setGalleryItems] = useState<GalleryUploadItem[]>([]);
 
   // sizes removed
   const [errors, setErrors] = useState({
@@ -119,32 +122,6 @@ const AddProduct = () => {
     }
   };
 
-  const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files as FileList;
-    if (!files || files.length === 0) return;
-    setIsUploading(true);
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      const uploaded: string[] = [];
-      for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('folder', 'product');
-        const res = await fetch('/api/upload', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : undefined, body: fd });
-        if (!res.ok) throw new Error('Upload failed');
-        const data = await res.json();
-        if (data?.url) {
-          uploaded.push(data.url);
-        }
-      }
-      setGalleryPreviews((prev) => [...prev, ...uploaded]);
-    } catch (err) {
-      toast.error('Gallery upload failed');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleCheckboxChange = (isChecked: boolean) => {
     setDataForm((prevData) => ({ ...prevData, isFeatured: isChecked }));
   };
@@ -166,13 +143,16 @@ const AddProduct = () => {
       category: "",
     });
 
+    const galleryUrls = galleryItemsToUrls(galleryItems);
+    const hasImages = dataForm.files.length > 0 || galleryUrls.length > 0;
+
     if (
       !dataForm.title ||
       dataForm.title.length < 4 ||
       !dataForm.description ||
       dataForm.description.length < 4 ||
       !dataForm.price ||
-      dataForm.files.length === 0 ||
+      !hasImages ||
       !dataForm.category
     ) {
       setIsLoading(false);
@@ -187,11 +167,18 @@ const AddProduct = () => {
             ? "Description must be at least 4 characters"
             : "",
         price: !dataForm.price ? "Please enter a price" : "",
-        files:
-          dataForm.files.length === 0 ? "Please select at least one file" : "",
+        files: !hasImages
+          ? "Add a main image or upload at least one gallery image"
+          : "",
         category: !dataForm.category ? "Please select a category" : "",
       }));
 
+      return;
+    }
+
+    if (galleryItems.some((i) => i.status === "uploading")) {
+      setIsLoading(false);
+      toast.error("Wait for gallery uploads to finish");
       return;
     }
 
@@ -206,8 +193,8 @@ const AddProduct = () => {
       sold: dataForm.isSold,
       negotiable: dataForm.isNegotiable,
       category: dataForm.category,
-      // no sizes
-      categoryId: dataForm.categoryId,
+      categoryId: dataForm.categoryId || dataForm.category,
+      imageURLs: galleryUrls,
     };
 
     if (dataForm.discount !== undefined) {
@@ -230,19 +217,19 @@ const AddProduct = () => {
     });
 
     formData.append("requestData", JSON.stringify(requestData));
-    // include uploaded gallery URLs
-    if (galleryPreviews.length) {
-      const current = JSON.parse(formData.get('requestData') as string);
-      current.imageURLs = [...(current.imageURLs || []), ...galleryPreviews];
-      formData.set('requestData', JSON.stringify(current));
-    }
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      const res = await axios.post("/api/product", formData, {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      if (!token) {
+        toast.error("Please sign in as admin");
+        setIsLoading(false);
+        return;
+      }
+
+      await axios.post("/api/product", formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
       });
       toast.success("Product created successfully");
@@ -250,9 +237,17 @@ const AddProduct = () => {
       router.push("/admin/products");
       setIsLoading(false);
       setImagePreviews([]);
+      setGalleryItems([]);
     } catch (error) {
       setIsLoading(false);
-      toast.error("Something went wrong!");
+      const msg =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? String(error.response.data.error)
+          : axios.isAxiosError(error)
+            ? error.message
+            : "Something went wrong!";
+      toast.error(msg);
+      console.error("Create product failed:", error);
     }
   };
 
@@ -448,7 +443,7 @@ const AddProduct = () => {
           type="file"
           id="image"
           name="image"
-          required
+          accept="image/*"
           onChange={handleFileChange}
           multiple
         />
@@ -465,21 +460,11 @@ const AddProduct = () => {
             />
           ))}
         </div>
-        <label htmlFor="gallery">Add Gallery Images (uploads sequentially)</label>
-        <Input type="file" id="gallery" name="gallery" onChange={handleGalleryChange} multiple />
-        {isUploading && <p className="text-sm text-gray-500">Uploading...</p>}
-        {galleryPreviews.length > 0 && (
-          <div className="flex gap-2 mt-2 flex-wrap">
-              {galleryPreviews.map((url, idx) => (
-              <img
-                key={idx}
-                src={/^(blob:|data:)/.test(url) ? url : resolvePublicImageSrc(url)}
-                alt={`Gallery ${idx + 1}`}
-                className="w-[100px] h-[100px] object-cover rounded"
-              />
-            ))}
-          </div>
-        )}
+        <GalleryUploadField
+          items={galleryItems}
+          onChange={setGalleryItems}
+          disabled={isLoading}
+        />
         <Button disabled={isLoading} className="mt-2 bg-green-600">
           Add Product
         </Button>

@@ -4,15 +4,14 @@ import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { writeBufferToPublicUploads } from "@/lib/public-uploads";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
-export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
-
-const MONGODB_URI = getMongoDbUri();
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   let client;
   
   try {
-    client = new MongoClient(MONGODB_URI, {
+    client = new MongoClient(getMongoDbUri(), {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
@@ -98,10 +97,10 @@ export async function POST(request: NextRequest) {
         condition: parsed.condition || "new",
       };
 
-      // Merge any pre-uploaded gallery URLs
-      const preUrls = Array.isArray(parsed.galleryURLs)
-        ? parsed.galleryURLs
-        : (Array.isArray(parsed.imageURLs) ? parsed.imageURLs : []);
+      const preUrls = [
+        ...(Array.isArray(parsed.galleryURLs) ? parsed.galleryURLs : []),
+        ...(Array.isArray(parsed.imageURLs) ? parsed.imageURLs : []),
+      ].filter((u): u is string => typeof u === "string" && u.length > 0);
 
       const files = formData.getAll('files') as File[];
       for (const file of files) {
@@ -119,15 +118,21 @@ export async function POST(request: NextRequest) {
       ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, sold, negotiable, ...extras } = body);
     }
 
-    if (!title || !description || !category || !categoryId || !price) {
+    if (!title || !description || !category || !price) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields: title, description, category, price" },
         { status: 400 }
       );
     }
 
-    // Connect to MongoDB
-    client = new MongoClient(MONGODB_URI, {
+    if (!imageURLs.length) {
+      return NextResponse.json(
+        { error: "At least one product image is required" },
+        { status: 400 }
+      );
+    }
+
+    client = new MongoClient(getMongoDbUri(), {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
@@ -147,7 +152,7 @@ export async function POST(request: NextRequest) {
       description,
       imageURLs,
       category,
-      categoryId,
+      categoryId: categoryId || category,
       price,
       finalPrice,
       discount,
@@ -166,10 +171,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newProduct);
   } catch (error) {
     console.error("Error creating product:", error);
-    return NextResponse.json(
-      { error: "Error creating product" },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error ? error.message : "Error creating product";
+    return NextResponse.json({ error: message }, { status: 500 });
   } finally {
     if (client) {
       await client.close();

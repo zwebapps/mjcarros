@@ -7,6 +7,11 @@ import Image from "next/image";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
+import {
+  GalleryUploadField,
+  galleryItemsToUrls,
+} from "@/components/admin/gallery-upload-field";
+import type { GalleryUploadItem } from "@/lib/admin-gallery-upload";
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 
@@ -95,7 +100,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const [previewImage, setPreviewImage] = useState<string[]>();
   const [dataForm, setDataForm] = useState<InitialType>(initialState);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [galleryItems, setGalleryItems] = useState<GalleryUploadItem[]>([]);
 
   const handleCheckboxChange = () => {
     setCheckBox((prevCheck) => !prevCheck);
@@ -218,35 +223,14 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     setIsLoading(false);
   };
 
-  const handleGalleryAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files as FileList;
-    if (!files || files.length === 0) return;
-    setIsUploading(true);
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      const uploaded: string[] = [];
-      for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('folder', 'product');
-        const res = await fetch('/api/upload', { 
-          method: 'POST', 
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined, 
-          body: fd 
-        });
-        if (!res.ok) throw new Error('Upload failed');
-        const data = await res.json();
-        if (data?.url) uploaded.push(data.url);
-      }
-      setPreviewImage([...(previewImage || []), ...uploaded]);
-      toast.success(`Gallery updated - ${uploaded.length} images added`);
-    } catch (err) {
-      console.error('Gallery upload error:', err);
-      toast.error('Gallery upload failed - please try again');
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  useEffect(() => {
+    const urls = galleryItemsToUrls(galleryItems);
+    if (!urls.length) return;
+    setPreviewImage((prev) => {
+      const base = (prev || []).filter((img) => !img.startsWith("blob:"));
+      return Array.from(new Set([...base, ...urls]));
+    });
+  }, [galleryItems]);
 
   // sizes removed
 
@@ -454,9 +438,11 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
           );
         })}
       </div>
-      <label htmlFor="gallery">Add Gallery Images (uploads sequentially)</label>
-      <Input type="file" id="gallery" name="gallery" onChange={handleGalleryAdd} multiple />
-      {isUploading && <p className="text-sm text-gray-500">Uploading...</p>}
+      <GalleryUploadField
+        items={galleryItems}
+        onChange={setGalleryItems}
+        disabled={isLoading}
+      />
       <Button disabled={isLoading} type="submit" className="mt-2 bg-green-600">
         Save Changes
       </Button>

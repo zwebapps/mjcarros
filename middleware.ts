@@ -33,7 +33,8 @@ export async function middleware(request: NextRequest) {
     '/api/categories',
     '/api/product',
     '/api/products',
-    '/api/billboards'
+    '/api/billboards',
+    '/api/upload',
   ];
 
   const isAdminRoute = adminRoutes.some(route =>

@@ -54,6 +54,8 @@ export interface RequestData {
   negotiable?: boolean;
   category: string;
   categoryId: string;
+  /** Pre-uploaded gallery URLs from /api/upload */
+  imageURLs?: string[];
   discount?: number;
   // New optional attributes
   modelName?: string;
