@@ -295,7 +295,9 @@ const AddProduct = () => {
   const mdeOptions = useMemo(() => ({
     spellChecker: false,
     status: false,
-    placeholder: "Write detailed description. Use headings, lists, tables (Markdown).",
+    sideBySide: true,
+    placeholder:
+      "Use Enter for new lines. Headings (##), lists (-), tables (|). Pasted specs break onto separate lines on the shop page.",
     autosave: { enabled: false },
     autoDownloadFontAwesome: true,
   }), []);

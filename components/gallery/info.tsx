@@ -7,6 +7,7 @@ import { Category, Product } from "@/types";
 import { Button } from "../ui/button";
 import useCart from "@/hooks/use-cart";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { formatProductDescription } from "@/lib/format-product-description";
 
@@ -72,7 +73,7 @@ const Info: React.FC<InfoProps> = ({ data }) => {
             "[&_a]:break-all [&_code]:break-all",
           ].join(" ")}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
             {formatProductDescription(data?.description || "")}
           </ReactMarkdown>
         </div>

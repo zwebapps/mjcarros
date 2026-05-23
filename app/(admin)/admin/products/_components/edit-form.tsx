@@ -339,8 +339,10 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         options={useMemo(() => ({
           spellChecker: false,
           status: false,
+          sideBySide: true,
           autoDownloadFontAwesome: false,
-          placeholder: "Write detailed description. Use headings, lists, tables (Markdown).",
+          placeholder:
+            "Use Enter for new lines. Headings (##), lists (-), tables (|). Pasted specs break onto separate lines on the shop page.",
         }), []) as any}
       />
 

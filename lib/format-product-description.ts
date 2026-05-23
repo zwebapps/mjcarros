@@ -1,7 +1,19 @@
 /**
- * Prepares admin/editor description text for react-markdown + remark-gfm.
+ * Prepares admin/editor description text for react-markdown + remark-gfm + remark-breaks.
  * EasyMDE often stores tab-separated rows (Excel/Word paste) instead of pipe tables.
  */
+
+/** Break pasted single-line listings before common field / feature emojis. */
+const INLINE_EMOJI_BREAK =
+  /(?<=\s)(?=(?:📅|🚪|⚙️|🔋|💨|⚡|🌍|🌡️|🚘|📷|🅿️|🛣️|🚨|👁️|🪑|🔥|🌞|🔑|🎵|📱|📶|🔌|🌐|✔️|📍|🏁|⚠️)\s)/g;
+
+function normalizeListingLine(line: string): string {
+  if (line.includes("\t")) return line;
+  return line
+    .replace(/\s•\s/g, "\n- ")
+    .replace(INLINE_EMOJI_BREAK, "\n");
+}
+
 export function formatProductDescription(raw: string): string {
   if (!raw?.trim()) return "";
 
@@ -48,7 +60,7 @@ export function formatProductDescription(raw: string): string {
       }
     }
 
-    out.push(line);
+    out.push(normalizeListingLine(line));
     i++;
   }
 
