@@ -10,6 +10,8 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { formatProductDescription } from "@/lib/format-product-description";
+import { useLocale } from "@/components/locale-provider";
+import { localeToIntl } from "@/lib/i18n";
 
 interface InfoProps {
   data: Product;
@@ -17,6 +19,8 @@ interface InfoProps {
 
 const Info: React.FC<InfoProps> = ({ data }) => {
   const cart = useCart();
+  const { t, locale } = useLocale();
+  const intlLocale = localeToIntl(locale);
 
   const onAddToCart = () => {
     cart.addItem(data);
@@ -33,7 +37,7 @@ const Info: React.FC<InfoProps> = ({ data }) => {
         </span>
         {data.featured && (
           <span className="inline-block bg-yellow-500 text-white text-sm px-3 py-1 rounded-full font-medium">
-            Featured
+            {t("product.featured")}
           </span>
         )}
       </div>
@@ -44,19 +48,19 @@ const Info: React.FC<InfoProps> = ({ data }) => {
           <div className="font-semibold">
             <div className="flex items-center gap-2">
               <span className="text-gray-500 line-through">
-                {formatCurrency(Number(data?.price), "EUR")}
+                {formatCurrency(Number(data?.price), "EUR", intlLocale)}
               </span>
               <div className="rounded-sm bg-red-600 p-1 px-2 text-sm font-semibold text-white">
                 -{data?.discount}%
               </div>
             </div>
             <p className="mt-1 text-2xl font-semibold text-gray-900">
-              {formatCurrency(Number(data.finalPrice), "EUR")}
+              {formatCurrency(Number(data.finalPrice), "EUR", intlLocale)}
             </p>
           </div>
         ) : (
           <p className="text-2xl font-semibold text-gray-900">
-            {formatCurrency(Number(data?.price), "EUR")}
+            {formatCurrency(Number(data?.price), "EUR", intlLocale)}
           </p>
         )}
       </div>
@@ -81,14 +85,14 @@ const Info: React.FC<InfoProps> = ({ data }) => {
 
       {/* sizes removed */}
 
-      {/* Add to Cart Button */}
-      <div className="mt-10 flex items-center gap-x-3">
+      <div className="product-cta-row mt-10">
         <Button
           onClick={onAddToCart}
-          className="flex items-center gap-x-2"
+          size="lg"
+          className="product-cta-button h-12 w-full gap-2 text-base sm:min-w-[16rem] sm:max-w-xl"
           disabled={!!data.sold}
         >
-          {data.sold ? 'Sold' : 'Add To Cart'}
+          {data.sold ? t("product.sold") : t("product.addToCart")}
           {!data.sold && <ShoppingCart size={20} />}
         </Button>
       </div>

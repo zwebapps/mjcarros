@@ -22,6 +22,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/components/locale-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 interface User {
   id: string;
@@ -29,13 +31,6 @@ interface User {
   name: string;
   role: string;
 }
-
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/shop", label: "Shop" },
-  { href: "/featured", label: "Featured" },
-  { href: "/contact", label: "Contact" },
-] as const;
 
 function NavLink({
   href,
@@ -66,13 +61,21 @@ function NavLink({
 
 export function Navbar() {
   const pathname = usePathname();
+  const { t } = useLocale();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const cart = useCart();
 
+  const navLinks = [
+    { href: "/", label: t("nav.home") },
+    { href: "/shop", label: t("nav.shop") },
+    { href: "/featured", label: t("nav.featured") },
+    { href: "/contact", label: t("nav.contact") },
+  ];
+
   const ordersHref = user ? "/orders" : "/orders/guest";
-  const ordersLabel = user ? "Orders" : "Track orders";
+  const ordersLabel = user ? t("nav.orders") : t("nav.trackOrders");
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -104,7 +107,7 @@ export function Navbar() {
   if (isLoading) {
     return (
       <header className="sticky top-0 z-50 border-b border-white/10 bg-nav text-nav-foreground backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
           <Logo />
           <div className="ml-auto h-9 w-28 animate-pulse rounded-lg bg-muted" />
         </div>
@@ -122,7 +125,7 @@ export function Navbar() {
           {user.role === "ADMIN" && (
             <Link href="/admin">
               <Button size="sm" variant="brand" className="shrink-0">
-                Admin
+                {t("nav.admin")}
               </Button>
             </Link>
           )}
@@ -145,13 +148,13 @@ export function Navbar() {
               className="hidden text-nav-foreground hover:bg-white/10 hover:text-primary sm:inline-flex"
             >
               <LogIn className="h-4 w-4 sm:mr-1.5" />
-              <span className="hidden whitespace-nowrap md:inline">Sign in</span>
+              <span className="hidden whitespace-nowrap md:inline">{t("nav.signIn")}</span>
             </Button>
           </Link>
           <Link href="/sign-up" className="shrink-0">
             <Button size="sm" variant="default">
               <User className="h-4 w-4 sm:mr-1.5" />
-              <span className="hidden whitespace-nowrap md:inline">Sign up</span>
+              <span className="hidden whitespace-nowrap md:inline">{t("nav.signUp")}</span>
             </Button>
           </Link>
         </>
@@ -162,7 +165,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-nav text-nav-foreground backdrop-blur-md supports-[backdrop-filter]:bg-nav/95">
       {/* Mobile-first: logo + actions */}
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:h-16 sm:gap-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-2 px-4 sm:h-16 sm:gap-3 sm:px-6 lg:px-8">
         <div className="shrink-0">
           <Logo />
         </div>
@@ -192,7 +195,9 @@ export function Navbar() {
             <NavbarSearch onDarkNav />
           </div>
 
-          <Link href="/cart" className="shrink-0">
+          <LanguageSwitcher className="shrink-0" />
+
+          <Link href="/cart" className="shrink-0" aria-label={t("nav.cart")}>
             <Button
               size="sm"
               variant="ghost"
@@ -241,6 +246,7 @@ export function Navbar() {
                     onNavigate={() => setMenuOpen(false)}
                   />
                 </nav>
+                <LanguageSwitcher compact={false} className="justify-center" />
                 <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
                   {user ? (
                     <>
@@ -248,7 +254,7 @@ export function Navbar() {
                       {user.role === "ADMIN" && (
                         <Link href="/admin" onClick={() => setMenuOpen(false)}>
                           <Button className="w-full" size="sm" variant="brand">
-                            Admin
+                            {t("nav.admin")}
                           </Button>
                         </Link>
                       )}
@@ -258,19 +264,19 @@ export function Navbar() {
                         className="w-full"
                         onClick={handleSignOut}
                       >
-                        Sign out
+                        {t("nav.signOut")}
                       </Button>
                     </>
                   ) : (
                     <>
                       <Link href="/sign-in" onClick={() => setMenuOpen(false)}>
                         <Button variant="outline" size="sm" className="w-full">
-                          Sign in
+                          {t("nav.signIn")}
                         </Button>
                       </Link>
                       <Link href="/sign-up" onClick={() => setMenuOpen(false)}>
                         <Button size="sm" className="w-full">
-                          Sign up
+                          {t("nav.signUp")}
                         </Button>
                       </Link>
                     </>

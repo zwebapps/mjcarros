@@ -98,6 +98,9 @@ export async function POST(request: NextRequest) {
         transmission: parsed.transmission || "",
         mileage: parsed.mileage ? Number(parsed.mileage) : null,
         condition: parsed.condition || "new",
+        titlePt: typeof parsed.titlePt === "string" ? parsed.titlePt : "",
+        descriptionPt:
+          typeof parsed.descriptionPt === "string" ? parsed.descriptionPt : "",
       };
 
       const preUrls = [

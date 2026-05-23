@@ -5,6 +5,7 @@ import "font-awesome/css/font-awesome.min.css";
 import { siteConfig } from "@/config/site";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { ToastProvider } from "@/providers/toast-provider";
+import { LocaleProvider } from "@/components/locale-provider";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -46,6 +47,13 @@ else{document.documentElement.setAttribute('data-theme','charcoal');}}catch(e){
 document.documentElement.setAttribute('data-theme','charcoal');}})();
 `;
 
+const localeInitScript = `
+(function(){try{var l=localStorage.getItem('mjcarros-locale');
+if(l!=='en'&&l!=='pt'){l='pt';localStorage.setItem('mjcarros-locale','pt');}
+document.documentElement.lang=l==='en'?'en':'pt-PT';}catch(e){
+document.documentElement.lang='pt-PT';}})();
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -53,16 +61,19 @@ export default function RootLayout({
 }) {
   return (
     <ReactQueryProvider>
-      <html lang="en" suppressHydrationWarning data-theme="charcoal">
+      <html lang="pt-PT" suppressHydrationWarning data-theme="charcoal">
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+          <script dangerouslySetInnerHTML={{ __html: localeInitScript }} />
         </head>
         <body
           className={`${plusJakarta.variable} ${anton.variable} ${oswald.variable} ${plusJakarta.className} font-sans`}
           suppressHydrationWarning
         >
-          <ToastProvider />
-          {children}
+          <LocaleProvider>
+            <ToastProvider />
+            {children}
+          </LocaleProvider>
         </body>
       </html>
     </ReactQueryProvider>

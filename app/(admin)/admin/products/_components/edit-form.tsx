@@ -33,6 +33,8 @@ type Category = {
 type InitialType = {
   title: string;
   description: string;
+  titlePt: string;
+  descriptionPt: string;
   price: number;
   category: string;
   files: File[];
@@ -76,6 +78,8 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const initialState = {
     title,
     description,
+    titlePt: (data as { titlePt?: string }).titlePt || "",
+    descriptionPt: (data as { descriptionPt?: string }).descriptionPt || "",
     price,
     category,
     files: [],
@@ -129,6 +133,8 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     setDataForm({
       title,
       description,
+      titlePt: (data as { titlePt?: string }).titlePt || "",
+      descriptionPt: (data as { descriptionPt?: string }).descriptionPt || "",
       price,
       category,
       files: [],
@@ -217,6 +223,8 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       formData.append("discount", String(dataForm.discount));
     }
     formData.append("description", dataForm.description);
+    formData.append("titlePt", dataForm.titlePt);
+    formData.append("descriptionPt", dataForm.descriptionPt);
     formData.append("category", dataForm.category);
     formData.append("modelName", dataForm.modelName || "");
     formData.append("year", String(dataForm.year || 0));
@@ -345,6 +353,37 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
             "Use Enter for new lines. Headings (##), lists (-), tables (|). Pasted specs break onto separate lines on the shop page.",
         }), []) as any}
       />
+
+      <div className="mt-4 rounded-md border border-dashed border-border bg-muted/30 p-4">
+        <p className="mb-3 text-sm font-semibold text-foreground">
+          Portuguese version (optional — shown when visitors use PT)
+        </p>
+        <label htmlFor="titlePt">Title (PT)</label>
+        <Input
+          id="titlePt"
+          name="titlePt"
+          value={dataForm.titlePt}
+          placeholder="Portuguese title"
+          onChange={(e) => setDataForm({ ...dataForm, titlePt: e.target.value })}
+        />
+        <label htmlFor="descriptionPt" className="mt-3 block">
+          Description (PT)
+        </label>
+        <textarea
+          id="descriptionPt"
+          name="descriptionPt"
+          rows={6}
+          className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          value={dataForm.descriptionPt}
+          placeholder="Portuguese description (Markdown supported)"
+          onChange={(e) =>
+            setDataForm({ ...dataForm, descriptionPt: e.target.value })
+          }
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Leave empty to show the English text when the site is in Portuguese.
+        </p>
+      </div>
 
       <label htmlFor="category">Choose a category</label>
       <select

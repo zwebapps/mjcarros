@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "home": "Início",
+    "shop": "Loja",
+    "featured": "Destaques",
+    "contact": "Contacto",
+    "orders": "Encomendas",
+    "trackOrders": "Seguir encomenda",
+    "signIn": "Entrar",
+    "signUp": "Registar",
+    "signOut": "Sair",
+    "cart": "Carrinho",
+    "admin": "Admin"
+  },
+  "footer": {
+    "rights": "Todos os direitos reservados"
+  },
+  "shop": {
+    "title": "Loja",
+    "category": "Categoria",
+    "sortBy": "Ordenar por",
+    "relevance": "Relevância",
+    "latestArrivals": "Mais recentes",
+    "priceLowHigh": "Preço: menor para maior",
+    "priceHighLow": "Preço: maior para menor",
+    "sidebarLoadError": "Não foi possível carregar contagens. Atualize a página.",
+    "allVehicles": "Todos os veículos",
+    "vehicles": "veículos"
+  },
+  "product": {
+    "backToShop": "Voltar à loja",
+    "featured": "Destaque",
+    "addToCart": "Adicionar ao carrinho",
+    "sold": "Vendido",
+    "recommended": "Recomendados",
+    "loading": "A carregar detalhes do veículo…",
+    "notFound": "Veículo não encontrado",
+    "invalidId": "ID de veículo inválido"
+  },
+  "home": {
+    "viewStock": "Ver o nosso stock",
+    "createAccount": "Criar conta",
+    "browseInventory": "Ver inventário",
+    "ctaTitle": "O seu próximo carro, diretamente da MJ Carros",
+    "ctaBody": "Vendemos o nosso próprio stock — consulte os veículos disponíveis, contacte-nos online e acompanhe a sua encomenda com uma conta segura MJ Carros."
+  },
+  "lang": {
+    "label": "Idioma",
+    "pt": "Português",
+    "en": "English"
+  },
+  "common": {
+    "loading": "A carregar…",
+    "error": "Algo correu mal"
+  }
+}

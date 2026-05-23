@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale } from "@/components/locale-provider";
 
 function formatCategoryLabel(segment: string): string {
   const decoded = decodeURIComponent(segment);
@@ -14,14 +15,15 @@ const ShopToolbar = () => {
   const pathName = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useLocale();
 
   const title = useMemo(() => {
     if (!pathName?.startsWith("/shop/") || pathName === "/shop") {
-      return "Shop";
+      return t("shop.title");
     }
     const segment = pathName.replace(/^\/shop\//, "").split("/")[0] ?? "";
     return formatCategoryLabel(segment);
-  }, [pathName]);
+  }, [pathName, t]);
 
   const [selectedSort, setSelectedSort] = useState<string>(
     (searchParams?.get("sort") as string) || ""
@@ -54,7 +56,7 @@ const ShopToolbar = () => {
       <h1 className="shop-toolbar-title">{title}</h1>
       <div className="flex items-center gap-2">
         <label htmlFor="shop-sort" className="text-sm font-semibold text-foreground">
-          Sort by
+          {t("shop.sortBy")}
         </label>
         <select
           id="shop-sort"
@@ -63,10 +65,10 @@ const ShopToolbar = () => {
           value={selectedSort}
           onChange={(e) => handleSortChange(e.target.value)}
         >
-          <option value="">Relevance</option>
-          <option value="latest-arrivals">Latest arrivals</option>
-          <option value="price-low-to-high">Price: low to high</option>
-          <option value="price-high-to-low">Price: high to low</option>
+          <option value="">{t("shop.relevance")}</option>
+          <option value="latest-arrivals">{t("shop.latestArrivals")}</option>
+          <option value="price-low-to-high">{t("shop.priceLowHigh")}</option>
+          <option value="price-high-to-low">{t("shop.priceHighLow")}</option>
         </select>
       </div>
     </div>

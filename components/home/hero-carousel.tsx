@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/components/locale-provider";
 
 const SLIDES = [
   {
@@ -49,6 +50,7 @@ function splitHeroTitle(title: string): { lead: string; accent: string } {
 }
 
 export function HeroCarousel() {
+  const { t } = useLocale();
   const [active, setActive] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -115,19 +117,19 @@ export function HeroCarousel() {
             {slide.description}
           </p>
 
-          <div className="hero-actions mt-10 flex flex-wrap gap-3 sm:gap-4">
-            <Link href="/shop">
-              <Button size="lg" className="min-w-[10rem] text-base shadow-lg">
-                Browse inventory
+          <div className="hero-actions mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+            <Link href="/shop" className="w-full sm:w-auto sm:min-w-[14rem]">
+              <Button size="lg" className="h-12 w-full text-base shadow-lg sm:min-w-[14rem]">
+                {t("home.browseInventory")}
               </Button>
             </Link>
-            <Link href="/sign-up">
+            <Link href="/sign-up" className="w-full sm:w-auto sm:min-w-[14rem]">
               <Button
                 size="lg"
                 variant="outline"
-                className="min-w-[10rem] border-2 border-white/90 bg-white/10 text-base text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-brand"
+                className="h-12 w-full border-2 border-white/90 bg-white/10 text-base text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-brand sm:min-w-[14rem]"
               >
-                Create account
+                {t("home.createAccount")}
               </Button>
             </Link>
           </div>

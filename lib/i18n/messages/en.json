@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "home": "Home",
+    "shop": "Shop",
+    "featured": "Featured",
+    "contact": "Contact",
+    "orders": "Orders",
+    "trackOrders": "Track orders",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "cart": "Cart",
+    "admin": "Admin"
+  },
+  "footer": {
+    "rights": "All rights reserved"
+  },
+  "shop": {
+    "title": "Shop",
+    "category": "Category",
+    "sortBy": "Sort by",
+    "relevance": "Relevance",
+    "latestArrivals": "Latest arrivals",
+    "priceLowHigh": "Price: low to high",
+    "priceHighLow": "Price: high to low",
+    "sidebarLoadError": "Could not load counts. Refresh the page.",
+    "allVehicles": "All vehicles",
+    "vehicles": "vehicles"
+  },
+  "product": {
+    "backToShop": "Back to shop",
+    "featured": "Featured",
+    "addToCart": "Add to cart",
+    "sold": "Sold",
+    "recommended": "Recommended",
+    "loading": "Loading vehicle details…",
+    "notFound": "Vehicle not found",
+    "invalidId": "Invalid vehicle ID"
+  },
+  "home": {
+    "viewStock": "View our stock",
+    "createAccount": "Create account",
+    "browseInventory": "Browse inventory",
+    "ctaTitle": "Your next car, direct from MJ Carros",
+    "ctaBody": "We sell our own stock — browse current vehicles, enquire online, and track your order with a secure MJ Carros account."
+  },
+  "lang": {
+    "label": "Language",
+    "pt": "Português",
+    "en": "English"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong"
+  }
+}

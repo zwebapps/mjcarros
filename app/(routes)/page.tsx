@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ui/product-card";
 import { HeroCarousel } from "@/components/home/hero-carousel";
+import { HomeCtaSection } from "@/components/home/home-cta-section";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -244,31 +245,7 @@ const HomePage = async () => {
         </div>
       </section>
 
-      <section className="gradient-brand py-16 text-white">
-        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Your next car, direct from MJ Carros
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/90 sm:text-lg">
-            We sell our own stock — browse current vehicles, enquire online, and track your
-            order with a secure MJ Carros account.
-          </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <Link href="/shop">
-              <Button size="lg">View our stock</Button>
-            </Link>
-            <Link href="/sign-up">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/85 bg-transparent text-white hover:bg-white hover:text-brand"
-              >
-                Create account
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
+      <HomeCtaSection />
     </div>
   );
 };

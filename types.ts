@@ -4,6 +4,8 @@ export interface Product {
   category: string;
   description: string;
   title: string;
+  titlePt?: string | null;
+  descriptionPt?: string | null;
   price: number;
   finalPrice?: number;
   discount?: number;
@@ -57,6 +59,8 @@ export interface RequestData {
   /** Pre-uploaded image URLs from /api/upload */
   galleryURLs?: string[];
   imageURLs?: string[];
+  titlePt?: string;
+  descriptionPt?: string;
   discount?: number;
   // New optional attributes
   modelName?: string;

@@ -3,19 +3,21 @@
 import { useEffect, useState } from "react";
 import Gallery from "@/components/gallery/gallery";
 import Info from "@/components/gallery/info";
-import Container from "@/components/ui/container";
 import ProductCard from "@/components/ui/product-card";
 import { Product } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Spinner from "@/components/Spinner";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
+import { useLocale } from "@/components/locale-provider";
+import { localizeProduct, t as translate } from "@/lib/i18n";
 
 interface ProductDetailProps {
   productId: string;
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
+  const { locale, t } = useLocale();
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,45 +25,42 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
 
   useEffect(() => {
     if (!productId) {
-      console.error('No productId provided');
-      setError('No product ID provided');
+      setError(translate(locale, "product.invalidId"));
       setIsLoading(false);
       return;
     }
 
     const fetchProduct = async () => {
       try {
-        console.log('Fetching product:', productId);
         const response = await fetch(`/api/product/${productId}`);
-        console.log('Response status:', response.status);
-        
+
         if (!response.ok) {
-          console.error('Response not ok:', response.status, response.statusText);
           throw new Error(`Failed to fetch product: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        console.log('API response:', data);
-        
+
         if (!data.product) {
-          console.error('No product in response:', data);
-          throw new Error('No product data received');
+          throw new Error(translate(locale, "product.notFound"));
         }
-        
-        // Transform the database product to match the Product interface
+
         const rawImages = data.product.imageURLs;
         const imageURLs: string[] = (
           Array.isArray(rawImages)
-            ? rawImages.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0)
+            ? rawImages.filter(
+                (u: unknown) => typeof u === "string" && String(u).trim().length > 0
+              )
             : rawImages != null && String(rawImages).trim() !== ""
               ? [String(rawImages)]
               : []
         ).map((u) => resolvePublicImageSrc(String(u)));
 
-        const transformedProduct: Product = {
+        const baseProduct: Product = {
           id: data.product._id?.toString(),
           title: data.product.title,
           description: data.product.description,
+          titlePt: data.product.titlePt,
+          descriptionPt: data.product.descriptionPt,
           price: data.product.price,
           finalPrice: data.product.finalPrice || undefined,
           discount: data.product.discount || undefined,
@@ -75,79 +74,87 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           updatedAt: data.product.updatedAt,
         };
 
-        // Transform related products
-        const mapImages = (p: any): string[] => {
+        const mapImages = (p: {
+          imageURLs?: unknown;
+        }): string[] => {
           const raw = p?.imageURLs;
-          const list =
-            Array.isArray(raw)
-              ? raw.filter((u: unknown) => typeof u === "string" && String(u).trim().length > 0)
-              : raw != null && String(raw).trim() !== ""
-                ? [String(raw)]
-                : [];
+          const list = Array.isArray(raw)
+            ? raw.filter(
+                (u: unknown) => typeof u === "string" && String(u).trim().length > 0
+              )
+            : raw != null && String(raw).trim() !== ""
+              ? [String(raw)]
+              : [];
           return list.map((u) => resolvePublicImageSrc(String(u)));
         };
 
-        const transformedRelatedProducts: Product[] = (data.relatedProducts || []).map((dbProduct: any) => ({
-          id: dbProduct._id?.toString(),
-          title: dbProduct.title,
-          description: dbProduct.description,
-          price: dbProduct.price,
-          finalPrice: dbProduct.finalPrice || undefined,
-          discount: dbProduct.discount || undefined,
-          featured: dbProduct.featured,
-          sold: !!dbProduct.sold,
-          negotiable: !!dbProduct.negotiable,
-          imageURLs: mapImages(dbProduct),
-          category: dbProduct.category,
-          categoryId: dbProduct.categoryId,
-          createdAt: dbProduct.createdAt,
-          updatedAt: dbProduct.updatedAt,
-        }));
+        const transformedRelatedProducts: Product[] = (
+          data.relatedProducts || []
+        ).map(
+          (dbProduct: Product & { _id?: string; titlePt?: string; descriptionPt?: string }) =>
+            localizeProduct(
+              {
+                id: dbProduct._id?.toString() || dbProduct.id,
+                title: dbProduct.title,
+                description: dbProduct.description,
+                titlePt: dbProduct.titlePt,
+                descriptionPt: dbProduct.descriptionPt,
+                price: dbProduct.price,
+                finalPrice: dbProduct.finalPrice || undefined,
+                discount: dbProduct.discount || undefined,
+                featured: dbProduct.featured,
+                sold: !!dbProduct.sold,
+                negotiable: !!dbProduct.negotiable,
+                imageURLs: mapImages(dbProduct),
+                category: dbProduct.category,
+                categoryId: dbProduct.categoryId,
+                createdAt: dbProduct.createdAt,
+                updatedAt: dbProduct.updatedAt,
+              },
+              locale
+            )
+        );
 
-        console.log('Transformed product:', transformedProduct);
-        console.log('Transformed related products:', transformedRelatedProducts);
-
-        setProduct(transformedProduct);
+        setProduct(localizeProduct(baseProduct, locale));
         setRelatedProducts(transformedRelatedProducts);
       } catch (err) {
-        console.error('Error fetching product:', err);
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        console.error("Error fetching product:", err);
+        setError(
+          err instanceof Error ? err.message : translate(locale, "common.error")
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProduct();
-  }, [productId]);
-
-  console.log('Component state:', { isLoading, error, product, relatedProducts });
+    setIsLoading(true);
+    void fetchProduct();
+  }, [productId, locale]);
 
   if (isLoading) {
-    console.log('Rendering loading state');
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="page-canvas flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
           <Spinner />
-          <p className="mt-4 text-gray-600">Loading product details...</p>
-          <p className="text-sm text-gray-500">Product ID: {productId}</p>
+          <p className="mt-4 text-muted-foreground">{t("product.loading")}</p>
         </div>
       </div>
     );
   }
 
   if (error || !product) {
-    console.log('Rendering error state:', { error, product });
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="page-canvas flex min-h-[50vh] items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-red-600 text-lg mb-4">
-            {error || "Product not found"}
+          <p className="mb-4 text-lg text-destructive">
+            {error || t("product.notFound")}
           </p>
-          <Link 
-            href="/shop" 
-            className="text-blue-600 hover:text-blue-800 underline"
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
           >
-            Back to shop
+            <ArrowLeft className="h-5 w-5 shrink-0" />
+            {t("product.backToShop")}
           </Link>
         </div>
       </div>
@@ -155,41 +162,44 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
   }
 
   return (
-    <div>
-      <div className="bg-white">
-        <Container>
-          <div className="px-4 py-10 sm:px-6 lg:px-16">
-            <Link href="/shop" className="flex items-center mb-5 gap-x-1">
-              <ArrowLeft className="w-5 h-5 shrink-0" />
-              <p className="text-md font-semibold leading-none">Back to shop</p>
-            </Link>
-            
-            <div className="lg:grid lg:grid-cols-[minmax(0,500px)_minmax(0,1fr)] lg:items-start lg:gap-x-8">
-              <Gallery
-                images={product.imageURLs}
-                sold={product.sold}
-                negotiable={!!product.negotiable}
-              />
-              <div className="mt-10 min-w-0 px-4 sm:mt-16 sm:px-0 lg:mt-0">
-                <Info data={product} />
-              </div>
-            </div>
+    <div className="page-canvas min-h-full w-full">
+      <div className="product-page-shell mx-auto w-full max-w-[1400px] bg-card">
+        <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+          <Link
+            href="/shop"
+            className="mb-6 inline-flex items-center gap-1 font-semibold text-foreground hover:text-primary"
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" />
+            {t("product.backToShop")}
+          </Link>
 
-            {relatedProducts.length > 0 && (
-              <>
-                <hr className="my-10" />
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-3xl">Recommended</h3>
-                  <div className="product-grid">
-                    {relatedProducts.map((item: Product) => (
-                      <ProductCard key={item.id} data={item} />
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+          <div className="lg:grid lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)] lg:items-start lg:gap-x-10">
+            <Gallery
+              images={product.imageURLs}
+              sold={product.sold}
+              negotiable={!!product.negotiable}
+            />
+            <div className="mt-8 min-w-0 lg:mt-0">
+              <Info data={product} />
+            </div>
           </div>
-        </Container>
+
+          {relatedProducts.length > 0 && (
+            <>
+              <hr className="my-10 border-border" />
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold text-brand sm:text-3xl">
+                  {t("product.recommended")}
+                </h3>
+                <div className="shop-grid-catalog !p-0">
+                  {relatedProducts.map((item: Product) => (
+                    <ProductCard key={item.id} data={item} />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

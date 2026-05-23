@@ -201,6 +201,10 @@ export async function PUT(
       else unsetData.finalPrice = "";
     }
     if (hasField('description')) setData.description = description;
+    const titlePt = String(formData.get("titlePt") || "");
+    const descriptionPt = String(formData.get("descriptionPt") || "");
+    if (hasField("titlePt")) setData.titlePt = titlePt;
+    if (hasField("descriptionPt")) setData.descriptionPt = descriptionPt;
     if (hasField('category')) setData.category = category;
     if (hasField('category') && categoryIdUpdate) setData.categoryId = categoryIdUpdate;
     if (hasField('modelName')) setData.modelName = modelName;

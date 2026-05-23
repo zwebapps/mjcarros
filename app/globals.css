@@ -549,4 +549,16 @@
   .shop-filter-label {
     @apply mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground;
   }
+
+  .product-page-shell {
+    @apply border-x border-border shadow-sm;
+  }
+
+  .product-cta-row {
+    @apply w-full max-w-xl;
+  }
+
+  .product-cta-button {
+    @apply justify-center;
+  }
 }

@@ -9,12 +9,14 @@ import {
   DEFAULT_CATEGORY_ORDER,
 } from "@/lib/default-categories";
 import type { ShopSidebarPayload } from "@/lib/shop-sidebar-data";
+import { useLocale } from "@/components/locale-provider";
 
 const fallbackCategories = sortCategoriesForDisplay(
   DEFAULT_CATEGORY_ORDER.map((name) => ({ id: name, category: name, count: 0 }))
 );
 
 const SidebarProducts = () => {
+  const { t } = useLocale();
   const [data, setData] = useState<ShopSidebarPayload | null>(null);
   const [error, setError] = useState(false);
 
@@ -50,9 +52,9 @@ const SidebarProducts = () => {
     <aside className="shop-sidebar">
       <div className="shop-sidebar-inner">
         <div>
-          <p className="shop-sidebar-title">Category</p>
+          <p className="shop-sidebar-title">{t("shop.category")}</p>
           {error && !data && (
-            <p className="mb-2 text-xs text-destructive">Could not load counts. Refresh the page.</p>
+            <p className="mb-2 text-xs text-destructive">{t("shop.sidebarLoadError")}</p>
           )}
           <SidebarItems categories={categories} totalCount={totalCount} />
         </div>
