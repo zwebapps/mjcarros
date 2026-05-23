@@ -37,3 +37,15 @@ export async function uploadGalleryFile(
 
   return data.url;
 }
+
+/** Upload multiple product images; fails on first error. */
+export async function uploadProductImages(
+  files: File[],
+  token: string | null
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    urls.push(await uploadGalleryFile(file, token));
+  }
+  return urls;
+}

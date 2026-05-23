@@ -3,15 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import React, { useEffect, useMemo, useState } from "react";
 import { type SizeProduct, type createData } from "./edit-product";
-import Image from "next/image";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import {
   GalleryUploadField,
   galleryItemsToUrls,
 } from "@/components/admin/gallery-upload-field";
-import type { GalleryUploadItem } from "@/lib/admin-gallery-upload";
+import { LocalImagePreview } from "@/components/admin/local-image-preview";
+import {
+  uploadProductImages,
+  type GalleryUploadItem,
+} from "@/lib/admin-gallery-upload";
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 
@@ -123,9 +125,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const productKey = data._id || data.id || "";
   useEffect(() => {
     setPreviewImage(imageURLs);
-  }, [productKey]);
-
-  useEffect(() => {
+    setGalleryItems([]);
     setDataForm({
       title,
       description,
@@ -140,33 +140,16 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       discount,
       modelName,
       year,
-      stockQuantity: (typeof stockQuantity === 'number' ? String(stockQuantity) : (stockQuantity || '1')) as any,
+      stockQuantity: (typeof stockQuantity === "number"
+        ? String(stockQuantity)
+        : (stockQuantity || "1")) as any,
       color,
       fuelType,
       transmission,
       mileage,
       condition,
     });
-  }, [
-    featured,
-    title,
-    description,
-    price,
-    category,
-    imageURLs,
-    productSizes,
-    categoryId,
-    discount,
-    modelName,
-    year,
-    stockQuantity,
-    color,
-    fuelType,
-    transmission,
-    mileage,
-    condition,
-    (data as any).sold,
-  ]);
+  }, [productKey]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -193,44 +176,100 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files as FileList;
+    if (!selectedFiles?.length) return;
+
+    const newFiles = Array.from(selectedFiles);
+    const newPreviews = newFiles.map(
+      (file) => URL.createObjectURL(file) as string
+    );
+
     setDataForm((prevData) => ({
       ...prevData,
-      files: [...prevData.files, ...Array.from(selectedFiles)],
+      files: [...prevData.files, ...newFiles],
     }));
+    setPreviewImage((prev) => [...(prev || []), ...newPreviews]);
+    e.target.value = "";
+  };
 
-    if (selectedFiles.length > 0) {
-      const imagePreviews: string[] = Array.from(selectedFiles).map(
-        (file) => URL.createObjectURL(file) as string
-      );
-      setPreviewImage([...(previewImage || []), ...imagePreviews]);
-    }
+  const removePreviewAt = (index: number) => {
+    setPreviewImage((prev) => {
+      if (!prev) return prev;
+      const url = prev[index];
+      if (url?.startsWith("blob:")) {
+        const blobIndex = prev
+          .slice(0, index)
+          .filter((u) => u.startsWith("blob:")).length;
+        URL.revokeObjectURL(url);
+        setDataForm((prevForm) => ({
+          ...prevForm,
+          files: prevForm.files.filter((_, i) => i !== blobIndex),
+        }));
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (galleryItems.some((i) => i.status === "uploading")) {
+      toast.error("Wait for gallery uploads to finish");
+      return;
+    }
+
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+    if (!token) {
+      toast.error("Please sign in as admin");
+      return;
+    }
+
     setIsLoading(true);
+
+    const galleryUrls = galleryItemsToUrls(galleryItems);
+    const persisted = (previewImage || []).filter(
+      (img) => !img.startsWith("blob:")
+    );
+
+    let uploadedMain: string[] = [];
+    try {
+      if (dataForm.files.length > 0) {
+        uploadedMain = await uploadProductImages(dataForm.files, token);
+      }
+    } catch (err) {
+      setIsLoading(false);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to upload product images"
+      );
+      return;
+    }
+
+    const merged = Array.from(
+      new Set([...persisted, ...uploadedMain, ...galleryUrls])
+    );
+
+    if (merged.length === 0) {
+      setIsLoading(false);
+      toast.error(
+        "Add at least one image (product image or gallery) before saving"
+      );
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
+    formData.delete("image");
+
     formData.append("isFeatured", checkbox.toString());
     formData.append("isSold", soldCheckbox.toString());
     formData.append("negotiable", negotiableCheckbox.toString());
-    // Include the current image list (filter out blobs). Always append, even if empty
-    if (previewImage) {
-      const validImages = previewImage.filter((img) => !img.startsWith('blob:'));
-      formData.append("existingImageURLs", JSON.stringify(validImages));
+    formData.append("existingImageURLs", JSON.stringify(merged));
+
+    try {
+      await onSubmit(formData);
+    } finally {
+      setIsLoading(false);
     }
-    await onSubmit(formData);
-
-    setIsLoading(false);
   };
-
-  useEffect(() => {
-    const urls = galleryItemsToUrls(galleryItems);
-    if (!urls.length) return;
-    setPreviewImage((prev) => {
-      const base = (prev || []).filter((img) => !img.startsWith("blob:"));
-      return Array.from(new Set([...base, ...urls]));
-    });
-  }, [galleryItems]);
 
   // sizes removed
 
@@ -400,44 +439,31 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
           <div>Mark price as negotiable</div>
         </div>
       </div>
-      <label htmlFor="image">Change Product Image</label>
+      <label htmlFor="image">Change product image</label>
       <Input
         type="file"
         id="image"
         name="image"
+        accept="image/*"
         onChange={handleFileChange}
         multiple
       />
-      <div className="flex gap-2 flex-wrap">
-        {previewImage?.map((preview, index) => {
-          const isBlobOrData = /^(blob:|data:)/.test(preview);
-          const imagePath = isBlobOrData ? preview : resolvePublicImageSrc(preview);
-          
-          return (
-            <div key={`preview-${index}-${preview.slice(-10)}`} className="relative">
-              <img
-                src={imagePath}
-                alt={`Preview ${index + 1}`}
-                width={100}
-                height={100}
-                className="rounded-sm object-cover border"
-                onError={(e) => {
-                  console.warn(`Failed to load image: ${imagePath}`);
-                  const img = e.currentTarget as HTMLImageElement;
-                  img.src = '/placeholder-image.svg';
-                }}
-              />
-              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center cursor-pointer"
-                   onClick={() => {
-                     const newPreviews = previewImage.filter((_, i) => i !== index);
-                     setPreviewImage(newPreviews);
-                   }}>
-                ×
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {previewImage && previewImage.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {previewImage.map((preview, index) => (
+            <LocalImagePreview
+              key={`${preview}-${index}`}
+              src={preview}
+              alt={`Product image ${index + 1}`}
+              onRemove={() => removePreviewAt(index)}
+            />
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Product images above. Gallery below uploads separately and is saved on
+        Submit.
+      </p>
       <GalleryUploadField
         items={galleryItems}
         onChange={setGalleryItems}

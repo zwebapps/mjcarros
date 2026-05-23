@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { writeBufferToPublicUploads } from "@/lib/public-uploads";
+import {
+  buildUploadRelativePath,
+  writeBufferToPublicUploads,
+} from "@/lib/public-uploads";
 import { ObjectId } from "mongodb";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
@@ -9,6 +12,19 @@ export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
 const MONGODB_URI = getMongoDbUri();
 const dbName = getMongoDbName();
+
+function sanitizeImageUrls(urls: string[]): string[] {
+  return urls
+    .map((u) => (typeof u === "string" ? u.trim() : ""))
+    .filter((u): u is string => {
+      if (!u || u === "-") return false;
+      return (
+        u.startsWith("/uploads/") ||
+        u.startsWith("http://") ||
+        u.startsWith("https://")
+      );
+    });
+}
 
 export async function GET(
   request: NextRequest,
@@ -130,27 +146,40 @@ export async function PUT(
     const existingImages: string[] | null = existingImagesRaw ? JSON.parse(String(existingImagesRaw)) : null;
     let newUrls: string[] = [];
     
+    const uploadFailures: string[] = [];
     if (newFiles.length > 0) {
-      try {
-        for (const file of newFiles) {
-          if (!file) continue;
+      for (const file of newFiles) {
+        if (!file || typeof file === "string" || file.size === 0) continue;
+        try {
           const bytes = Buffer.from(await file.arrayBuffer());
-          const safe = String(file.name).replace(/\s+/g, '-').replace(/[^A-Za-z0-9._-]/g, '');
-          const relativePath = `product/${Date.now()}-${safe || 'image'}`;
+          const relativePath = buildUploadRelativePath("product", file.name);
           const url = await writeBufferToPublicUploads(relativePath, bytes);
           newUrls.push(url);
+        } catch (localError) {
+          const name = file.name || "image";
+          uploadFailures.push(name);
+          console.warn(
+            "⚠️ Upload failed:",
+            name,
+            localError instanceof Error ? localError.message : String(localError)
+          );
         }
-      } catch (localError) {
-        console.warn('⚠️ Upload failed:', localError instanceof Error ? localError.message : String(localError));
       }
     }
 
-    // Decide final gallery URLs
-    // If client provided existingImageURLs, treat it as the final list and ignore newly uploaded files.
-    // Otherwise, append any newly uploaded files to the current ones.
+    if (uploadFailures.length > 0 && newUrls.length === 0) {
+      return NextResponse.json(
+        {
+          error: `Failed to save image file(s): ${uploadFailures.join(", ")}. Check server uploads folder permissions.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Client sends final URL list via existingImageURLs; multipart files are a fallback.
     let combinedUrls: string[] | undefined;
     if (existingImages !== null) {
-      combinedUrls = existingImages;
+      combinedUrls = Array.from(new Set([...existingImages, ...newUrls]));
     } else if (newUrls.length && existing) {
       combinedUrls = [...(existing.imageURLs || []), ...newUrls];
     } else if (newUrls.length) {
@@ -186,11 +215,24 @@ export async function PUT(
     }
     if (hasField('condition')) setData.condition = condition || 'new';
     if (combinedUrls !== undefined) {
-      const sanitized = combinedUrls
-        .map((u) => typeof u === 'string' ? u.trim() : u)
-        .filter((u): u is string => typeof u === 'string' && u.length > 0 && !u.endsWith('-'));
+      const sanitized = sanitizeImageUrls(combinedUrls);
       const unique = Array.from(new Set(sanitized));
-      setData.imageURLs = unique;
+
+      if (unique.length > 0) {
+        setData.imageURLs = unique;
+      } else if (newFiles.length > 0) {
+        return NextResponse.json(
+          { error: "No valid image URLs to save. Upload images again from admin." },
+          { status: 400 }
+        );
+      } else if ((existing?.imageURLs?.length ?? 0) > 0) {
+        // Avoid wiping images when client sent an empty list by mistake
+        console.warn(
+          `[product/edit] Preserving ${existing!.imageURLs!.length} existing image(s); client sent empty existingImageURLs`
+        );
+      } else {
+        setData.imageURLs = [];
+      }
     }
 
     // Ensure a human-friendly productCode is set once

@@ -21,6 +21,15 @@ server {
 
     client_max_body_size 64M;
 
+    # Serve uploaded images directly from the host bind mount (recommended for mjcarros.pt)
+    # Path must match docker-compose.prod.yml: ./public/uploads on the server
+    location /uploads/ {
+        alias /var/www/mjcarros/public/uploads/;
+        expires 30d;
+        add_header Cache-Control "public";
+        try_files $uri =404;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;

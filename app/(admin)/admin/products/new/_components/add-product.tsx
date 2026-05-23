@@ -3,16 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RequestData } from "@/types";
 import axios from "axios";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import SimpleMDE from "react-simplemde-editor";
+import { LocalImagePreview } from "@/components/admin/local-image-preview";
 import {
   GalleryUploadField,
   galleryItemsToUrls,
 } from "@/components/admin/gallery-upload-field";
-import type { GalleryUploadItem } from "@/lib/admin-gallery-upload";
+import {
+  uploadProductImages,
+  type GalleryUploadItem,
+} from "@/lib/admin-gallery-upload";
 import "easymde/dist/easymde.min.css";
 
 type Category = {
@@ -109,17 +112,31 @@ const AddProduct = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files as FileList;
+    if (!selectedFiles?.length) return;
+
+    const newFiles = Array.from(selectedFiles);
+    const newPreviews = newFiles.map(
+      (file) => URL.createObjectURL(file) as string
+    );
+
     setDataForm((prevData) => ({
       ...prevData,
-      files: [...prevData.files, ...Array.from(selectedFiles)],
+      files: [...prevData.files, ...newFiles],
     }));
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
+    e.target.value = "";
+  };
 
-    if (selectedFiles.length > 0) {
-      const imagePreviews: string[] = Array.from(selectedFiles).map(
-        (file) => URL.createObjectURL(file) as string
-      );
-      setImagePreviews((prev) => [...prev, ...imagePreviews]);
-    }
+  const removeMainPreview = (index: number) => {
+    setImagePreviews((prev) => {
+      const url = prev[index];
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      return prev.filter((_, i) => i !== index);
+    });
+    setDataForm((prev) => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+    }));
   };
 
   const handleCheckboxChange = (isChecked: boolean) => {
@@ -184,6 +201,35 @@ const AddProduct = () => {
 
     const convPrice = +dataForm.price;
 
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+    if (!token) {
+      setIsLoading(false);
+      toast.error("Please sign in as admin");
+      return;
+    }
+
+    let mainUrls: string[] = [];
+    try {
+      if (dataForm.files.length > 0) {
+        mainUrls = await uploadProductImages(dataForm.files, token);
+      }
+    } catch (err) {
+      setIsLoading(false);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to upload product images"
+      );
+      return;
+    }
+
+    const allImageUrls = Array.from(new Set([...galleryUrls, ...mainUrls]));
+
+    if (allImageUrls.length === 0) {
+      setIsLoading(false);
+      toast.error("Add at least one image before creating the product");
+      return;
+    }
+
     const requestData: RequestData = {
       title: dataForm.title,
       description: dataForm.description,
@@ -194,7 +240,8 @@ const AddProduct = () => {
       negotiable: dataForm.isNegotiable,
       category: dataForm.category,
       categoryId: dataForm.categoryId || dataForm.category,
-      imageURLs: galleryUrls,
+      galleryURLs: allImageUrls,
+      imageURLs: allImageUrls,
     };
 
     if (dataForm.discount !== undefined) {
@@ -219,14 +266,6 @@ const AddProduct = () => {
     formData.append("requestData", JSON.stringify(requestData));
 
     try {
-      const token =
-        typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
-      if (!token) {
-        toast.error("Please sign in as admin");
-        setIsLoading(false);
-        return;
-      }
-
       await axios.post("/api/product", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -448,18 +487,22 @@ const AddProduct = () => {
           multiple
         />
         {errors.files && <p className="text-red-500">{errors.files}</p>}
-        <div className="flex gap-2">
-          {imagePreviews.map((preview, index) => (
-            <Image
-              key={index}
-              src={preview}
-              alt={`Preview ${index}`}
-              width={100}
-              height={100}
-              className="rounded-sm"
-            />
-          ))}
-        </div>
+        {imagePreviews.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {imagePreviews.map((preview, index) => (
+              <LocalImagePreview
+                key={`${preview}-${index}`}
+                src={preview}
+                alt={`Main image ${index + 1}`}
+                onRemove={() => removeMainPreview(index)}
+              />
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Main images upload when you click Add Product. Gallery images upload
+          immediately when selected.
+        </p>
         <GalleryUploadField
           items={galleryItems}
           onChange={setGalleryItems}

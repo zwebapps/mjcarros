@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { writeBufferToPublicUploads } from "@/lib/public-uploads";
+import {
+  buildUploadRelativePath,
+  writeBufferToPublicUploads,
+} from "@/lib/public-uploads";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const runtime = "nodejs";
@@ -102,17 +105,36 @@ export async function POST(request: NextRequest) {
         ...(Array.isArray(parsed.imageURLs) ? parsed.imageURLs : []),
       ].filter((u): u is string => typeof u === "string" && u.length > 0);
 
-      const files = formData.getAll('files') as File[];
+      const files = formData.getAll("files") as File[];
+      const uploadFailures: string[] = [];
       for (const file of files) {
-        if (!file) continue;
-        const bytes = Buffer.from(await file.arrayBuffer());
-        const safe = file.name.replace(/\s+/g, '-').replace(/[^A-Za-z0-9._-]/g, '');
-        const relativePath = `product/${Date.now()}-${safe || 'image'}`;
-        const url = await writeBufferToPublicUploads(relativePath, bytes);
-        imageURLs.push(url);
+        if (!file || typeof file === "string" || file.size === 0) continue;
+        try {
+          const bytes = Buffer.from(await file.arrayBuffer());
+          const relativePath = buildUploadRelativePath("product", file.name);
+          const url = await writeBufferToPublicUploads(relativePath, bytes);
+          imageURLs.push(url);
+        } catch (err) {
+          uploadFailures.push(file.name || "image");
+          console.warn(
+            "[product/create] upload failed:",
+            file.name,
+            err instanceof Error ? err.message : String(err)
+          );
+        }
       }
 
       imageURLs = [...preUrls, ...imageURLs];
+
+      if (files.length > 0 && uploadFailures.length === files.length && !preUrls.length) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to save image files. Use gallery upload or check uploads folder permissions on the server.",
+          },
+          { status: 400 }
+        );
+      }
     } else {
       const body = await request.json();
       ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, sold, negotiable, ...extras } = body);

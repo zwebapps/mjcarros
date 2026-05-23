@@ -72,7 +72,11 @@ const EditProduct = () => {
       toast.success("Product edit successfully");
       router.push("/admin/products");
     } catch (error) {
-      toast.error("Something went wrong");
+      const msg =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? String(error.response.data.error)
+          : "Something went wrong";
+      toast.error(msg);
     }
   };
 

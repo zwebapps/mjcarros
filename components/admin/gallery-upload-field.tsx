@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import {
   uploadGalleryFile,
   type GalleryUploadItem,
@@ -117,58 +116,49 @@ export function GalleryUploadField({
       )}
       {items.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-3">
-          {items.map((item, idx) => {
-            const src =
-              item.status === "done" && item.serverUrl
-                ? resolvePublicImageSrc(item.serverUrl)
-                : item.previewUrl;
-
-            return (
-              <li
-                key={item.id}
-                className="relative w-[108px] shrink-0 rounded border border-border bg-muted/30 p-1"
-              >
+          {items.map((item, idx) => (
+            <li
+              key={item.id}
+              className="w-[108px] shrink-0 rounded border border-border bg-muted/30 p-1"
+            >
+              <div className="relative h-[100px] w-full overflow-hidden rounded">
                 <img
-                  src={src}
+                  src={item.previewUrl}
                   alt={`Gallery ${idx + 1}`}
-                  className="h-[100px] w-full rounded object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      "/placeholder-image.svg";
-                  }}
+                  className="h-full w-full object-cover"
                 />
                 <button
                   type="button"
-                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground"
+                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold leading-none text-destructive-foreground shadow"
                   onClick={() => removeItem(item.id)}
                   aria-label={`Remove ${item.name}`}
                 >
                   ×
                 </button>
-                <p
-                  className="mt-1 truncate text-[10px] text-muted-foreground"
-                  title={item.name}
-                >
-                  {item.name}
-                </p>
-                <p
-                  className={`text-[10px] font-semibold ${
-                    item.status === "done"
-                      ? "text-emerald-600"
-                      : item.status === "error"
-                        ? "text-destructive"
-                        : "text-primary"
-                  }`}
-                >
-                  {item.status === "uploading"
-                    ? "Uploading…"
-                    : item.status === "done"
-                      ? "Uploaded"
-                      : item.error || "Failed"}
-                </p>
-              </li>
-            );
-          })}
+              </div>
+              <p
+                className="mt-1 truncate text-[10px] text-muted-foreground"
+                title={item.name}
+              >
+                {item.name}
+              </p>
+              <p
+                className={`text-[10px] font-semibold ${
+                  item.status === "done"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : item.status === "error"
+                      ? "text-destructive"
+                      : "text-primary"
+                }`}
+              >
+                {item.status === "uploading"
+                  ? "Uploading…"
+                  : item.status === "done"
+                    ? "Uploaded"
+                    : item.error || "Failed"}
+              </p>
+            </li>
+          ))}
         </ul>
       )}
     </div>

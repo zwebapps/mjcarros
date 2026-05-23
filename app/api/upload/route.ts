@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { writeBufferToPublicUploads } from "@/lib/public-uploads";
+import {
+  buildUploadRelativePath,
+  writeBufferToPublicUploads,
+} from "@/lib/public-uploads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,8 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
-    const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, '-');
-    const relativePath = `${folder}/${Date.now()}-${safeName}`;
+    const relativePath = buildUploadRelativePath(folder, file.name);
     const url = await writeBufferToPublicUploads(relativePath, bytes);
 
     return NextResponse.json({ url, key: relativePath, local: true });
