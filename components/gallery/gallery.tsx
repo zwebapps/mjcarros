@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 
 import GalleryTab from "./gallery-tab";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
+import { NegotiableRibbon, SoldRibbon } from "@/components/ui/listing-ribbons";
 
 interface GalleryProps {
   images: string[];
@@ -85,10 +86,12 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], sold = false, negotiable
                 onClick={() => setIsLightboxOpen(true)}
               />
               {sold && (
-                <div className="absolute inset-0 bg-yellow-400/40 flex items-center justify-center pointer-events-none">
-                  <span className="bg-yellow-400 text-black font-bold px-4 py-1 rounded shadow">SOLD</span>
-                </div>
+                <>
+                  <SoldRibbon />
+                  <div className="pointer-events-none absolute inset-0 bg-black/35" />
+                </>
               )}
+              {negotiable && !sold && <NegotiableRibbon />}
               {normalizedImages.length > 1 && (
                 <>
                   <button
@@ -117,13 +120,6 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], sold = false, negotiable
               >
                 <Maximize2 className="w-4 h-4" />
               </button>
-              {negotiable && (
-                <div className="absolute top-3 left-3">
-                  <span className="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full font-medium shadow-sm">
-                    Negotiable
-                  </span>
-                </div>
-              )}
             </div>
           </Tab.Panel>
         ))}
@@ -145,10 +141,12 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], sold = false, negotiable
               onError={handleError}
             />
             {sold && (
-              <div className="absolute inset-0 bg-yellow-400/20 flex items-center justify-center pointer-events-none">
-                <span className="bg-yellow-400 text-black font-bold px-4 py-1 rounded shadow">SOLD</span>
-              </div>
+              <>
+                <SoldRibbon />
+                <div className="pointer-events-none absolute inset-0 bg-black/35" />
+              </>
             )}
+            {negotiable && !sold && <NegotiableRibbon />}
             {normalizedImages.length > 1 && (
               <>
                 <button
@@ -168,13 +166,6 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], sold = false, negotiable
                   <ChevronRight className="w-6 h-6" />
                 </button>
               </>
-            )}
-            {negotiable && (
-              <div className="absolute top-4 left-4">
-                <span className="bg-emerald-200/30 backdrop-blur text-emerald-200 text-xs px-2 py-1 rounded-full font-medium border border-emerald-300/50">
-                  Negotiable
-                </span>
-              </div>
             )}
             <button
               type="button"

@@ -410,6 +410,33 @@
     color: hsl(var(--negotiable-foreground));
   }
 
+  /* Product detail — markdown tables from admin descriptions */
+  .product-description table {
+    width: 100%;
+    margin: 1.25rem 0;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .product-description thead {
+    background: hsl(var(--muted) / 0.65);
+  }
+
+  .product-description th,
+  .product-description td {
+    border: 1px solid hsl(var(--border));
+    padding: 0.625rem 0.875rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .product-description th {
+    font-weight: 700;
+    color: hsl(var(--foreground));
+  }
+
   .listing-badge {
     display: inline-flex;
     align-items: center;

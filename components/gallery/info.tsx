@@ -8,6 +8,7 @@ import { Button } from "../ui/button";
 import useCart from "@/hooks/use-cart";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { formatProductDescription } from "@/lib/format-product-description";
 
 interface InfoProps {
   data: Product;
@@ -34,64 +35,46 @@ const Info: React.FC<InfoProps> = ({ data }) => {
             Featured
           </span>
         )}
-        {data.negotiable && (
-          <span className="inline-block bg-emerald-100 text-emerald-700 text-sm px-3 py-1 rounded-full font-medium">
-            Negotiable
-          </span>
-        )}
       </div>
 
       {/* Pricing */}
-      <div className="mt-3 flex items-end justify-between">
+      <div className="mt-3">
         {data.finalPrice && data.finalPrice > 0 && data.discount && data.discount > 0 ? (
           <div className="font-semibold">
             <div className="flex items-center gap-2">
               <span className="text-gray-500 line-through">
-                {formatCurrency(Number(data?.price), 'EUR')}
+                {formatCurrency(Number(data?.price), "EUR")}
               </span>
-              <div className="bg-red-600 text-sm text-white p-1 px-2 font-semibold rounded-sm">
+              <div className="rounded-sm bg-red-600 p-1 px-2 text-sm font-semibold text-white">
                 -{data?.discount}%
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-2xl text-gray-900 font-semibold">
-                {formatCurrency(Number(data.finalPrice), 'EUR')}
-              </p>
-              {data.negotiable && (
-                <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                  Negotiable
-                </span>
-              )}
-            </div>
+            <p className="mt-1 text-2xl font-semibold text-gray-900">
+              {formatCurrency(Number(data.finalPrice), "EUR")}
+            </p>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <p className="text-2xl text-gray-900 font-semibold">
-              {formatCurrency(Number(data?.price), 'EUR')}
-            </p>
-            {data.negotiable && (
-              <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                Negotiable
-              </span>
-            )}
-          </div>
+          <p className="text-2xl font-semibold text-gray-900">
+            {formatCurrency(Number(data?.price), "EUR")}
+          </p>
         )}
       </div>
 
-      {/* Rich Description — wrap long words/URLs; horizontal scroll for wide tables/pre */}
-      <div className="mt-6 min-w-0 w-full overflow-x-auto">
+      {/* Rich description — markdown + tab-separated tables from admin editor */}
+      <div className="mt-6 min-w-0 w-full">
         <div
           className={[
-            "prose prose-neutral max-w-none",
-            "prose-headings:mt-4 prose-headings:break-words",
-            "prose-p:break-words prose-li:break-words prose-td:break-words prose-th:break-words",
-            "prose-th:text-gray-900 prose-td:text-gray-700",
-            "prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:break-normal",
-            "[&_table]:max-w-full",
+            "product-description prose prose-neutral max-w-none",
+            "prose-headings:mt-6 prose-headings:mb-2 prose-headings:break-words prose-headings:text-gray-900",
+            "prose-p:my-3 prose-p:break-words prose-p:leading-relaxed prose-p:text-gray-700",
+            "prose-ul:my-3 prose-li:my-1 prose-li:break-words",
+            "prose-strong:text-gray-900",
             "[&_a]:break-all [&_code]:break-all",
           ].join(" ")}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{data?.description || ""}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {formatProductDescription(data?.description || "")}
+          </ReactMarkdown>
         </div>
       </div>
 
