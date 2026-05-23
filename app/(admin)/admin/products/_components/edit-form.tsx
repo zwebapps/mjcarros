@@ -209,6 +209,30 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     });
   };
 
+  const buildEditFormData = (imageUrls: string[]) => {
+    const formData = new FormData();
+    formData.append("name", dataForm.title);
+    formData.append("price", String(dataForm.price));
+    if (dataForm.discount != null && dataForm.discount !== undefined) {
+      formData.append("discount", String(dataForm.discount));
+    }
+    formData.append("description", dataForm.description);
+    formData.append("category", dataForm.category);
+    formData.append("modelName", dataForm.modelName || "");
+    formData.append("year", String(dataForm.year || 0));
+    formData.append("stockQuantity", String(dataForm.stockQuantity ?? 1));
+    formData.append("color", dataForm.color || "");
+    formData.append("fuelType", dataForm.fuelType || "");
+    formData.append("transmission", dataForm.transmission || "manual");
+    formData.append("mileage", String(dataForm.mileage ?? 0));
+    formData.append("condition", dataForm.condition || "new");
+    formData.append("isFeatured", checkbox.toString());
+    formData.append("isSold", soldCheckbox.toString());
+    formData.append("negotiable", negotiableCheckbox.toString());
+    formData.append("existingImageURLs", JSON.stringify(imageUrls));
+    return formData;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -256,13 +280,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       return;
     }
 
-    const formData = new FormData(e.currentTarget);
-    formData.delete("image");
-
-    formData.append("isFeatured", checkbox.toString());
-    formData.append("isSold", soldCheckbox.toString());
-    formData.append("negotiable", negotiableCheckbox.toString());
-    formData.append("existingImageURLs", JSON.stringify(merged));
+    const formData = buildEditFormData(merged);
 
     try {
       await onSubmit(formData);
