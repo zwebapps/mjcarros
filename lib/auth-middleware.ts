@@ -5,6 +5,7 @@
 // Subpath import avoids the main `jose` barrel (JWE → deflate → CompressionStream) which Edge warns on.
 import { jwtVerify } from "jose/jwt/verify";
 import type { JWTPayload } from "./auth";
+import { normalizeRole } from "./roles";
 
 export function extractTokenFromHeader(authHeader: string | null | undefined): string | null {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -31,7 +32,7 @@ export async function verifyTokenMiddleware(token: string): Promise<JWTPayload |
     return {
       userId: String(payload.userId ?? ""),
       email: String(payload.email ?? ""),
-      role: String(payload.role ?? ""),
+      role: normalizeRole(payload.role),
     };
   } catch {
     return null;

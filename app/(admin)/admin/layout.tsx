@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "../_components/Navbar";
 import Sidebar from "../_components/Sidebar";
 
+import { isAdminRole } from "@/lib/roles";
+
 interface User {
   id: string;
   email: string;
@@ -33,7 +35,7 @@ export default function AdminLayout({
 
     try {
       const userObj = JSON.parse(userData);
-      if (userObj.role !== 'ADMIN') {
+      if (!isAdminRole(userObj.role)) {
         router.push('/');
         return;
       }

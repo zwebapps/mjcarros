@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import { comparePassword, generateToken } from '@/lib/auth';
 import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
+import { normalizeRole } from '@/lib/roles';
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
 
@@ -14,18 +15,16 @@ export async function POST(request: NextRequest) {
     console.log('🔐 Signin request received');
     
     const { email, password } = await request.json();
-    console.log('📧 Email:', email);
+    const emailRaw = typeof email === "string" ? email.trim() : "";
+    const passwordRaw = typeof password === "string" ? password : "";
 
-    // Validate input
-    if (!email || !password) {
-      console.log('❌ Missing email or password');
+    if (!emailRaw || !passwordRaw) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
       );
     }
 
-    // Connect to MongoDB
     client = new MongoClient(MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
@@ -33,52 +32,41 @@ export async function POST(request: NextRequest) {
     });
     
     await client.connect();
-    console.log('✅ Connected to MongoDB');
     
     const db = client.db(getMongoDbName());
     const usersCollection = db.collection('users');
     
-    // Find user
-    console.log('🔍 Looking for user...');
-    const user = await usersCollection.findOne({ email });
-    console.log('👤 User found:', !!user);
+    const user = await usersCollection.findOne({
+      email: { $regex: new RegExp(`^${emailRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    });
 
     if (!user) {
-      console.log('❌ User not found');
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
 
-    // Verify password
-    console.log('🔐 Verifying password...');
-    const isValidPassword = await comparePassword(password, user.password);
-    console.log('🔐 Password valid:', isValidPassword);
+    const isValidPassword = await comparePassword(passwordRaw, user.password);
 
     if (!isValidPassword) {
-      console.log('❌ Invalid password');
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
 
-    // Generate token
-    console.log('🎫 Generating token...');
+    const role = normalizeRole(user.role);
     const token = generateToken({
       userId: user._id?.toString() || '',
       email: user.email,
-      role: user.role
+      role,
     });
-    console.log('✅ Token generated');
 
-    // Return user data (without password) and token
     const { password: _, ...userWithoutPassword } = user;
     
-    console.log('✅ Signin successful');
     return NextResponse.json({
-      user: userWithoutPassword,
+      user: { ...userWithoutPassword, role },
       token
     });
 

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { normalizeRole, type AppRole } from '@/lib/roles';
 
 /** Resolve at request time — not at module load — so `next build` (no env) does not throw. */
 function getJwtSecret(): string {
@@ -14,7 +15,7 @@ function getJwtSecret(): string {
 export interface JWTPayload {
   userId: string;
   email: string;
-  role: string;
+  role: AppRole;
 }
 
 export const hashPassword = async (password: string): Promise<string> => {
@@ -27,13 +28,16 @@ export const comparePassword = async (password: string, hashedPassword: string):
 };
 
 export const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: '7d' });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
 };
 
 export const verifyToken = (token: string): JWTPayload | null => {
   try {
     const decoded = jwt.verify(token, getJwtSecret()) as JWTPayload;
-    return decoded;
+    return {
+      ...decoded,
+      role: normalizeRole(decoded.role),
+    };
   } catch (error) {
     return null;
   }
