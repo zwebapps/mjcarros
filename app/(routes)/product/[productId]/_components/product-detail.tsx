@@ -68,6 +68,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
           imageURLs,
           category: data.product.category,
           categoryId: data.product.categoryId,
+          modelName: data.product.modelName,
+          year: data.product.year,
+          fuelType: data.product.fuelType,
+          transmission: data.product.transmission,
+          mileage: data.product.mileage,
+          condition: data.product.condition,
           createdAt: data.product.createdAt,
           updatedAt: data.product.updatedAt,
         };

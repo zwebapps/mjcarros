@@ -561,4 +561,33 @@
   .product-cta-button {
     @apply justify-center;
   }
+
+  /* Standvirtual-style “Destaques” highlights */
+  .product-highlights {
+    @apply mt-5 border-t border-border pt-5;
+  }
+
+  .product-highlights-title {
+    @apply mb-4 text-lg font-semibold text-foreground;
+  }
+
+  .product-highlights-grid {
+    @apply flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory;
+  }
+
+  .product-highlight-item {
+    @apply min-w-[8.5rem] shrink-0 snap-start rounded-lg border border-border bg-muted/40 px-4 py-3;
+  }
+
+  .product-highlight-label {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .product-highlight-value {
+    @apply mt-1 text-base font-semibold leading-snug text-foreground;
+  }
+
+  .product-overview-line {
+    @apply mt-4 text-sm leading-relaxed text-muted-foreground;
+  }
 }

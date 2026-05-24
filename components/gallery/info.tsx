@@ -3,7 +3,7 @@ import { formatCurrency } from "@/lib/utils";
 
 import { ShoppingCart } from "lucide-react";
 
-import { Category, Product } from "@/types";
+import { Product } from "@/types";
 import { Button } from "../ui/button";
 import useCart from "@/hooks/use-cart";
 import ReactMarkdown from "react-markdown";
@@ -13,6 +13,7 @@ import { formatProductDescription } from "@/lib/format-product-description";
 import { useLocale } from "@/components/locale-provider";
 import { localeToIntl } from "@/lib/i18n";
 import { useTranslatedText } from "@/hooks/use-translated-text";
+import { ProductSpecs } from "@/components/gallery/product-specs";
 
 interface InfoProps {
   data: Product;
@@ -33,11 +34,8 @@ const Info: React.FC<InfoProps> = ({ data }) => {
     <div className="min-w-0 max-w-full">
       <h1 className="text-3xl font-bold text-gray-900 break-words">{displayTitle}</h1>
 
-      {/* Category badges — flex-wrap so labels never run together on narrow widths */}
+      {/* Featured badge — category and specs shown as text below */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="inline-block bg-blue-600 text-white text-sm px-3 py-1 rounded-full font-medium">
-          {data.category}
-        </span>
         {data.featured && (
           <span className="inline-block bg-yellow-500 text-white text-sm px-3 py-1 rounded-full font-medium">
             {t("product.featured")}
@@ -68,8 +66,13 @@ const Info: React.FC<InfoProps> = ({ data }) => {
         )}
       </div>
 
-      {/* Rich description — markdown + tab-separated tables from admin editor */}
-      <div className="mt-6 min-w-0 w-full">
+      <ProductSpecs data={data} />
+
+      {/* Description — Standvirtual “Detalhes” section */}
+      <div className="mt-8 min-w-0 w-full">
+        <h2 className="mb-4 text-lg font-semibold text-foreground">
+          {t("product.details")}
+        </h2>
         <div
           className={[
             "product-description prose prose-neutral max-w-none",

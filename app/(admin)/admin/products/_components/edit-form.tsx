@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin-gallery-upload";
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
+import { getProductDescriptionMdeOptions } from "@/lib/admin-product-mde-options";
 
 type EditFormProps = {
   data: createData;
@@ -336,14 +337,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         id="description"
         value={dataForm.description}
         onChange={(value) => setDataForm({ ...dataForm, description: value })}
-        options={useMemo(() => ({
-          spellChecker: false,
-          status: false,
-          sideBySide: true,
-          autoDownloadFontAwesome: false,
-          placeholder:
-            "Use Enter for new lines. Headings (##), lists (-), tables (|). Pasted specs break onto separate lines on the shop page.",
-        }), []) as any}
+        options={useMemo(() => getProductDescriptionMdeOptions(), []) as any}
       />
 
       <label htmlFor="category">Choose a category</label>

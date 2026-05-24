@@ -35,7 +35,16 @@
     "recommended": "Recomendados",
     "loading": "A carregar detalhes do veículo…",
     "notFound": "Veículo não encontrado",
-    "invalidId": "ID de veículo inválido"
+    "invalidId": "ID de veículo inválido",
+    "specHighlights": "Destaques",
+    "specCategory": "Segmento",
+    "specYear": "Ano",
+    "specFuelType": "Combustível",
+    "specTransmission": "Tipo de caixa",
+    "specMileage": "Quilómetros",
+    "specCondition": "Estado",
+    "firstRegistration": "Primeiro registo",
+    "details": "Detalhes"
   },
   "home": {
     "viewStock": "Ver o nosso stock",

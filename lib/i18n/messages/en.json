@@ -35,7 +35,16 @@
     "recommended": "Recommended",
     "loading": "Loading vehicle details…",
     "notFound": "Vehicle not found",
-    "invalidId": "Invalid vehicle ID"
+    "invalidId": "Invalid vehicle ID",
+    "specHighlights": "Highlights",
+    "specCategory": "Segment",
+    "specYear": "Year",
+    "specFuelType": "Fuel",
+    "specTransmission": "Gearbox",
+    "specMileage": "Mileage",
+    "specCondition": "Condition",
+    "firstRegistration": "First registration",
+    "details": "Details"
   },
   "home": {
     "viewStock": "View our stock",

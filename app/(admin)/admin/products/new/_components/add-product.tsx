@@ -17,6 +17,7 @@ import {
   type GalleryUploadItem,
 } from "@/lib/admin-gallery-upload";
 import "easymde/dist/easymde.min.css";
+import { getProductDescriptionMdeOptions } from "@/lib/admin-product-mde-options";
 
 type Category = {
   _id?: string;
@@ -292,15 +293,7 @@ const AddProduct = () => {
 
   // sizes removed
 
-  const mdeOptions = useMemo(() => ({
-    spellChecker: false,
-    status: false,
-    sideBySide: true,
-    placeholder:
-      "Use Enter for new lines. Headings (##), lists (-), tables (|). Pasted specs break onto separate lines on the shop page.",
-    autosave: { enabled: false },
-    autoDownloadFontAwesome: true,
-  }), []);
+  const mdeOptions = useMemo(() => getProductDescriptionMdeOptions(), []);
 
   return (
     <div className="flex justify-center items-center max-md:justify-start">
