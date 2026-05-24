@@ -5,6 +5,7 @@ import {
   buildUploadRelativePath,
   writeBufferToPublicUploads,
 } from "@/lib/public-uploads";
+import { mergeProductImageUrls } from "@/lib/product-image-urls";
 import { ObjectId } from "mongodb";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
@@ -14,16 +15,7 @@ const MONGODB_URI = getMongoDbUri();
 const dbName = getMongoDbName();
 
 function sanitizeImageUrls(urls: string[]): string[] {
-  return urls
-    .map((u) => (typeof u === "string" ? u.trim() : ""))
-    .filter((u): u is string => {
-      if (!u || u === "-") return false;
-      return (
-        u.startsWith("/uploads/") ||
-        u.startsWith("http://") ||
-        u.startsWith("https://")
-      );
-    });
+  return mergeProductImageUrls(urls);
 }
 
 export async function GET(
@@ -179,11 +171,11 @@ export async function PUT(
     // Client sends final URL list via existingImageURLs; multipart files are a fallback.
     let combinedUrls: string[] | undefined;
     if (existingImages !== null) {
-      combinedUrls = Array.from(new Set([...existingImages, ...newUrls]));
+      combinedUrls = mergeProductImageUrls(existingImages, newUrls);
     } else if (newUrls.length && existing) {
-      combinedUrls = [...(existing.imageURLs || []), ...newUrls];
+      combinedUrls = mergeProductImageUrls(existing.imageURLs || [], newUrls);
     } else if (newUrls.length) {
-      combinedUrls = newUrls;
+      combinedUrls = mergeProductImageUrls(newUrls);
     }
 
     // Prepare update data using field presence (not truthiness)
@@ -215,8 +207,7 @@ export async function PUT(
     }
     if (hasField('condition')) setData.condition = condition || 'new';
     if (combinedUrls !== undefined) {
-      const sanitized = sanitizeImageUrls(combinedUrls);
-      const unique = Array.from(new Set(sanitized));
+      const unique = sanitizeImageUrls(combinedUrls);
 
       if (unique.length > 0) {
         setData.imageURLs = unique;

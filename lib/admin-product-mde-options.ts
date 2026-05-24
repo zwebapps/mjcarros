@@ -11,13 +11,18 @@ const MARKDOWN_TABLE_TEMPLATE = [
 
 /** Shared SimpleMDE / EasyMDE config for product descriptions (add + edit). */
 export function getProductDescriptionMdeOptions(
-  overrides: Partial<Options> = {}
-): Options {
+  overrides: Partial<Options> = {},
+  autosaveKey = "mjcarros-product-description-new"
+): Partial<Options> {
   return {
     spellChecker: false,
     status: false,
     sideBySide: true,
-    autosave: { enabled: false },
+    autosave: {
+      enabled: true,
+      uniqueId: autosaveKey,
+      delay: 2000,
+    },
     autoDownloadFontAwesome: true,
     placeholder:
       "Use headings (##), lists (-), or the table button. Markdown tables use | Column | syntax.",
@@ -48,5 +53,5 @@ export function getProductDescriptionMdeOptions(
       "guide",
     ],
     ...overrides,
-  };
+  } as Partial<Options>;
 }

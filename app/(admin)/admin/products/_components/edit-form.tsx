@@ -17,6 +17,7 @@ import {
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 import { getProductDescriptionMdeOptions } from "@/lib/admin-product-mde-options";
+import { mergeProductImageUrls } from "@/lib/product-image-urls";
 
 type EditFormProps = {
   data: createData;
@@ -269,9 +270,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       return;
     }
 
-    const merged = Array.from(
-      new Set([...persisted, ...uploadedMain, ...galleryUrls])
-    );
+    const merged = mergeProductImageUrls(persisted, uploadedMain, galleryUrls);
 
     if (merged.length === 0) {
       setIsLoading(false);
@@ -337,7 +336,16 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         id="description"
         value={dataForm.description}
         onChange={(value) => setDataForm({ ...dataForm, description: value })}
-        options={useMemo(() => getProductDescriptionMdeOptions(), []) as any}
+        options={
+          useMemo(
+            () =>
+              getProductDescriptionMdeOptions(
+                {},
+                `mjcarros-product-description-${productKey || "edit"}`
+              ),
+            [productKey]
+          ) as any
+        }
       />
 
       <label htmlFor="category">Choose a category</label>

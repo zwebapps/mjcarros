@@ -18,6 +18,7 @@ import {
 } from "@/lib/admin-gallery-upload";
 import "easymde/dist/easymde.min.css";
 import { getProductDescriptionMdeOptions } from "@/lib/admin-product-mde-options";
+import { mergeProductImageUrls } from "@/lib/product-image-urls";
 
 type Category = {
   _id?: string;
@@ -223,7 +224,7 @@ const AddProduct = () => {
       return;
     }
 
-    const allImageUrls = Array.from(new Set([...galleryUrls, ...mainUrls]));
+    const allImageUrls = mergeProductImageUrls(galleryUrls, mainUrls);
 
     if (allImageUrls.length === 0) {
       setIsLoading(false);
@@ -259,11 +260,7 @@ const AddProduct = () => {
     if (dataForm.condition) requestData.condition = dataForm.condition;
 
     const formData = new FormData();
-
-    Array.from(dataForm.files).forEach((file) => {
-      formData.append("files", file);
-    });
-
+    // Images already uploaded via /api/upload — URLs in requestData only (avoids duplicate files on server).
     formData.append("requestData", JSON.stringify(requestData));
 
     try {
@@ -293,7 +290,10 @@ const AddProduct = () => {
 
   // sizes removed
 
-  const mdeOptions = useMemo(() => getProductDescriptionMdeOptions(), []);
+  const mdeOptions = useMemo(
+    () => getProductDescriptionMdeOptions({}, "mjcarros-product-description-new"),
+    []
+  );
 
   return (
     <div className="flex justify-center items-center max-md:justify-start">

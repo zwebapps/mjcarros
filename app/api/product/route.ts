@@ -5,6 +5,7 @@ import {
   buildUploadRelativePath,
   writeBufferToPublicUploads,
 } from "@/lib/public-uploads";
+import { mergeProductImageUrls } from "@/lib/product-image-urls";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 
 export const runtime = "nodejs";
@@ -100,31 +101,36 @@ export async function POST(request: NextRequest) {
         condition: parsed.condition || "new",
       };
 
-      const preUrls = [
-        ...(Array.isArray(parsed.galleryURLs) ? parsed.galleryURLs : []),
-        ...(Array.isArray(parsed.imageURLs) ? parsed.imageURLs : []),
-      ].filter((u): u is string => typeof u === "string" && u.length > 0);
+      const preUrls = mergeProductImageUrls(
+        Array.isArray(parsed.galleryURLs) ? parsed.galleryURLs : [],
+        Array.isArray(parsed.imageURLs) ? parsed.imageURLs : []
+      );
 
       const files = formData.getAll("files") as File[];
       const uploadFailures: string[] = [];
-      for (const file of files) {
-        if (!file || typeof file === "string" || file.size === 0) continue;
-        try {
-          const bytes = Buffer.from(await file.arrayBuffer());
-          const relativePath = buildUploadRelativePath("product", file.name);
-          const url = await writeBufferToPublicUploads(relativePath, bytes);
-          imageURLs.push(url);
-        } catch (err) {
-          uploadFailures.push(file.name || "image");
-          console.warn(
-            "[product/create] upload failed:",
-            file.name,
-            err instanceof Error ? err.message : String(err)
-          );
+      let uploadedUrls: string[] = [];
+
+      // Client pre-uploads via /api/upload; only fall back to multipart when no URLs were sent.
+      if (preUrls.length === 0) {
+        for (const file of files) {
+          if (!file || typeof file === "string" || file.size === 0) continue;
+          try {
+            const bytes = Buffer.from(await file.arrayBuffer());
+            const relativePath = buildUploadRelativePath("product", file.name);
+            const url = await writeBufferToPublicUploads(relativePath, bytes);
+            uploadedUrls.push(url);
+          } catch (err) {
+            uploadFailures.push(file.name || "image");
+            console.warn(
+              "[product/create] upload failed:",
+              file.name,
+              err instanceof Error ? err.message : String(err)
+            );
+          }
         }
       }
 
-      imageURLs = [...preUrls, ...imageURLs];
+      imageURLs = mergeProductImageUrls(preUrls, uploadedUrls);
 
       if (files.length > 0 && uploadFailures.length === files.length && !preUrls.length) {
         return NextResponse.json(
@@ -138,6 +144,7 @@ export async function POST(request: NextRequest) {
     } else {
       const body = await request.json();
       ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, sold, negotiable, ...extras } = body);
+      imageURLs = mergeProductImageUrls(imageURLs);
     }
 
     if (!title || !description || !category || !price) {
