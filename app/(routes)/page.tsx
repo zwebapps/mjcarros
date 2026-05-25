@@ -92,10 +92,34 @@ async function getCategoriesWithCounts() {
   }
 }
 
+function toProductCard(p: Awaited<ReturnType<typeof getFeaturedProducts>>[number]): Product {
+  return {
+    id: p._id,
+    title: p.title,
+    description: p.description,
+    price: p.price,
+    finalPrice: p.finalPrice || undefined,
+    discount: p.discount || undefined,
+    featured: p.featured,
+    sold: !!p.sold,
+    negotiable: !!p.negotiable,
+    imageURLs: p.imageURLs || [],
+    category: p.category,
+    categoryId: p.categoryId,
+    createdAt: p.createdAt
+      ? new Date(p.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: p.updatedAt
+      ? new Date(p.updatedAt).toISOString()
+      : new Date().toISOString(),
+  };
+}
+
 const HomePage = async () => {
-  const featured = skipMongoConnectionDuringBuild()
+  const featuredRows = skipMongoConnectionDuringBuild()
     ? []
     : await getFeaturedProducts(8).catch(() => []);
+  const featured = featuredRows.map(toProductCard);
   const categories = await getCategoriesWithCounts();
 
   return (
@@ -150,11 +174,8 @@ const HomePage = async () => {
             </p>
           </div>
           <div className="product-grid">
-            {featured.map((product: (typeof featured)[number]) => (
-              <ProductCard
-                key={product._id}
-                data={{ ...product, id: product._id } as Product}
-              />
+            {featured.map((product) => (
+              <ProductCard key={product.id} data={product} />
             ))}
           </div>
           <div className="mt-12 text-center">

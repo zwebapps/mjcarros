@@ -29,7 +29,7 @@ async function getAccessToken() {
 }
 
 async function resolvePrismaProductIds(
-  orderItems: Array<{ productId?: string; product?: { id?: string } | null }>
+  orderItems: Array<{ productId?: string | null; product?: { id?: string } | null }>
 ) {
   const ids: string[] = [];
   for (const item of orderItems) {

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -8,13 +8,8 @@ export async function GET(
   const { id } = params;
 
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const category = await db.category.findUnique({
-      where: {
-        id,
-      },
+    const category = await prisma.category.findUnique({
+      where: { id },
       include: {
         categorySizes: {
           include: {
@@ -28,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: "Category not found" });
     }
 
-    const sizesForCategory = category.categorySizes.map((cs: any) => cs.size);
+    const sizesForCategory = category.categorySizes.map((cs) => cs.size);
 
     return NextResponse.json(sizesForCategory);
   } catch (error) {
