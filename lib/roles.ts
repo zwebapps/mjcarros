@@ -1,3 +1,5 @@
+import { UserRole } from "@prisma/client";
+
 /** Application roles — admin accounts are created via env/setup scripts only. */
 export const ROLES = {
   ADMIN: "ADMIN",
@@ -29,3 +31,18 @@ export function isReservedAdminEmail(email: string): boolean {
 
 /** Role assigned to every public self-service registration. */
 export const SIGNUP_ROLE: AppRole = ROLES.USER;
+
+/** Map API string roles to Prisma UserRole enum. */
+export function toPrismaUserRole(role: string): UserRole {
+  const upper = role.toUpperCase();
+  if (upper === "ADMIN") return UserRole.ADMIN;
+  if (upper === "CUSTOMER") return UserRole.CUSTOMER;
+  if (upper === "DEALER") return UserRole.DEALER;
+  return UserRole.USER;
+}
+
+export function prismaRoleToAppRole(role: UserRole): AppRole {
+  if (role === UserRole.ADMIN) return ROLES.ADMIN;
+  if (role === UserRole.CUSTOMER) return ROLES.CUSTOMER;
+  return ROLES.USER;
+}

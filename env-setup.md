@@ -1,77 +1,115 @@
 # Environment Setup Guide
 
-## Required Environment Variables
+## Required variables (`.env` / `.env.local`)
 
-Create a `.env.local` file in your project root with the following variables:
+### PostgreSQL (primary database)
 
-### Database Configuration
 ```bash
-DATABASE_URL="mongodb://localhost:27017/mjcarros?replicaSet=rs0"
+# Mongo (legacy scripts / one-time migration)
+DATABASE_URL=mongodb://USER:PASSWORD@127.0.0.1:27017/YOUR_DB?authSource=YOUR_DB
+
+# Postgres (Prisma) — use 5433 on Mac if local Postgres already uses 5432
+POSTGRES_PRISMA_URL=postgresql://postgres:postgres@127.0.0.1:5433/mjcarros?schema=public
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=mjcarros
+POSTGRES_PORT=5433
 ```
 
-### JWT Authentication
+**Docker Compose** (app container): host is `db`, not `localhost`:
+
+```bash
+DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@db:5432/mjcarros?schema=public"
+```
+
+After changing the schema:
+
+```bash
+npm run db:deploy     # apply committed migrations
+npm run db:generate   # regenerate Prisma client (run locally if IDE hangs)
+```
+
+If Prisma CLI hangs on **"warming up"**, see [docs/PRISMA-SETUP.md](docs/PRISMA-SETUP.md).
+
+### Admin bootstrap (not public signup)
+
+```bash
+ADMIN_EMAIL=admin@mjcarros.pt
+ADMIN_PASSWORD=change-me-after-first-login
+ADMIN_NAME=MJ Carros Admin
+```
+
+On container start, `npm run setup-admin` upserts the admin user and seeds default categories/products.
+
+### JWT
+
 ```bash
 JWT_SECRET="your-super-secure-jwt-secret-key-here"
 ```
 
-### AWS S3 Configuration (Optional - for image uploads)
+Generate:
+
 ```bash
-# Images are stored locally under `public/uploads/` and served as `/uploads/...`
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
-### Stripe Configuration (Optional - for payments)
-```bash
-STRIPE_SECRET_KEY="your-stripe-secret-key"
-STRIPE_WEBHOOK_SECRET="your-stripe-webhook-secret"
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="your-stripe-publishable-key"
-```
+### App
 
-### App Configuration
 ```bash
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-## How to Generate JWT_SECRET
+### Stripe / PayPal / Email
 
-You can generate a secure JWT secret using:
+See existing `.env.example` for `STRIPE_*`, `PAYPAL_*`, `EMAIL_*`.
+
+---
+
+## Migrating existing MongoDB data (one-time)
+
+On staging first, then production during a maintenance window:
 
 ```bash
-# Option 1: Using Node.js
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# Source Mongo (production backup URI)
+export MONGODB_URI="mongodb://user:pass@host:27017/mjcarros?authSource=admin"
+export MONGO_DATABASE=mjcarros
 
-# Option 2: Using OpenSSL
-openssl rand -hex 64
+# Target Postgres
+export DATABASE_URL="postgresql://user:pass@host:5432/mjcarros?schema=public"
 
-# Option 3: Using the setup script
-chmod +x setup.sh
-./setup.sh
+npm run db:migrate          # ensure Postgres schema exists
+npm run migrate:mongo-to-postgres
+
+# Dry run (counts only)
+DRY_RUN=1 npm run migrate:mongo-to-postgres
 ```
 
-## Important Notes
+Compare row counts and spot-check products/orders/users before cutover.
 
-1. **Never commit `.env.local` to version control**
-2. **Keep your JWT_SECRET secure and unique**
-3. **Update S3 bucket name in components if you change it**
-4. **Restart your development server after adding environment variables**
+---
 
-## S3 Bucket Configuration
+## Docker production (IONOS / VPS)
 
-If you're using S3 for image storage, make sure to:
-1. Create an S3 bucket in your AWS account
-2. Configure CORS settings for your bucket
-3. Update the bucket name in your environment variables
-4. Upload images from admin; they will appear in `/uploads/...`
-5. Update any hardcoded S3 URLs in components to use your bucket
-
-## Example S3 CORS Configuration
-
-```json
-[
-  {
-    "AllowedHeaders": ["*"],
-    "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
-    "AllowedOrigins": ["http://localhost:3000", "https://yourdomain.com"],
-    "ExposeHeaders": []
-  }
-]
+```bash
+docker compose -f docker-compose.prod.yml up -d
+# or
+docker compose -f docker-compose.ionos.yml up -d --build
 ```
+
+Stack: **Postgres 16** + **Next.js** + persistent `./public/uploads` (or named volume on IONOS file).
+
+GitHub Actions builds the image on CI and loads it on the VPS (`deploy-ionos.yml`).
+
+---
+
+## Legacy Mongo variables
+
+`MONGO_*` is only needed for `npm run migrate:mongo-to-postgres`. Remove from production `.env` after migration.
+
+---
+
+## Security notes
+
+1. Never commit `.env` / `.env.local`
+2. Change `ADMIN_PASSWORD` after first login
+3. Signup creates `USER` role only; admin email is reserved via `ADMIN_EMAIL`

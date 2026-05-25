@@ -1,33 +1,24 @@
 import { type Metadata } from "next";
-import { MongoClient } from "mongodb";
 import { siteConfig } from "@/config/site";
 import ProductDetail from "./_components/product-detail";
 import Link from "next/link";
-
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-
-const MONGODB_URI = getMongoDbUri();
+import { skipMongoConnectionDuringBuild } from "@/lib/mongodb-connection";
+import { getProductById } from "@/lib/data-access";
 
 export async function generateMetadata({
   params,
 }: {
   params: { productId: string };
 }): Promise<Metadata> {
-  let client;
-  
+  if (skipMongoConnectionDuringBuild()) {
+    return {
+      title: "Product | MJ Carros",
+      description: "Product details",
+    };
+  }
+
   try {
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    
-    const { ObjectId } = await import('mongodb');
-    const product = await productsCollection.findOne({ _id: new ObjectId(params.productId) });
+    const product = await getProductById(params.productId);
 
     if (!product) {
       return {
@@ -40,15 +31,11 @@ export async function generateMetadata({
       title: `${product.title} | ${siteConfig.name}`,
       description: product.description || "Product details",
     };
-  } catch (error) {
+  } catch {
     return {
       title: "Product | MJ Carros",
       description: "Product details",
     };
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }
 
@@ -65,7 +52,7 @@ const ProductPage = ({ params }: { params: { productId: string } }) => {
       </div>
     );
   }
-  
+
   return <ProductDetail productId={params.productId} />;
 };
 

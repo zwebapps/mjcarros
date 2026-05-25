@@ -1,167 +1,109 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-import { extractTokenFromHeader, verifyToken, hashPassword } from '@/lib/auth';
-import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
+import { NextRequest, NextResponse } from "next/server";
+import { extractTokenFromHeader, verifyToken, hashPassword } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { toPrismaUserRole } from "@/lib/roles";
+import { withMongoId } from "@/lib/serialize-api";
 
-export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+export const runtime = "nodejs";
 
-const MONGODB_URI = getMongoDbUri();
+function formatClerkUser(user: {
+  id: string;
+  legacyMongoId: string | null;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const serialized = withMongoId(user);
+  return {
+    id: serialized._id,
+    _id: serialized._id,
+    firstName: user.name,
+    username: user.name,
+    emailAddresses: [{ emailAddress: user.email }],
+    unsafeMetadata: { isAdmin: user.role === "ADMIN" },
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
 
 export async function GET(request: NextRequest) {
-  let client;
-  
   try {
-    console.log('🔍 GET /api/clerk/users - Fetching users list');
-    
-    // Admin authentication required
-    const authHeader = request.headers.get('authorization');
-    console.log('🔐 Auth header present:', !!authHeader);
-    
+    const authHeader = request.headers.get("authorization");
     const token = extractTokenFromHeader(authHeader);
     if (!token) {
-      console.log('❌ No token provided');
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
-    if (!decoded) {
-      console.log('❌ Invalid token');
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    if (!decoded || decoded.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 });
     }
 
-    console.log('✅ Token decoded, user role:', decoded.role);
-
-    if (decoded.role !== 'ADMIN') {
-      console.log('❌ User is not admin, role:', decoded.role);
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
-    }
-
-    console.log('✅ Admin access verified, connecting to database...');
-
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        legacyMongoId: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection('users');
-    
-    // Get all users (excluding passwords)
-    const users = await usersCollection.find({}, {
-      projection: { password: 0 } // Exclude password field
-    }).sort({ createdAt: -1 }).toArray();
-    
-    console.log(`📊 Found ${users.length} users in database`);
-    
-    // Format users to match Clerk API format
-    const formattedUsers = users.map(user => ({
-      id: user._id.toString(),
-      _id: user._id,
-      firstName: user.name,
-      username: user.name,
-      emailAddresses: [{ emailAddress: user.email }],
-      unsafeMetadata: { isAdmin: user.role === 'ADMIN' },
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
-    }));
-    
-    console.log('✅ Returning formatted users:', formattedUsers.map(u => ({ id: u.id, email: u.emailAddresses[0].emailAddress, role: u.unsafeMetadata.isAdmin ? 'ADMIN' : 'USER' })));
-    
-    return NextResponse.json(formattedUsers);
+
+    return NextResponse.json(users.map(formatClerkUser));
   } catch (error) {
-    console.error('Error fetching users:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    console.error("Error fetching users:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
-  let client;
-  
   try {
-    // Admin authentication required
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const token = extractTokenFromHeader(authHeader);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
-    }
-
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
+    if (!decoded || decoded.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 });
     }
 
     const { email, userName, password, isAdmin } = await request.json();
 
     if (!email || !userName || !password) {
       return NextResponse.json(
-        { error: 'Email, username, and password are required' },
+        { error: "Email, username, and password are required" },
         { status: 400 }
       );
     }
 
-    const role = isAdmin === 'Admin' ? 'ADMIN' : 'USER';
+    const role = isAdmin === "Admin" ? "ADMIN" : "USER";
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection('users');
-    
-    // Check if user already exists
-    const existingUser = await usersCollection.findOne({ email });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "User with this email already exists" }, { status: 400 });
     }
 
     const hashedPassword = await hashPassword(password);
 
-    const userData = { 
-      email, 
-      password: hashedPassword, 
-      name: userName, 
-      role,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const row = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name: userName,
+        role: toPrismaUserRole(role),
+      },
+    });
 
-    const result = await usersCollection.insertOne(userData);
-    
-    // Format response to match Clerk API
-    const newUser = {
-      id: result.insertedId.toString(),
-      _id: result.insertedId,
-      firstName: userName,
-      username: userName,
-      emailAddresses: [{ emailAddress: email }],
-      unsafeMetadata: { isAdmin: role === 'ADMIN' },
-      createdAt: userData.createdAt,
-      updatedAt: userData.updatedAt
-    };
-    
-    return NextResponse.json({ user: newUser });
+    return NextResponse.json({ user: formatClerkUser(row) });
   } catch (error) {
-    console.error('Error creating user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    console.error("Error creating user:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

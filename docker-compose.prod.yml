@@ -1,38 +1,26 @@
 name: mjcarros
 
 services:
-  mongodb:
-    image: mongo:7
-    container_name: mongodb
+  db:
+    image: postgres:16-alpine
+    container_name: mjcarros-db
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
-
-      MONGO_DATABASE: ${MONGO_DATABASE}
-      MONGO_USERNAME: ${MONGO_USERNAME}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
-
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      ADMIN_NAME: ${ADMIN_NAME}
-
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mjcarros}
     ports:
-      - "27017:27017"
-
+      - "5432:5432"
     volumes:
-      - mongodb_data:/data/db
-      - ./mongo-init-simple.js:/docker-entrypoint-initdb.d/mongo-init-simple.js:ro
-
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mjcarros}"]
       interval: 10s
-      timeout: 10s
-      retries: 15
-      start_period: 40s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   nextjs:
     container_name: nextjs
@@ -50,31 +38,22 @@ services:
       - "8080:3000"
 
     depends_on:
-      mongodb:
+      db:
         condition: service_healthy
 
     environment:
       NODE_ENV: production
       DOCKER: "true"
 
-      # Mongo
-      MONGO_USERNAME: ${MONGO_USERNAME}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_HOST: mongodb
-      MONGO_PORT: 27017
-      MONGO_DATABASE: ${MONGO_DATABASE}
-      MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE}
+      POSTGRES_PRISMA_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-mjcarros}?schema=public
 
-      # Admin
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_NAME: ${ADMIN_NAME}
 
-      # App
       JWT_SECRET: ${JWT_SECRET}
       NEXT_PUBLIC_APP_URL: http://localhost:8080
 
-      # Payments
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
@@ -83,7 +62,6 @@ services:
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
       PAYPAL_ENV: ${PAYPAL_ENV}
 
-      # Email
       EMAIL_HOST: ${EMAIL_HOST}
       EMAIL_PORT: ${EMAIL_PORT}
       EMAIL_USER: ${EMAIL_USER}
@@ -91,19 +69,20 @@ services:
       EMAIL_FROM: ${EMAIL_FROM}
 
     volumes:
-      # persistent uploads (SAFE)
       - ./public/uploads:/app/public/uploads:rw
 
     command: >
       sh -c "
-        echo '⏳ Waiting for MongoDB...' &&
-        sleep 5 &&
-        echo '👤 Creating admin user...' &&
+        echo '⏳ Waiting for Postgres...' &&
+        sleep 3 &&
+        echo '📦 Applying database schema...' &&
+        (npx prisma migrate deploy || npx prisma db push --accept-data-loss) &&
+        echo '👤 Seeding admin + defaults...' &&
         npm run setup-admin &&
         echo '🚀 Starting Next.js...' &&
         npm run start
       "
 
 volumes:
-  mongodb_data:
-    name: mjcarros_mongodb_data
+  pgdata:
+    name: mjcarros_pgdata

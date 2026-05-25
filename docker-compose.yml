@@ -1,60 +1,53 @@
-# Local / dev stack only (replSet, no mongo-init script). Do NOT use for production — use docker-compose.prod.yml.
-# Fixed project + volume names so MongoDB data survives `docker compose down` / `up`.
+# Local dev: PostgreSQL + Next.js (hot reload via `npm run dev` on host, or build nextjs service).
 name: mjcarros
 
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
+  db:
+    image: postgres:16-alpine
+    container_name: mjcarros-postgres
     env_file:
       - .env
     environment:
-      - MONGO_INITDB_ROOT_USERNAME:${MONGO_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD:${MONGO_ROOT_PASSWORD}
-      - MONGO_INITDB_DATABASE:${MONGO_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mjcarros}
     ports:
-      - "${MONGO_PORT}:27017"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
-      - mongodb_data:/data/db
-    command: mongod --replSet rs0 --bind_ip_all
+      - pgdata_dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mjcarros}"]
       interval: 5s
-      timeout: 10s
-      retries: 15
-      start_period: 60s
+      timeout: 5s
+      retries: 10
     networks:
-      - mongo_network
+      - mjcarros_dev
 
   nextjs:
     container_name: nextjs
-    # Tag so `docker compose up --build` always refreshes the app image when sources change.
     image: mjcarros-ecommerce-nextjs:local
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${NEXTJS_PORT}:3000"
+      - "${NEXTJS_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - DOCKER=true
-      # App must reach Mongo by Compose service name + container port (not localhost / host port).
-      - DATABASE_URL=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE:-mjcarros}
+      DOCKER: "true"
+      POSTGRES_PRISMA_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-mjcarros}?schema=public
     depends_on:
-      mongodb:
+      db:
         condition: service_healthy
     networks:
-      - mongo_network
+      - mjcarros_dev
     volumes:
       - ./public/uploads:/app/public/uploads:rw
 
 networks:
-  mongo_network:
+  mjcarros_dev:
     driver: bridge
 
 volumes:
-  mongodb_data:
-    name: mjcarros_mongodb_data
-    driver: local
+  pgdata_dev:
+    name: mjcarros_pgdata_dev

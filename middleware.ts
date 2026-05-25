@@ -41,6 +41,7 @@ const ADMIN_PREFIXES = [
   "/api/clerk",
   "/api/contact/cms",
   "/api/orders",
+  "/api/import-requests",
 ] as const;
 
 function matchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
@@ -56,20 +57,49 @@ function isPublicCatalogRead(request: NextRequest): boolean {
   const path = request.nextUrl.pathname;
   if (path === "/api/product") return true;
   if (/^\/api\/product\/[a-fA-F0-9]{24}$/.test(path)) return true;
+  if (/^\/api\/product\/[a-zA-Z0-9_-]+$/.test(path)) return true;
   if (path.startsWith("/api/product/category/")) return true;
   if (path.startsWith("/api/shop/")) return true;
   return false;
 }
 
-function wantsHtml(request: NextRequest): boolean {
-  const accept = request.headers.get("accept") || "";
-  return accept.includes("text/html");
+/** Customer import lead form (POST only). */
+function isPublicImportLeadPost(request: NextRequest): boolean {
+  return (
+    request.method === "POST" &&
+    request.nextUrl.pathname === "/api/import-requests"
+  );
+}
+
+/** Files in /public (logo, placeholders, fonts) must not require JWT. */
+function isPublicStaticAsset(pathname: string): boolean {
+  return /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp|woff2?|ttf|otf|eot)$/i.test(pathname);
+}
+
+/**
+ * Admin UI routes (/admin/*) — auth is checked client-side via localStorage + AdminLayout.
+ * Browser navigations do not send Authorization; APIs still require Bearer below.
+ */
+function isAdminUiPage(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (matchesPrefix(pathname, PUBLIC_PREFIXES) || isPublicCatalogRead(request)) {
+  if (isPublicStaticAsset(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (isAdminUiPage(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (
+    matchesPrefix(pathname, PUBLIC_PREFIXES) ||
+    isPublicCatalogRead(request) ||
+    isPublicImportLeadPost(request)
+  ) {
     return NextResponse.next();
   }
 
@@ -78,9 +108,6 @@ export async function middleware(request: NextRequest) {
   const token = extractTokenFromHeader(request.headers.get("authorization"));
 
   if (!token) {
-    if (pathname.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
-    }
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
@@ -89,9 +116,6 @@ export async function middleware(request: NextRequest) {
 
   const payload = await verifyTokenMiddleware(token);
   if (!payload) {
-    if (pathname.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
-    }
     return NextResponse.json(
       { error: "Invalid or expired token" },
       { status: 401 }
@@ -99,11 +123,6 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAdminRoute && !isAdminRole(payload.role)) {
-    if (pathname.startsWith("/admin") && wantsHtml(request)) {
-      return NextResponse.redirect(
-        new URL("/sign-in?error=admin_required", request.url)
-      );
-    }
     return NextResponse.json(
       { error: "Admin access required" },
       { status: 403 }
@@ -122,6 +141,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|uploads/).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|uploads/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot)$).*)",
   ],
 };

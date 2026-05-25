@@ -3,48 +3,17 @@ import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ui/product-card";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeCtaSection } from "@/components/home/home-cta-section";
+import { skipMongoConnectionDuringBuild } from "@/lib/mongodb-connection";
+import {
+  getFeaturedProducts,
+  getCategoriesWithProductCounts,
+  getBillboards,
+} from "@/lib/data-access";
+import { prisma } from "@/lib/prisma";
+import { Product } from "@/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-async function getFeaturedProducts() {
-  let client: any;
-  try {
-    const { skipMongoConnectionDuringBuild, getMongoDbUri, getMongoDbName } = await import(
-      "@/lib/mongodb-connection"
-    );
-    if (skipMongoConnectionDuringBuild()) {
-      return [] as any[];
-    }
-    const { MongoClient } = await import("mongodb");
-    const MONGODB_URI = getMongoDbUri();
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection("products");
-    const docs = await productsCollection
-      .find({ featured: true })
-      .sort({ updatedAt: -1 })
-      .limit(8)
-      .toArray();
-    return docs.map((p: any) => ({
-      ...p,
-      id: (p._id || "").toString(),
-      imageURLs: Array.isArray(p.imageURLs) ? p.imageURLs : [],
-    }));
-  } catch (e) {
-    console.warn("Failed to load featured products, returning empty list");
-    return [] as any[];
-  } finally {
-    if (client) {
-      await client.close();
-    }
-  }
-}
 
 const banners = [
   {
@@ -68,59 +37,27 @@ const banners = [
 ];
 
 async function getCategoriesWithCounts() {
-  let client;
+  if (skipMongoConnectionDuringBuild()) {
+    return [];
+  }
+
   try {
-    const { skipMongoConnectionDuringBuild, getMongoDbUri, getMongoDbName } = await import(
-      "@/lib/mongodb-connection"
-    );
-    if (skipMongoConnectionDuringBuild()) {
-      return [];
-    }
-    const { MongoClient, ObjectId } = await import("mongodb");
-    const MONGODB_URI = getMongoDbUri();
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection("products");
-    const categoriesCollection = db.collection("categories");
-    const billboardsCollection = db.collection("billboards");
-
-    const [products, categories] = await Promise.all([
-      productsCollection.find({}).project({ category: 1 }).toArray(),
-      categoriesCollection.find({}).project({ category: 1, billboardId: 1 }).toArray(),
+    const [categories, billboards, productCategories] = await Promise.all([
+      getCategoriesWithProductCounts(),
+      getBillboards(),
+      prisma.product.findMany({ select: { category: true } }),
     ]);
 
     const counts = new Map<string, number>();
-    for (const p of products) {
+    for (const p of productCategories) {
       const key = String(p.category || "").trim();
       if (!key) continue;
       counts.set(key, (counts.get(key) || 0) + 1);
     }
 
-    const billboardIdByCategory = new Map<string, string>();
-    for (const c of categories) {
-      const key = String(c.category || "").trim();
-      const bbId = c.billboardId ? String(c.billboardId) : "";
-      if (key && bbId) billboardIdByCategory.set(key, bbId);
-    }
-
-    const billboardIds = Array.from(new Set(Array.from(billboardIdByCategory.values())));
-    const billboards = billboardIds.length
-      ? await billboardsCollection
-          .find({ _id: { $in: billboardIds.map((id) => new ObjectId(id)) } })
-          .project({ imageURL: 1 })
-          .toArray()
-      : [];
-
-    const billboardImageById = new Map<string, string>();
-    for (const b of billboards) {
-      billboardImageById.set(String(b._id), String((b as any).imageURL || ""));
-    }
+    const billboardImageById = new Map(
+      billboards.map((b: (typeof billboards)[number]) => [b.id, String(b.imageURL || "")])
+    );
 
     const slugify = (s: string) =>
       s
@@ -129,8 +66,10 @@ async function getCategoriesWithCounts() {
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9_-]/g, "");
 
-    const rows = Array.from(counts.entries()).map(([name, count]) => {
-      const bbId = billboardIdByCategory.get(name) || "";
+    const rows = categories.map((cat: (typeof categories)[number]) => {
+      const name = String(cat.category || "").trim();
+      const count = counts.get(name) ?? cat.productCount ?? 0;
+      const bbId = cat.billboardId || "";
       const billboardImage = (bbId && billboardImageById.get(bbId)) || "";
       const isPlaceholder =
         !billboardImage || billboardImage.includes("/placeholder-image.");
@@ -139,22 +78,25 @@ async function getCategoriesWithCounts() {
       return { name, count, image };
     });
 
-    return rows.sort((a, b) => b.count - a.count).slice(0, 8);
+    for (const [name, count] of counts) {
+      if (!rows.some((r: { name: string }) => r.name === name)) {
+        const localCategoryImage = `/uploads/category/${slugify(name)}.jpg`;
+        rows.push({ name, count, image: localCategoryImage });
+      }
+    }
+
+    return rows.sort((a: { count: number }, b: { count: number }) => b.count - a.count).slice(0, 8);
   } catch (error) {
     console.error("Error fetching categories:", error);
     return [];
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }
 
 const HomePage = async () => {
-  const [categories, featured] = await Promise.all([
-    getCategoriesWithCounts(),
-    getFeaturedProducts(),
-  ]);
+  const featured = skipMongoConnectionDuringBuild()
+    ? []
+    : await getFeaturedProducts(8).catch(() => []);
+  const categories = await getCategoriesWithCounts();
 
   return (
     <div className="page-canvas">
@@ -170,7 +112,7 @@ const HomePage = async () => {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-            {categories.map((category) => (
+            {categories.map((category: { name: string; count: number; image: string }) => (
               <Link
                 key={category.name}
                 href={`/shop/${category.name.toLowerCase()}`}
@@ -208,8 +150,11 @@ const HomePage = async () => {
             </p>
           </div>
           <div className="product-grid">
-            {featured.map((product: any) => (
-              <ProductCard key={product.id} data={product} />
+            {featured.map((product: (typeof featured)[number]) => (
+              <ProductCard
+                key={product._id}
+                data={{ ...product, id: product._id } as Product}
+              />
             ))}
           </div>
           <div className="mt-12 text-center">

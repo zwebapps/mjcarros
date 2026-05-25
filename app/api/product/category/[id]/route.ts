@@ -1,22 +1,29 @@
-import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { legacyMongoFilter } from "@/lib/id-resolve";
+import { withMongoIds } from "@/lib/serialize-api";
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
 
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const product = await db.product.findMany({
-      where: { category: id },
+    const category = await prisma.category.findFirst({
+      where: legacyMongoFilter(id),
     });
 
-    return NextResponse.json(product);
+    const products = await prisma.product.findMany({
+      where: category
+        ? { categoryId: category.id }
+        : { category: { equals: id, mode: "insensitive" } },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    return NextResponse.json(withMongoIds(products));
   } catch (error) {
-    return NextResponse.json({ error: "Error getting product", status: 500 });
+    console.error("Error getting products by category:", error);
+    return NextResponse.json({ error: "Error getting product" }, { status: 500 });
   }
 }

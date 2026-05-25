@@ -1,79 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient, ObjectId } from 'mongodb';
-import { extractTokenFromHeader, verifyToken, hashPassword } from '@/lib/auth';
-import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
+import { NextRequest, NextResponse } from "next/server";
+import { extractTokenFromHeader, verifyToken, hashPassword } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { toPrismaUserRole } from "@/lib/roles";
+import { legacyMongoFilter } from "@/lib/id-resolve";
+import { withMongoId } from "@/lib/serialize-api";
 
-export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+export const runtime = "nodejs";
 
-const MONGODB_URI = getMongoDbUri();
+function formatClerkUser(user: {
+  id: string;
+  legacyMongoId: string | null;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const serialized = withMongoId(user);
+  return {
+    id: serialized._id,
+    _id: serialized._id,
+    firstName: user.name,
+    username: user.name,
+    emailAddresses: [{ emailAddress: user.email }],
+    unsafeMetadata: { isAdmin: user.role === "ADMIN" },
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    // Admin authentication required
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const token = extractTokenFromHeader(authHeader);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    if (!decoded || decoded.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 });
     }
 
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
-    }
-
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const user = await prisma.user.findFirst({
+      where: legacyMongoFilter(params.id),
+      select: {
+        id: true,
+        legacyMongoId: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection('users');
-    
-    // Validate ObjectId format
-    if (!ObjectId.isValid(params.id)) {
-      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const user = await usersCollection.findOne(
-      { _id: new ObjectId(params.id) },
-      { projection: { password: 0 } } // Exclude password
-    );
-    
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    
-    // Format to match Clerk API format
-    const formattedUser = {
-      id: user._id.toString(),
-      _id: user._id,
-      firstName: user.name,
-      username: user.name,
-      emailAddresses: [{ emailAddress: user.email }],
-      unsafeMetadata: { isAdmin: user.role === 'ADMIN' },
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
-    };
-    
-    return NextResponse.json({ user: formattedUser });
+    return NextResponse.json({ user: formatClerkUser(user) });
   } catch (error) {
-    console.error('Error fetching user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    console.error("Error fetching user:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -81,117 +73,68 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    // Admin authentication required
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const token = extractTokenFromHeader(authHeader);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
-    }
-
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
+    if (!decoded || decoded.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 });
     }
 
     const { email, userName, isAdmin, password } = await request.json();
 
     if (!email || !userName) {
-      return NextResponse.json(
-        { error: 'Email and username are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email and username are required" }, { status: 400 });
     }
 
-    const role = isAdmin === 'Admin' ? 'ADMIN' : 'USER';
+    const role = isAdmin === "Admin" ? "ADMIN" : "USER";
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const existingUser = await prisma.user.findFirst({
+      where: legacyMongoFilter(params.id),
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection('users');
-    
-    // Validate ObjectId format
-    if (!ObjectId.isValid(params.id)) {
-      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    if (!existingUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if user exists
-    const existingUser = await usersCollection.findOne({ _id: new ObjectId(params.id) });
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    
-    // Check if email is taken by another user
-    const emailTaken = await usersCollection.findOne({ 
-      email, 
-      _id: { $ne: new ObjectId(params.id) } 
+    const emailTaken = await prisma.user.findFirst({
+      where: { email, NOT: { id: existingUser.id } },
     });
     if (emailTaken) {
-      return NextResponse.json(
-        { error: 'Email is already taken by another user' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email is already taken by another user" }, { status: 400 });
     }
-    
-    // Prepare update data
-    const updateData: any = {
+
+    const updateData: { email: string; name: string; role: ReturnType<typeof toPrismaUserRole>; password?: string } = {
       email,
       name: userName,
-      role,
-      updatedAt: new Date()
+      role: toPrismaUserRole(role),
     };
-    
-    // Only update password if provided
-    if (password && password.trim()) {
+
+    if (password?.trim()) {
       updateData.password = await hashPassword(password);
     }
-    
-    const result = await usersCollection.updateOne(
-      { _id: new ObjectId(params.id) },
-      { $set: updateData }
-    );
-    
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    
-    // Get updated user (without password)
-    const updatedUser = await usersCollection.findOne(
-      { _id: new ObjectId(params.id) },
-      { projection: { password: 0 } }
-    );
-    
-    // Format to match Clerk API format
-    const formattedUser = {
-      id: updatedUser!._id.toString(),
-      _id: updatedUser!._id,
-      firstName: updatedUser!.name,
-      username: updatedUser!.name,
-      emailAddresses: [{ emailAddress: updatedUser!.email }],
-      unsafeMetadata: { isAdmin: updatedUser!.role === 'ADMIN' },
-      createdAt: updatedUser!.createdAt,
-      updatedAt: updatedUser!.updatedAt
-    };
-    
-    return NextResponse.json({ user: formattedUser });
+
+    const updatedUser = await prisma.user.update({
+      where: { id: existingUser.id },
+      data: updateData,
+      select: {
+        id: true,
+        legacyMongoId: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return NextResponse.json({ user: formatClerkUser(updatedUser) });
   } catch (error) {
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    console.error("Error updating user:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -199,53 +142,28 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    // Admin authentication required
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const token = extractTokenFromHeader(authHeader);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    if (!decoded || decoded.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 });
     }
 
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
+    const existing = await prisma.user.findFirst({ where: legacyMongoFilter(params.id) });
+    if (!existing) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection('users');
-    
-    // Validate ObjectId format
-    if (!ObjectId.isValid(params.id)) {
-      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
-    }
+    await prisma.user.delete({ where: { id: existing.id } });
 
-    const result = await usersCollection.deleteOne({ _id: new ObjectId(params.id) });
-    
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    
-    return NextResponse.json({ message: 'User deleted successfully' });
+    return NextResponse.json({ message: "User deleted successfully" });
   } catch (error) {
-    console.error('Error deleting user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    console.error("Error deleting user:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

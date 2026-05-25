@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  CUSTOMER
+  DEALER
+}
+
+enum ImportStatus {
+  SEARCHING
+  INSPECTION
+  NEGOTIATION
+  PURCHASE
+  EXPORT
+  TRANSPORT
+  REGISTRATION
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id             String   @id @default(cuid())
+  legacyMongoId  String?  @unique
+  email          String   @unique
+  password       String
+  name           String
+  role           UserRole @default(USER)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  notifications Notification[]
+  dealerProfile Dealer?
+}
+
+model Billboard {
+  id             String   @id @default(cuid())
+  legacyMongoId  String?  @unique
+  billboard      String
+  imageURL       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  categories Category[]
+}
+
+model Category {
+  id             String   @id @default(cuid())
+  legacyMongoId  String?  @unique
+  category       String   @unique
+  billboard      String
+  billboardId    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  billboardRef Billboard?     @relation(fields: [billboardId], references: [id])
+  products     Product[]
+  categorySizes CategorySize[]
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  legacyMongoId  String?  @unique
+  seedKey        String?  @unique
+  productCode    String?
+  title          String
+  description    String   @default("")
+  imageURLs      String[] @default([])
+  category       String
+  categoryId     String
+  price          Float
+  finalPrice     Float?
+  discount       Float?
+  featured       Boolean  @default(false)
+  sold           Boolean  @default(false)
+  negotiable     Boolean  @default(false)
+  modelName      String?
+  year           Int?
+  stockQuantity  Int      @default(1)
+  color          String?
+  fuelType       String?
+  transmission   String?
+  mileage        Int?
+  condition      String?  @default("used")
+  vin            String?
+  dealerId       String?
+  availability   String?  @default("available")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  categoryRef Category      @relation(fields: [categoryId], references: [id])
+  dealer        Dealer?       @relation(fields: [dealerId], references: [id])
+  orderItems    OrderItem[]
+  productSizes  ProductSize[]
+}
+
+model Order {
+  id                String   @id @default(cuid())
+  legacyMongoId     String?  @unique
+  orderNumber       Int      @unique
+  isPaid            Boolean  @default(false)
+  userEmail         String   @default("")
+  phone             String   @default("")
+  address           String   @default("")
+  paymentMethod     String?
+  paymentIntentId   String?
+  transactionId     String?
+  checkoutSessionId String?
+  notificationSent  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  legacyMongoId  String? @unique
+  orderId        String
+  productId      String?
+  productName    String
+  quantity       Int     @default(1)
+  price          Float   @default(0)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+}
+
+model ContactPage {
+  id           String   @id @default(cuid())
+  legacyMongoId String? @unique
+  heroTitle    String
+  heroSubtitle String
+  address1     String
+  cityLine     String
+  phone        String
+  email        String
+  web          String
+  hours        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Size {
+  id             String   @id @default(cuid())
+  legacyMongoId  String?  @unique
+  name           String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  categorySizes CategorySize[]
+  productSizes  ProductSize[]
+}
+
+model CategorySize {
+  id         String @id @default(cuid())
+  categoryId String
+  sizeId     String
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  size     Size     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, sizeId])
+}
+
+model ProductSize {
+  id        String @id @default(cuid())
+  productId String
+  sizeId    String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size    Size    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, sizeId])
+}
+
+// Germany → Portugal import pipeline (customer lead)
+model ImportRequest {
+  id        String       @id @default(cuid())
+  status    ImportStatus @default(SEARCHING)
+  sortOrder Int          @default(0)
+
+  fullName          String
+  phone             String
+  email             String
+  country           String  @default("Portugal")
+  preferredContact  String?
+
+  brand            String?
+  model            String?
+  budgetRange      String?
+  fuelType         String?
+  transmission     String?
+  yearMin          Int?
+  yearMax          Int?
+  mileageLimit     Int?
+  bodyType         String?
+  mustHaveFeatures String?
+
+  germanyOnly         Boolean @default(true)
+  maxImportTime       String?
+  registrationAssist  Boolean @default(false)
+  deliveryLocation    String?
+
+  totalBudget         String?
+  financingRequired   Boolean @default(false)
+  downPayment         String?
+  reservationDeposit  String?
+
+  assignedDealerId String?
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dealer   Dealer?       @relation(fields: [assignedDealerId], references: [id])
+  events   ImportEvent[]
+}
+
+model ImportEvent {
+  id              String       @id @default(cuid())
+  importRequestId String
+  status          ImportStatus
+  message         String?
+  createdAt       DateTime     @default(now())
+
+  importRequest ImportRequest @relation(fields: [importRequestId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Dealer {
+  id             String   @id @default(cuid())
+  legacyMongoId  String?  @unique
+  userId         String?  @unique
+  companyName    String
+  contactName    String
+  email          String   @unique
+  phone          String?
+  country        String   @default("Germany")
+  verified       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User?           @relation(fields: [userId], references: [id])
+  products       Product[]
+  importRequests ImportRequest[]
+}

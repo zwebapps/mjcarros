@@ -41,7 +41,8 @@ export default function SignInPage() {
 
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push(isAdminRole(data.user?.role) ? '/admin' : '/');
+      const destination = isAdminRole(data.user?.role) ? '/admin' : '/';
+      router.replace(destination);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
