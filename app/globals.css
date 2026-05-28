@@ -102,6 +102,51 @@
     --glow: 24 85% 50%;
   }
 
+  /* Admin portal theme (Flux Indigo) — scoped, does not affect storefront */
+  .admin-theme {
+    --background: 225 45% 97%;
+    --foreground: 224 54% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 54% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 54% 14%;
+
+    /* Indigo primary for admin accents */
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Admin brand (deep indigo/navy) */
+    --brand: 224 62% 18%;
+    --brand-foreground: 210 40% 98%;
+
+    --secondary: 226 36% 92%;
+    --secondary-foreground: 224 54% 18%;
+
+    --muted: 226 38% 93%;
+    --muted-foreground: 225 16% 43%;
+
+    --accent: 243 75% 59%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 226 24% 86%;
+    --input: 226 24% 86%;
+    --ring: 243 75% 59%;
+
+    --nav: 224 62% 18%;
+    --nav-foreground: 210 40% 98%;
+
+    --surface: 226 45% 95%;
+    --surface-warm: 226 38% 94%;
+    --hero-from: 224 62% 14%;
+    --hero-to: 243 58% 28%;
+    --glow: 243 75% 59%;
+  }
+
   [data-theme="charcoal"] {
     --background: 218 32% 12%;
     --foreground: 210 28% 96%;
@@ -185,6 +230,34 @@
     background-attachment: fixed;
   }
 
+  /* Admin typography tuning (scoped to `.admin-theme` wrapper) */
+  .admin-theme {
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    letter-spacing: -0.01em;
+    line-height: 1.58;
+  }
+
+  .admin-theme h1,
+  .admin-theme h2,
+  .admin-theme h3,
+  .admin-theme h4,
+  .admin-theme h5,
+  .admin-theme h6 {
+    letter-spacing: -0.03em;
+  }
+
+  .admin-theme p,
+  .admin-theme li {
+    letter-spacing: -0.005em;
+  }
+
+  .admin-theme code,
+  .admin-theme pre,
+  .admin-theme kbd {
+    font-feature-settings: "kern" 1, "liga" 0;
+  }
+
   [data-theme="charcoal"] body {
     background-color: hsl(var(--background));
     background-image: linear-gradient(
@@ -203,6 +276,78 @@
 @layer components {
   .page-canvas {
     @apply min-h-screen;
+  }
+
+  /* Admin UI primitives */
+  .admin-card {
+    @apply rounded-2xl border border-border/70 bg-card text-card-foreground shadow-sm;
+  }
+
+  .admin-table {
+    @apply w-full min-w-full divide-y divide-border text-sm;
+  }
+
+  .admin-th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+
+  .admin-td {
+    @apply px-4 py-3 text-foreground/85;
+  }
+
+  .admin-input {
+    @apply h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
+  }
+
+  .admin-select {
+    @apply h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
+  }
+
+  .admin-textarea {
+    @apply w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15;
+  }
+
+  /* Flux-inspired patterns (token-safe: uses existing CSS variables) */
+  .flux-frosted {
+    @apply border border-border/60 bg-background/80 backdrop-blur-xl;
+  }
+
+  .flux-shadow {
+    box-shadow:
+      0 1px 3px hsl(var(--foreground) / 0.06),
+      0 16px 32px hsl(var(--foreground) / 0.08);
+  }
+
+  .flux-dot-grid {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.08) 1px, transparent 0);
+    background-size: 18px 18px;
+  }
+
+  .flux-gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--brand)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .flux-glow {
+    position: relative;
+  }
+
+  .flux-glow::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0;
+    filter: blur(14px);
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.9), hsl(var(--brand) / 0.7));
+    transition: opacity 200ms ease;
+  }
+
+  .flux-glow:hover::after {
+    opacity: 0.45;
   }
 
   .text-display {

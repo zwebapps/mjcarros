@@ -9,11 +9,11 @@ const Logo = () => {
         <Image
           src="/logo.png"
           alt="Logo"
-          height={50}
-          width={50}
+          height={32}
+          width={32}
           style={{
-            width: "50px",
-            height: "50px",
+            width: "32px",
+            height: "32px",
           }}
           priority
         />

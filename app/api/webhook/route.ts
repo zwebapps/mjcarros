@@ -47,6 +47,22 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed") {
     try {
+      if (session?.metadata?.type === "import_deposit" && session.metadata.importRequestId) {
+        const { createEscrowForImport } = await import("@/lib/escrow-service");
+        const amount = (session.amount_total ?? 0) / 100;
+        const paymentIntentId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : undefined;
+        await createEscrowForImport({
+          importRequestId: String(session.metadata.importRequestId),
+          amount,
+          stripeSessionId: session.id,
+          stripePaymentId: paymentIntentId,
+        });
+        return new NextResponse(null, { status: 200 });
+      }
+
       const orderId = session?.metadata?.orderId;
       if (!orderId) {
         console.error("Stripe webhook: No order ID in session metadata");

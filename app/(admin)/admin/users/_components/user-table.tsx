@@ -42,7 +42,7 @@ const UserTable = () => {
             id: user.id,
             name: user.firstName || user.username,
             email: user.emailAddresses[0].emailAddress,
-            role: user.unsafeMetadata.isAdmin ? "ADMIN" : "USER",
+            role: user.role || (user.unsafeMetadata?.isAdmin ? "ADMIN" : "USER"),
             createdAt: user.createdAt
           })) as User[];
           
@@ -94,7 +94,7 @@ const UserTable = () => {
     <>
       <TitleHeader
         title="Manage Users"
-        description="Manage admin users"
+        description="Customers, dealers, and staff accounts"
         url="/admin/users/new"
         count={data?.length}
       />

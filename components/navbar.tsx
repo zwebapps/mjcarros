@@ -72,6 +72,7 @@ export function Navbar() {
     { href: "/shop", label: t("nav.shop") },
     { href: "/featured", label: t("nav.featured") },
     { href: "/contact", label: t("nav.contact") },
+    { href: "/import", label: "Import from Germany" },
   ];
 
   const ordersHref = user ? "/orders" : "/orders/guest";

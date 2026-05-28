@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { withMongoId, withMongoIds } from "@/lib/serialize-api";
+import { importInclude } from "@/lib/import-service";
+import { notifyAdmins } from "@/lib/platform-notify";
 
 export const runtime = "nodejs";
 
@@ -53,7 +55,22 @@ export async function POST(request: NextRequest) {
       data: { importRequestId: row.id, status: "SEARCHING", message: "Lead received" },
     });
 
-    return NextResponse.json(withMongoId(row), { status: 201 });
+    let userId: string | undefined;
+    const token = extractTokenFromHeader(request.headers.get("authorization") ?? undefined);
+    const payload = token ? verifyToken(token) : null;
+    if (payload?.userId) {
+      userId = payload.userId;
+      await prisma.importRequest.update({
+        where: { id: row.id },
+        data: { userId },
+      });
+    }
+
+    await notifyAdmins(`New import lead: ${fullName} (${email})`, "import");
+
+    return NextResponse.json(withMongoId({ ...row, userId: userId ?? row.userId }), {
+      status: 201,
+    });
   } catch (error) {
     console.error("Import request error:", error);
     return NextResponse.json({ error: "Failed to submit request" }, { status: 500 });
@@ -75,6 +92,7 @@ export async function GET(request: NextRequest) {
 
     const rows = await prisma.importRequest.findMany({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      include: importInclude,
     });
     return NextResponse.json(withMongoIds(rows));
   } catch (error) {

@@ -1,6 +1,5 @@
 import { db, insertOne, findMany } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
 
 export async function POST(req: Request) {
   const { categoryId, sizes } = await req.json();
@@ -10,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Database not found' }, { status: 500 });
     }
     const category = await db.category.findUnique({
-      where: { _id: new ObjectId(categoryId ) },
+      where: { id: String(categoryId) },
     });
 
     if (!category) {

@@ -22,7 +22,8 @@ function formatClerkUser(user: {
     firstName: user.name,
     username: user.name,
     emailAddresses: [{ emailAddress: user.email }],
-    unsafeMetadata: { isAdmin: user.role === "ADMIN" },
+    role: user.role,
+    unsafeMetadata: { isAdmin: user.role === "ADMIN", role: user.role },
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -83,7 +84,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const role = isAdmin === "Admin" ? "ADMIN" : "USER";
+    const roleMap: Record<string, string> = {
+      Admin: "ADMIN",
+      Dealer: "DEALER",
+      Customer: "CUSTOMER",
+      User: "USER",
+    };
+    const role = roleMap[String(isAdmin)] || "USER";
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {

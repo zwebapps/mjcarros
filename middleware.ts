@@ -4,7 +4,7 @@ import {
   verifyTokenMiddleware,
   extractTokenFromHeader,
 } from "./lib/auth-middleware";
-import { isAdminRole } from "./lib/roles";
+import { isAdminRole, isDealerRole } from "./lib/roles";
 
 const PUBLIC_PREFIXES = [
   "/",
@@ -12,6 +12,7 @@ const PUBLIC_PREFIXES = [
   "/product",
   "/featured",
   "/contact",
+  "/import",
   "/cart",
   "/orders",
   "/api/auth/signin",
@@ -41,8 +42,13 @@ const ADMIN_PREFIXES = [
   "/api/clerk",
   "/api/contact/cms",
   "/api/orders",
-  "/api/import-requests",
+  "/api/stats",
+  "/api/payments",
+  "/api/dealers",
+  "/api/escrow",
 ] as const;
+
+const DEALER_PREFIXES = ["/api/dealer"] as const;
 
 function matchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
   return prefixes.some((route) => {
@@ -84,6 +90,10 @@ function isAdminUiPage(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+function isDealerUiPage(pathname: string): boolean {
+  return pathname === "/dealer" || pathname.startsWith("/dealer/");
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -91,7 +101,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isAdminUiPage(pathname)) {
+  if (isAdminUiPage(pathname) || isDealerUiPage(pathname)) {
     return NextResponse.next();
   }
 
@@ -104,7 +114,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const isAdminRoute = matchesPrefix(pathname, ADMIN_PREFIXES);
-
+  const isDealerRoute = matchesPrefix(pathname, DEALER_PREFIXES);
   const token = extractTokenFromHeader(request.headers.get("authorization"));
 
   if (!token) {
@@ -125,6 +135,13 @@ export async function middleware(request: NextRequest) {
   if (isAdminRoute && !isAdminRole(payload.role)) {
     return NextResponse.json(
       { error: "Admin access required" },
+      { status: 403 }
+    );
+  }
+
+  if (isDealerRoute && !isDealerRole(payload.role)) {
+    return NextResponse.json(
+      { error: "Dealer access required" },
       { status: 403 }
     );
   }

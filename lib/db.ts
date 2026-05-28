@@ -1,7 +1,7 @@
 /**
  * Prisma-backed data access with a Prisma-like surface for legacy callers.
  */
-import { ObjectId } from "mongodb";
+import type { ObjectId } from "mongodb";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { legacyMongoFilter } from "./id-resolve";
@@ -11,8 +11,13 @@ export { prisma };
 
 function resolveWhereId(where: { id?: string; _id?: ObjectId | string }) {
   if (where._id != null) {
-    const raw =
-      where._id instanceof ObjectId ? where._id.toString() : String(where._id);
+    // Avoid importing Mongo's ObjectId at runtime (keeps Next dev fast).
+    // Accept both ObjectId-like objects and plain strings.
+    const raw = String(
+      typeof where._id === "object" && where._id && "toString" in where._id
+        ? (where._id as { toString: () => string }).toString()
+        : where._id
+    );
     return legacyMongoFilter(raw);
   }
   if (where.id != null) {

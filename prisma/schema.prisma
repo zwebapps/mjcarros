@@ -26,6 +26,12 @@ enum ImportStatus {
   CANCELLED
 }
 
+enum EscrowStatus {
+  HELD
+  RELEASED
+  REFUNDED
+}
+
 model User {
   id             String   @id @default(cuid())
   legacyMongoId  String?  @unique
@@ -38,6 +44,7 @@ model User {
 
   notifications Notification[]
   dealerProfile Dealer?
+  importRequests ImportRequest[]
 }
 
 model Billboard {
@@ -186,6 +193,7 @@ model ImportRequest {
   id        String       @id @default(cuid())
   status    ImportStatus @default(SEARCHING)
   sortOrder Int          @default(0)
+  userId    String?
 
   fullName          String
   phone             String
@@ -214,14 +222,46 @@ model ImportRequest {
   downPayment         String?
   reservationDeposit  String?
 
-  assignedDealerId String?
-  notes            String?
+  assignedDealerId    String?
+  notes               String?
+  inspectionImageURLs String[] @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   dealer   Dealer?       @relation(fields: [assignedDealerId], references: [id])
   events   ImportEvent[]
+  escrow   Escrow?
+  payments PaymentRecord[]
+}
+
+model Escrow {
+  id                String       @id @default(cuid())
+  importRequestId   String       @unique
+  amount            Float
+  currency          String       @default("eur")
+  status            EscrowStatus @default(HELD)
+  stripePaymentId   String?
+  stripeSessionId   String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  importRequest ImportRequest @relation(fields: [importRequestId], references: [id], onDelete: Cascade)
+}
+
+model PaymentRecord {
+  id              String   @id @default(cuid())
+  stripeId        String?
+  amount          Float
+  currency        String   @default("eur")
+  status          String
+  type            String
+  orderId         String?
+  importRequestId String?
+  createdAt       DateTime @default(now())
+
+  importRequest ImportRequest? @relation(fields: [importRequestId], references: [id], onDelete: SetNull)
 }
 
 model ImportEvent {
