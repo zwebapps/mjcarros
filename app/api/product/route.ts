@@ -16,6 +16,15 @@ export async function GET(request: NextRequest) {
   let client;
   
   try {
+    const includeHidden = request.nextUrl.searchParams.get("includeHidden") === "1";
+    let userRole = request.headers.get("x-user-role");
+    if (!userRole) {
+      const token = extractTokenFromHeader(request.headers.get("authorization"));
+      const payload = token ? verifyToken(token) : null;
+      if (payload) userRole = payload.role;
+    }
+    const isAdmin = userRole === "ADMIN";
+
     client = new MongoClient(getMongoDbUri(), {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
@@ -26,7 +35,8 @@ export async function GET(request: NextRequest) {
     const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
-    const products = await productsCollection.find(CLIENT_VISIBLE_PRODUCT_FILTER).toArray();
+    const filter = includeHidden && isAdmin ? {} : CLIENT_VISIBLE_PRODUCT_FILTER;
+    const products = await productsCollection.find(filter).toArray();
     const withCode = products.map((p:any)=>({
       ...p,
       productCode: p.productCode || `PRD-${p._id.toString().slice(-6).toUpperCase()}`,

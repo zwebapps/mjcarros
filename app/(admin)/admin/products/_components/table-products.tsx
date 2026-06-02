@@ -31,14 +31,15 @@ export default function ProductTable() {
   const productsPerPage = 5;
   const queryClient = useQueryClient();
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
 
   const { error, data, isLoading } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["products", showHidden],
     queryFn: async () => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
-      const { data } = await axios.get("/api/product", { headers });
+      const { data } = await axios.get(`/api/product${showHidden ? "?includeHidden=1" : ""}`, { headers });
 
       const sortedData = sortByDate(data);
       return sortedData as createData[];
@@ -82,6 +83,20 @@ export default function ProductTable() {
         description="Manage products for your store"
         url="/admin/products/new"
       />
+      <div className="mb-3 flex items-center justify-end gap-3">
+        <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={showHidden}
+            onChange={(e) => {
+              setCurrentPage(0);
+              setShowHidden(e.target.checked);
+            }}
+          />
+          Show hidden products
+        </label>
+      </div>
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">

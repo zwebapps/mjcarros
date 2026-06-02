@@ -4,6 +4,7 @@ import ProductCard from "@/components/ui/product-card";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeCtaSection } from "@/components/home/home-cta-section";
 import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -137,7 +138,7 @@ async function getCategoriesWithCounts() {
         !billboardImage || billboardImage.includes("/placeholder-image.");
       const localCategoryImage = `/uploads/category/${slugify(name)}.jpg`;
       const image = isPlaceholder ? localCategoryImage : billboardImage;
-      return { name, count, image };
+      return { name, count, image: resolvePublicImageSrc(image) };
     });
 
     return rows.sort((a, b) => b.count - a.count).slice(0, 8);
@@ -182,6 +183,10 @@ const HomePage = async () => {
                     src={category.image}
                     alt={category.name}
                     className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] sm:h-44"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/placeholder-image.svg";
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-brand/85 via-brand/40 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
