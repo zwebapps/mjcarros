@@ -5,6 +5,7 @@ import ProductDetail from "./_components/product-detail";
 import Link from "next/link";
 
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { isProductHidden } from "@/lib/product-visibility";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -29,7 +30,7 @@ export async function generateMetadata({
     const { ObjectId } = await import('mongodb');
     const product = await productsCollection.findOne({ _id: new ObjectId(params.productId) });
 
-    if (!product) {
+    if (!product || isProductHidden(product)) {
       return {
         title: "Product Not Found | MJ Carros",
         description: "The requested product could not be found",

@@ -8,6 +8,7 @@ import {
   sortCategoriesForDisplay,
   DEFAULT_CATEGORY_ORDER,
 } from "@/lib/default-categories";
+import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 export type ShopSidebarCategory = {
   id: string;
@@ -40,7 +41,7 @@ export async function getShopSidebarData(): Promise<ShopSidebarPayload> {
 
     const [dbCategories, dbProducts] = await Promise.all([
       categoriesCollection.find({}).toArray(),
-      productsCollection.find({}).toArray(),
+      productsCollection.find(CLIENT_VISIBLE_PRODUCT_FILTER).toArray(),
     ]);
 
     const products: UIProduct[] = dbProducts.map((p) => ({

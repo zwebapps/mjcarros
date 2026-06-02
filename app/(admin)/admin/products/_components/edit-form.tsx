@@ -39,6 +39,7 @@ type InitialType = {
   category: string;
   files: File[];
   isFeatured: boolean;
+  isHidden?: boolean;
   isSold?: boolean;
   negotiable?: boolean;
   productSizes?: SizeProduct[];
@@ -82,6 +83,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     category,
     files: [],
     isFeatured: featured,
+    isHidden: (data as any).hidden || false,
     isSold: (data as any).sold || false,
     negotiable: (data as any).negotiable || false,
     productSizes: productSizes,
@@ -101,6 +103,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const [checkbox, setCheckBox] = useState<boolean>(featured);
   const [soldCheckbox, setSoldCheckbox] = useState<boolean>((data as any).sold || false);
   const [negotiableCheckbox, setNegotiableCheckbox] = useState<boolean>((data as any).negotiable || false);
+  const [hiddenCheckbox, setHiddenCheckbox] = useState<boolean>((data as any).hidden || false);
   const [previewImage, setPreviewImage] = useState<string[]>();
   const [dataForm, setDataForm] = useState<InitialType>(initialState);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -115,12 +118,16 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
   const handleNegotiableCheckboxChange = () => {
     setNegotiableCheckbox((prevCheck) => !prevCheck);
   };
+  const handleHiddenCheckboxChange = () => {
+    setHiddenCheckbox((prevCheck) => !prevCheck);
+  };
 
   useEffect(() => {
     setCheckBox(featured);
     setSoldCheckbox((data as any).sold || false);
     setNegotiableCheckbox((data as any).negotiable || false);
-  }, [featured]);
+    setHiddenCheckbox((data as any).hidden || false);
+  }, [featured, data]);
 
   // Only reset gallery from server when switching products. Do not depend on `imageURLs`
   // reference — React Query refetches would wipe locally uploaded URLs before Save.
@@ -135,6 +142,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
       category,
       files: [],
       isFeatured: featured,
+      isHidden: (data as any).hidden || false,
       isSold: (data as any).sold || false,
       negotiable: (data as any).negotiable || false,
       productSizes,
@@ -229,6 +237,7 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
     formData.append("mileage", String(dataForm.mileage ?? 0));
     formData.append("condition", dataForm.condition || "new");
     formData.append("isFeatured", checkbox.toString());
+    formData.append("isHidden", hiddenCheckbox.toString());
     formData.append("isSold", soldCheckbox.toString());
     formData.append("negotiable", negotiableCheckbox.toString());
     formData.append("existingImageURLs", JSON.stringify(imageUrls));
@@ -429,6 +438,21 @@ const EditForm = ({ data, onSubmit }: EditFormProps) => {
         <div className="space-y-1 leading-none">
           <p className="font-semibold">Featured</p>
           <div>This product will appear on the home page</div>
+        </div>
+      </div>
+      <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+        <div>
+          <input
+            type="checkbox"
+            id="isHidden"
+            name="isHidden"
+            checked={hiddenCheckbox}
+            onChange={handleHiddenCheckboxChange}
+          />
+        </div>
+        <div className="space-y-1 leading-none">
+          <p className="font-semibold">Hide from storefront</p>
+          <div>When enabled, this vehicle will not appear on the public shop or home pages</div>
         </div>
       </div>
       <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">

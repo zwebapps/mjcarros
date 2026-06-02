@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit",
+    "test": "tsx tests/run.ts",
     "prepare": "husky",
     "start": "next start",
     "lint": "next lint",

@@ -99,6 +99,9 @@ export default function ProductTable() {
                 Featured
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Visibility
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Quantity
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -143,6 +146,9 @@ export default function ProductTable() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   {product.featured ? "Yes" : "No"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  {(product as { hidden?: boolean }).hidden ? "Hidden" : "Visible"}
                 </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                 {typeof product.stockQuantity === 'number' ? Math.max(1, product.stockQuantity) : 1}

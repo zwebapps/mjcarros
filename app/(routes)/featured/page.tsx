@@ -4,6 +4,7 @@ import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
 import { MongoClient } from "mongodb";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 export const metadata: Metadata = {
   title: "Featured | MJ Carros",
@@ -28,7 +29,7 @@ const FeaturedPage = async ({
     const db = client.db(getMongoDbName());
     const productsCollection = db.collection("products");
     const dbProducts = await productsCollection
-      .find({ featured: true })
+      .find({ featured: true, ...CLIENT_VISIBLE_PRODUCT_FILTER })
       .sort({ updatedAt: -1 })
       .toArray();
     await client.close();

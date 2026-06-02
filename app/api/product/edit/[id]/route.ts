@@ -110,6 +110,7 @@ export async function PUT(
       return s === 'true' || s === 'on' || s === '1' || s === 'yes' || s === 'checked';
     };
     const isFeatured = parseBool(formData.get("isFeatured"));
+    const isHidden = parseBool(formData.get("isHidden"));
     const isSold = parseBool(formData.get("isSold"));
     const isNegotiable = parseBool(formData.get("negotiable"));
     const productSizesRaw = String(formData.get("productSizes") || "[]");
@@ -179,7 +180,13 @@ export async function PUT(
     }
 
     // Prepare update data using field presence (not truthiness)
-    const setData: any = { updatedAt: new Date(), featured: isFeatured, sold: isSold, negotiable: isNegotiable };
+    const setData: any = {
+      updatedAt: new Date(),
+      featured: isFeatured,
+      hidden: isHidden,
+      sold: isSold,
+      negotiable: isNegotiable,
+    };
     const unsetData: any = {};
 
     if (hasField('name')) setData.title = name;

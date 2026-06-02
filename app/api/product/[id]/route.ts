@@ -3,6 +3,7 @@ import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { isProductHidden, CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 const MONGODB_URI = getMongoDbUri();
 
@@ -33,11 +34,24 @@ export async function GET(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
+    let userRole = request.headers.get("x-user-role");
+    if (!userRole) {
+      const token = extractTokenFromHeader(request.headers.get("authorization"));
+      const payload = token ? verifyToken(token) : null;
+      if (payload) userRole = payload.role;
+    }
+    const isAdmin = userRole === "ADMIN";
+
+    if (!isAdmin && isProductHidden(product)) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
     // Find related products (same category, excluding current product)
     const relatedProducts = await productsCollection
       .find({ 
         category: product.category, 
-        _id: { $ne: new ObjectId(params.id) } 
+        _id: { $ne: new ObjectId(params.id) },
+        ...CLIENT_VISIBLE_PRODUCT_FILTER,
       })
       .limit(4)
       .toArray();

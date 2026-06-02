@@ -44,7 +44,9 @@ export async function getAllProducts() {
 export async function getFeaturedProducts() {
   try {
     const res = await axios.get(`/api/product/`);
-    const featured = res.data.filter((product: Product) => product.featured);
+    const featured = res.data.filter(
+      (product: Product) => product.featured && !product.hidden
+    );
     return featured;
   } catch (error) {
     console.error('Error fetching featured products:', error);

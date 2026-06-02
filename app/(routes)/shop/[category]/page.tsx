@@ -4,7 +4,8 @@ import { sortSoldLast } from "@/lib/shop-products";
 import { Product } from "@/types";
 import ShopProductCard from "@/components/ui/shop-product-card";
 import { MongoClient } from "mongodb";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection"; 
+import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility"; 
 
 interface CategoryPageProps {
   params: { category: string };
@@ -32,7 +33,12 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
     await client.connect();
     const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
-    const dbProducts: any[] = await productsCollection.find({ category: new RegExp(`^${params.category}$`, 'i') }).toArray();
+    const dbProducts: any[] = await productsCollection
+      .find({
+        category: new RegExp(`^${params.category}$`, "i"),
+        ...CLIENT_VISIBLE_PRODUCT_FILTER,
+      })
+      .toArray();
 
     const products: Product[] = dbProducts.map((dbProduct) => ({
       id: dbProduct._id?.toString(),

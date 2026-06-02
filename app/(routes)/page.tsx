@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ui/product-card";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeCtaSection } from "@/components/home/home-cta-section";
+import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -27,7 +28,7 @@ async function getFeaturedProducts() {
     const db = client.db(getMongoDbName());
     const productsCollection = db.collection("products");
     const docs = await productsCollection
-      .find({ featured: true })
+      .find({ featured: true, ...CLIENT_VISIBLE_PRODUCT_FILTER })
       .sort({ updatedAt: -1 })
       .limit(8)
       .toArray();
@@ -91,7 +92,7 @@ async function getCategoriesWithCounts() {
     const billboardsCollection = db.collection("billboards");
 
     const [products, categories] = await Promise.all([
-      productsCollection.find({}).project({ category: 1 }).toArray(),
+      productsCollection.find(CLIENT_VISIBLE_PRODUCT_FILTER).project({ category: 1 }).toArray(),
       categoriesCollection.find({}).project({ category: 1, billboardId: 1 }).toArray(),
     ]);
 

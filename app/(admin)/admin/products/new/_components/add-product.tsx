@@ -35,6 +35,7 @@ type initialState = {
   category: string;
   files: File[];
   isFeatured: boolean;
+  isHidden: boolean;
   isSold: boolean;
   isNegotiable: boolean;
   categoryId: string;
@@ -62,6 +63,7 @@ const AddProduct = () => {
     categoryId: "",
     files: [],
     isFeatured: false,
+    isHidden: false,
     isSold: false,
     isNegotiable: false,
     // sizes removed
@@ -149,6 +151,9 @@ const AddProduct = () => {
   };
   const handleNegotiableChange = (isChecked: boolean) => {
     setDataForm((prevData) => ({ ...prevData, isNegotiable: isChecked }));
+  };
+  const handleHiddenChange = (isChecked: boolean) => {
+    setDataForm((prevData) => ({ ...prevData, isHidden: isChecked }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -238,6 +243,7 @@ const AddProduct = () => {
       price: convPrice,
       files: dataForm.files,
       featured: dataForm.isFeatured,
+      hidden: dataForm.isHidden,
       sold: dataForm.isSold,
       negotiable: dataForm.isNegotiable,
       category: dataForm.category,
@@ -455,6 +461,21 @@ const AddProduct = () => {
           <div className="space-y-1 leading-none">
             <p className="font-semibold">Featured</p>
             <div>This product will appear on the home page</div>
+          </div>
+        </div>
+        <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+          <div>
+            <input
+              type="checkbox"
+              id="isHidden"
+              name="isHidden"
+              checked={dataForm.isHidden}
+              onChange={(e) => handleHiddenChange(e.target.checked)}
+            />
+          </div>
+          <div className="space-y-1 leading-none">
+            <p className="font-semibold">Hide from storefront</p>
+            <div>When enabled, this vehicle will not appear on the public shop or home pages</div>
           </div>
         </div>
         <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">

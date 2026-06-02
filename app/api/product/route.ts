@@ -7,6 +7,7 @@ import {
 } from "@/lib/public-uploads";
 import { mergeProductImageUrls } from "@/lib/product-image-urls";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
     
-    const products = await productsCollection.find({}).toArray();
+    const products = await productsCollection.find(CLIENT_VISIBLE_PRODUCT_FILTER).toArray();
     const withCode = products.map((p:any)=>({
       ...p,
       productCode: p.productCode || `PRD-${p._id.toString().slice(-6).toUpperCase()}`,
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
     let finalPrice: number | undefined = undefined;
     let discount: number | undefined = undefined;
     let featured: boolean = false;
+    let hidden: boolean = false;
     let sold: boolean = false;
     let negotiable: boolean = false;
     let imageURLs: string[] = [];
@@ -86,6 +88,7 @@ export async function POST(request: NextRequest) {
       finalPrice = parsed.finalPrice ? Number(parsed.finalPrice) : undefined;
       discount = parsed.discount ? Number(parsed.discount) : undefined;
       featured = !!parsed.featured;
+      hidden = !!parsed.hidden;
       sold = !!parsed.sold;
       negotiable = !!parsed.negotiable;
       // sizes removed
@@ -143,7 +146,21 @@ export async function POST(request: NextRequest) {
       }
     } else {
       const body = await request.json();
-      ({ title, description, imageURLs = [], category, categoryId, price, finalPrice, discount, featured, sold, negotiable, ...extras } = body);
+      ({
+        title,
+        description,
+        imageURLs = [],
+        category,
+        categoryId,
+        price,
+        finalPrice,
+        discount,
+        featured,
+        hidden = false,
+        sold,
+        negotiable,
+        ...extras
+      } = body);
       imageURLs = mergeProductImageUrls(imageURLs);
     }
 
@@ -186,6 +203,7 @@ export async function POST(request: NextRequest) {
       finalPrice,
       discount,
       featured: featured || false,
+      hidden: hidden || false,
       sold: sold || false,
       negotiable: negotiable || false,
       productCode,

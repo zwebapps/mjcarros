@@ -4,6 +4,7 @@ import { sortSoldLast } from "@/lib/shop-products";
 import { Product } from "@/types";
 import { MongoClient } from "mongodb";
 import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 export const metadata = {
   title: "Shop | MJ Carros",
@@ -29,7 +30,7 @@ const ShopPage = async ({
     await client.connect();
     const db = client.db(getMongoDbName());
     const productsCollection = db.collection('products');
-    const dbProducts = await productsCollection.find({}).toArray();
+    const dbProducts = await productsCollection.find(CLIENT_VISIBLE_PRODUCT_FILTER).toArray();
     await client.close();
 
     const products: Product[] = dbProducts.map((dbProduct: any) => ({
