@@ -5,6 +5,7 @@ import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeCtaSection } from "@/components/home/home-cta-section";
 import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
+import { SafeImg } from "@/components/ui/safe-img";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -179,14 +180,11 @@ const HomePage = async () => {
                 className="group"
               >
                 <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all duration-300 group-hover:border-primary/40 group-hover:shadow-card-hover">
-                  <img
+                  <SafeImg
                     src={category.image}
                     alt={category.name}
                     className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] sm:h-44"
                     loading="lazy"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "/placeholder-image.svg";
-                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-brand/85 via-brand/40 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
