@@ -47,7 +47,7 @@ const MobileSidebar = () => {
           side="left"
           className="p-2 pt-10 bg-neutral-800 text-white"
         >
-          <Sidebar />
+          <Sidebar collapsed={false} />
         </SheetContent>
       </Sheet>
     </>

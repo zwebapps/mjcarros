@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, LogOut, Search, Shield, User } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/hooks/use-notifications";
+import { SidebarToggle } from "./sidebar-toggle";
 
 interface User {
   id: string;
@@ -13,7 +14,12 @@ interface User {
   role: string;
 }
 
-export function Navbar() {
+type NavbarProps = {
+  sidebarCollapsed?: boolean;
+  onSidebarToggle?: () => void;
+};
+
+export function Navbar({ sidebarCollapsed, onSidebarToggle }: NavbarProps) {
   const [user, setUser] = useState<User | null>(null);
   const { data: notifications } = useNotifications(true);
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
@@ -44,8 +50,11 @@ export function Navbar() {
     <header className="sticky top-0 z-40 border-b border-border/70 flux-frosted flux-shadow">
       <div className="mx-auto flex h-16 items-center gap-4 px-4 md:px-6">
         <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+          {onSidebarToggle != null && sidebarCollapsed != null && (
+            <SidebarToggle collapsed={sidebarCollapsed} onToggle={onSidebarToggle} />
+          )}
           <Shield className="h-4 w-4 text-primary" />
-          <span className="font-medium">Admin</span>
+          <span className="font-medium text-foreground">Admin</span>
         </div>
 
         <div className="flex-1">
