@@ -13,8 +13,17 @@ jobs:
         uses: actions/checkout@v4
 
       # Build on GitHub (more RAM). VPS builds often OOM (exit 137) during `next build`.
-      - name: Build Docker image
-        run: docker build -t mjcarros-nextjs:prod .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (with layer cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          tags: mjcarros-nextjs:prod
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Save image archive
         run: docker save mjcarros-nextjs:prod | gzip -1 > mjcarros-nextjs.tar.gz
