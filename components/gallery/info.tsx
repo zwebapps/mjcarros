@@ -80,6 +80,11 @@ const Info: React.FC<InfoProps> = ({ data }) => {
             "prose-p:my-3 prose-p:break-words prose-p:leading-relaxed prose-p:text-muted-foreground",
             "prose-ul:my-3 prose-li:my-1 prose-li:break-words",
             "prose-strong:text-foreground",
+            // Tables need explicit contrast; typography defaults can be too faint.
+            "prose-table:w-full",
+            "prose-thead:border-border prose-tr:border-border",
+            "prose-th:text-foreground prose-th:font-semibold prose-th:bg-muted/30 prose-th:px-3 prose-th:py-2",
+            "prose-td:text-foreground/90 prose-td:px-3 prose-td:py-2",
             "[&_a]:break-all [&_code]:break-all",
           ].join(" ")}
         >
