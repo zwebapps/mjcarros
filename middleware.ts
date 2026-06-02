@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   verifyTokenMiddleware,
-  extractTokenFromHeader,
+  extractTokenFromRequest,
 } from "./lib/auth-middleware";
 import { isAdminRole } from "./lib/roles";
 
@@ -16,6 +16,7 @@ const PUBLIC_PREFIXES = [
   "/orders",
   "/api/auth/signin",
   "/api/auth/signup",
+  "/api/auth/signout",
   "/api/contact",
   "/api/checkout",
   "/api/webhook",
@@ -75,11 +76,16 @@ export async function middleware(request: NextRequest) {
 
   const isAdminRoute = matchesPrefix(pathname, ADMIN_PREFIXES);
 
-  const token = extractTokenFromHeader(request.headers.get("authorization"));
+  const token = extractTokenFromRequest(
+    request.headers.get("authorization"),
+    request.headers.get("cookie")
+  );
 
   if (!token) {
     if (pathname.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(signInUrl);
     }
     return NextResponse.json(
       { error: "Authentication required" },
@@ -90,7 +96,9 @@ export async function middleware(request: NextRequest) {
   const payload = await verifyTokenMiddleware(token);
   if (!payload) {
     if (pathname.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(signInUrl);
     }
     return NextResponse.json(
       { error: "Invalid or expired token" },

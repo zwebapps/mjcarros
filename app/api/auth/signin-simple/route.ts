@@ -3,6 +3,8 @@ import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
 import { generateToken } from '@/lib/auth';
+import { setAuthCookie } from '@/lib/auth-cookie';
+import { normalizeRole } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
   let client;
@@ -66,16 +68,19 @@ export async function POST(request: NextRequest) {
     const token = generateToken({
       userId: user._id?.toString() || '',
       email: user.email,
-      role: user.role,
+      role: normalizeRole(user.role),
     });
 
     // Return user data (without password) and token
     const { password: _, ...userWithoutPassword } = user;
-    
-    return NextResponse.json({
-      user: userWithoutPassword,
-      token
+    const role = normalizeRole(user.role);
+
+    const response = NextResponse.json({
+      user: { ...userWithoutPassword, role },
+      token,
     });
+    setAuthCookie(response, token);
+    return response;
 
   } catch (error) {
     console.error('❌ Signin error:', error);

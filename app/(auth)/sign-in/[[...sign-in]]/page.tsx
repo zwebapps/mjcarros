@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,6 @@ export default function SignInPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -30,6 +29,7 @@ export default function SignInPage() {
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ email, password }),
       });
 
@@ -41,7 +41,14 @@ export default function SignInPage() {
 
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push(isAdminRole(data.user?.role) ? '/admin' : '/');
+
+      const redirectTo = searchParams?.get('redirect');
+      if (redirectTo && redirectTo.startsWith('/')) {
+        window.location.assign(redirectTo);
+        return;
+      }
+
+      window.location.assign(isAdminRole(data.user?.role) ? '/admin' : '/');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {

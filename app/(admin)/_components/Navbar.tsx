@@ -28,11 +28,15 @@ export function Navbar() {
     }
   }, []);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await fetch("/api/auth/signout", { method: "POST", credentials: "same-origin" });
+    } catch {
+      // still clear client session below
+    }
     localStorage.removeItem('user');
     localStorage.removeItem('authToken');
     setUser(null);
-    // Redirect to home page
     window.location.href = '/';
   };
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import { comparePassword, generateToken } from '@/lib/auth';
+import { setAuthCookie } from '@/lib/auth-cookie';
 import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
 import { normalizeRole } from '@/lib/roles';
 
@@ -64,11 +65,13 @@ export async function POST(request: NextRequest) {
     });
 
     const { password: _, ...userWithoutPassword } = user;
-    
-    return NextResponse.json({
+
+    const response = NextResponse.json({
       user: { ...userWithoutPassword, role },
-      token
+      token,
     });
+    setAuthCookie(response, token);
+    return response;
 
   } catch (error) {
     console.error('❌ Signin error:', error);

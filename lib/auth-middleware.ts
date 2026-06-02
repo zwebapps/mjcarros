@@ -5,6 +5,7 @@
 // Subpath import avoids the main `jose` barrel (JWE → deflate → CompressionStream) which Edge warns on.
 import { jwtVerify } from "jose/jwt/verify";
 import type { JWTPayload } from "./auth";
+import { getTokenFromCookie } from "./auth-cookie";
 import { normalizeRole } from "./roles";
 
 export function extractTokenFromHeader(authHeader: string | null | undefined): string | null {
@@ -12,6 +13,13 @@ export function extractTokenFromHeader(authHeader: string | null | undefined): s
     return null;
   }
   return authHeader.substring(7);
+}
+
+export function extractTokenFromRequest(
+  authHeader: string | null | undefined,
+  cookieHeader: string | null | undefined
+): string | null {
+  return extractTokenFromHeader(authHeader) ?? getTokenFromCookie(cookieHeader);
 }
 
 function getJwtSecretKey(): Uint8Array {
