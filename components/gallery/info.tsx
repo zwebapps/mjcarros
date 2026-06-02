@@ -32,7 +32,7 @@ const Info: React.FC<InfoProps> = ({ data }) => {
 
   return (
     <div className="min-w-0 max-w-full">
-      <h1 className="text-3xl font-bold text-gray-900 break-words">{displayTitle}</h1>
+      <h1 className="text-3xl font-bold text-foreground break-words">{displayTitle}</h1>
 
       {/* Featured badge — category and specs shown as text below */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -48,19 +48,19 @@ const Info: React.FC<InfoProps> = ({ data }) => {
         {data.finalPrice && data.finalPrice > 0 && data.discount && data.discount > 0 ? (
           <div className="font-semibold">
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 line-through">
+              <span className="text-muted-foreground line-through">
                 {formatCurrency(Number(data?.price), "EUR", intlLocale)}
               </span>
               <div className="rounded-sm bg-red-600 p-1 px-2 text-sm font-semibold text-white">
                 -{data?.discount}%
               </div>
             </div>
-            <p className="mt-1 text-2xl font-semibold text-gray-900">
+            <p className="mt-1 text-2xl font-semibold text-foreground">
               {formatCurrency(Number(data.finalPrice), "EUR", intlLocale)}
             </p>
           </div>
         ) : (
-          <p className="text-2xl font-semibold text-gray-900">
+          <p className="text-2xl font-semibold text-foreground">
             {formatCurrency(Number(data?.price), "EUR", intlLocale)}
           </p>
         )}
@@ -76,10 +76,10 @@ const Info: React.FC<InfoProps> = ({ data }) => {
         <div
           className={[
             "product-description prose prose-neutral max-w-none",
-            "prose-headings:mt-6 prose-headings:mb-2 prose-headings:break-words prose-headings:text-gray-900",
-            "prose-p:my-3 prose-p:break-words prose-p:leading-relaxed prose-p:text-gray-700",
+            "prose-headings:mt-6 prose-headings:mb-2 prose-headings:break-words prose-headings:text-foreground",
+            "prose-p:my-3 prose-p:break-words prose-p:leading-relaxed prose-p:text-muted-foreground",
             "prose-ul:my-3 prose-li:my-1 prose-li:break-words",
-            "prose-strong:text-gray-900",
+            "prose-strong:text-foreground",
             "[&_a]:break-all [&_code]:break-all",
           ].join(" ")}
         >
