@@ -1,59 +1,61 @@
 import { type Metadata } from "next";
-import { MongoClient } from "mongodb";
 import { siteConfig } from "@/config/site";
 import ProductDetail from "./_components/product-detail";
 import Link from "next/link";
-
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-import { isProductHidden } from "@/lib/product-visibility";
-
-const MONGODB_URI = getMongoDbUri();
+import { JsonLd } from "@/components/seo/json-ld";
+import { buildProductJsonLd } from "@/lib/product-json-ld";
+import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
+import { absoluteUrl } from "@/lib/site-url";
+import { getStorefrontProductById } from "@/lib/storefront-product";
 
 export async function generateMetadata({
   params,
 }: {
   params: { productId: string };
 }): Promise<Metadata> {
-  let client;
-  
-  try {
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    
-    const { ObjectId } = await import('mongodb');
-    const product = await productsCollection.findOne({ _id: new ObjectId(params.productId) });
+  const product = await getStorefrontProductById(params.productId);
 
-    if (!product || isProductHidden(product)) {
-      return {
-        title: "Product Not Found | MJ Carros",
-        description: "The requested product could not be found",
-      };
-    }
-
+  if (!product) {
     return {
-      title: `${product.title} | ${siteConfig.name}`,
-      description: product.description || "Product details",
+      title: "Veículo não encontrado",
+      description: "O veículo solicitado não está disponível.",
+      robots: { index: false, follow: true },
     };
-  } catch (error) {
-    return {
-      title: "Product | MJ Carros",
-      description: "Product details",
-    };
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
+
+  const title = product.title;
+  const description =
+    product.description?.slice(0, 160) ||
+    `${product.title} — ${siteConfig.name}`;
+  const canonical = `/product/${params.productId}`;
+  const firstImage = Array.isArray(product.imageURLs)
+    ? product.imageURLs.find((u) => typeof u === "string" && u.trim())
+    : undefined;
+  const ogImage = firstImage
+    ? absoluteUrl(resolvePublicImageSrc(firstImage))
+    : siteConfig.ogImage;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      url: absoluteUrl(canonical),
+      title: `${title} | ${siteConfig.name}`,
+      description,
+      images: [{ url: ogImage, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | ${siteConfig.name}`,
+      description,
+      images: [ogImage],
+    },
+  };
 }
 
-const ProductPage = ({ params }: { params: { productId: string } }) => {
+const ProductPage = async ({ params }: { params: { productId: string } }) => {
   if (!params?.productId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -66,8 +68,17 @@ const ProductPage = ({ params }: { params: { productId: string } }) => {
       </div>
     );
   }
-  
-  return <ProductDetail productId={params.productId} />;
+
+  const product = await getStorefrontProductById(params.productId);
+
+  return (
+    <>
+      {product ? (
+        <JsonLd data={buildProductJsonLd(product, params.productId)} />
+      ) : null}
+      <ProductDetail productId={params.productId} />
+    </>
+  );
 };
 
 export default ProductPage;

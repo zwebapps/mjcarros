@@ -3,6 +3,8 @@ import { Anton, Oswald, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import "font-awesome/css/font-awesome.min.css";
 import { siteConfig } from "@/config/site";
+import { SiteJsonLd } from "@/components/seo/site-json-ld";
+import { getSiteUrl } from "@/lib/site-url";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { ToastProvider } from "@/providers/toast-provider";
 import { LocaleProvider } from "@/components/locale-provider";
@@ -30,8 +32,36 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
-  title: siteConfig.name,
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
+  },
   description: siteConfig.description,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_PT",
+    alternateLocale: ["en"],
+    url: getSiteUrl(),
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [{ url: siteConfig.ogImage, alt: siteConfig.name }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+  },
+  alternates: {
+    canonical: "/",
+  },
   icons: [
     {
       url: "/logo.png",
@@ -63,6 +93,7 @@ export default function RootLayout({
     <ReactQueryProvider>
       <html lang="pt-PT" suppressHydrationWarning data-theme="charcoal">
         <head>
+          <SiteJsonLd />
           <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
           <script dangerouslySetInnerHTML={{ __html: localeInitScript }} />
         </head>

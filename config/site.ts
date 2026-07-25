@@ -1,8 +1,9 @@
 export const siteConfig = {
   name: "MJ Carros",
-  description: "Premium automotive marketplace for luxury and performance vehicles",
-  url: "https://mjcarros.com",
-  ogImage: "https://mjcarros.com/og.jpg",
+  description:
+    "Stand automóvel premium em Portugal — veículos de luxo, desportivos, SUV e elétricos.",
+  url: "https://mjcarros.pt",
+  ogImage: "https://mjcarros.pt/logo.png",
   links: {
     twitter: "https://twitter.com/mjcarros",
     github: "https://github.com/mjcarros",

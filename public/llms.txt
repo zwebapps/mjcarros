@@ -1,0 +1,27 @@
+# MJ Carros (mjcarros.pt)
+
+> Stand automóvel premium em Portugal — veículos de luxo, desportivo, SUV e elétricos.
+
+## Site
+- https://mjcarros.pt/
+- https://mjcarros.pt/shop
+- https://mjcarros.pt/featured
+- https://mjcarros.pt/contact
+
+## Catalog
+- Listagem completa: https://mjcarros.pt/shop
+- Cada veículo: https://mjcarros.pt/product/{id}
+
+## Sitemap
+- https://mjcarros.pt/sitemap.xml
+
+## Contact
+- Página de contacto: https://mjcarros.pt/contact
+
+## Language
+- Português (pt-PT) e English (en) — conteúdo do stand em Portugal.
+
+## Crawling
+- robots.txt: https://mjcarros.pt/robots.txt
+- Páginas públicas indexáveis: home, shop, categorias, fichas de veículos, featured, contacto.
+- Áreas privadas (não indexar): /admin, /cart, /orders, autenticação.
