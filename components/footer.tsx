@@ -22,7 +22,7 @@ const COMPLAINTS_BOOK_URL = "https://www.livroreclamacoes.pt/Inicio/";
 
 function FooterHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-brand-foreground/60">
+    <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-brand-foreground/60">
       {children}
     </h2>
   );
@@ -33,7 +33,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
     <li>
       <Link
         href={href}
-        className="inline-block py-1 text-sm text-brand-foreground/85 transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-block py-0.5 text-sm text-brand-foreground/85 transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {children}
       </Link>
@@ -68,23 +68,23 @@ const Footer = () => {
 
   return (
     <footer className="mt-auto border-t border-border bg-brand text-brand-foreground">
-      <div className="mx-auto max-w-[1400px] px-4 pb-8 pt-14 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-12 lg:gap-8">
+      <div className="mx-auto max-w-[1400px] px-4 pb-5 pt-9 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-7 lg:grid-cols-12 lg:gap-8">
           {/* Brand */}
           <div className="col-span-2 lg:col-span-4">
             <Link
               href="/"
               className="inline-flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Image src={logoPng} alt="" width={44} height={44} className="h-11 w-11" />
+              <Image src={logoPng} alt="" width={36} height={36} className="h-9 w-9" />
               <span className="text-xl font-bold tracking-tight text-white">MJ Carros</span>
             </Link>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-brand-foreground/75">
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-brand-foreground/75">
               {t("footer.tagline")}
             </p>
             <Link
               href="/shop"
-              className="mt-6 inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
+              className="mt-4 inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
             >
               {t("footer.browseStock")}
             </Link>
@@ -95,7 +95,7 @@ const Footer = () => {
             <FooterHeading>
               <span id="footer-explore">{t("footer.explore")}</span>
             </FooterHeading>
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               <FooterLink href="/shop">{t("nav.shop")}</FooterLink>
               <FooterLink href="/featured">{t("nav.featured")}</FooterLink>
               <FooterLink href="/import">{t("footer.importGermany")}</FooterLink>
@@ -108,7 +108,7 @@ const Footer = () => {
             <FooterHeading>
               <span id="footer-account">{t("footer.account")}</span>
             </FooterHeading>
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               <FooterLink href="/sign-in">{t("nav.signIn")}</FooterLink>
               <FooterLink href="/sign-up">{t("nav.signUp")}</FooterLink>
               <FooterLink href="/orders/guest">{t("nav.trackOrders")}</FooterLink>
@@ -119,7 +119,7 @@ const Footer = () => {
           {/* Contact — from the admin-editable contact page; rows without data are omitted */}
           <div className="col-span-2 lg:col-span-4">
             <FooterHeading>{t("footer.visitUs")}</FooterHeading>
-            <address className="space-y-3 text-sm not-italic text-brand-foreground/85">
+            <address className="space-y-2 text-sm not-italic text-brand-foreground/85">
               {hasAddress && (
                 <p className="flex gap-3">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -149,11 +149,7 @@ const Footer = () => {
               {hours.length > 0 && (
                 <div className="flex gap-3">
                   <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  <ul>
-                    {hours.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
+                  <span>{hours.join(" · ")}</span>
                 </div>
               )}
               {!contact && (
@@ -165,7 +161,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs text-brand-foreground/65 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-7 flex flex-col gap-2 border-t border-white/10 pt-4 text-xs text-brand-foreground/65 sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {year} MJ Carros · {COMPANY_NAME}. {t("footer.rights")}.
           </p>
