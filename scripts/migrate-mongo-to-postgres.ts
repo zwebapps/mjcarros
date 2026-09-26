@@ -127,6 +127,13 @@ async function main() {
     // A category with the same name may already exist (e.g. created by setup-admin);
     // adopt it instead of failing on the unique name.
     const sameName = await prisma.category.findUnique({ where: { category: name } });
+    if (sameName?.legacyMongoId && sameName.legacyMongoId !== legacy) {
+      // Mongo holds two categories with this name; Postgres keeps one and both
+      // legacy ids resolve to it, so every product still finds its category.
+      console.log(`↪ duplicate category "${name}" (${legacy}) merged into ${sameName.legacyMongoId}`);
+      idMap.categories.set(legacy, sameName.id);
+      continue;
+    }
     const row = await prisma.category.upsert({
       where: sameName && !sameName.legacyMongoId ? { id: sameName.id } : { legacyMongoId: legacy },
       create: {
