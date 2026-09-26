@@ -30,11 +30,8 @@ RUN set -e && \
 FROM node:18-bullseye AS runner
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
+# ca-certificates and OpenSSL (needed by Prisma) ship with node:18-bullseye; an apt
+# upgrade here fails whenever Debian retires the bullseye-security package it points to.
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
