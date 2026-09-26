@@ -9,7 +9,7 @@ const Logo = () => {
       <div className="hover:opacity-75 transition flex items-center">
         <Image
           src={logoPng}
-          alt="Logo"
+          alt="MJ Carros"
           height={32}
           width={32}
           style={{

@@ -13,7 +13,15 @@
     "admin": "Admin"
   },
   "footer": {
-    "rights": "Todos os direitos reservados"
+    "rights": "Todos os direitos reservados",
+    "tagline": "Viaturas premium em Portugal: carros de luxo, desportivos, SUV e elétricos, todos cuidadosamente selecionados e prontos a conduzir.",
+    "browseStock": "Ver o nosso stock",
+    "explore": "Explorar",
+    "account": "Conta",
+    "visitUs": "Visite-nos",
+    "importGermany": "Importar da Alemanha",
+    "complaintsBook": "Livro de Reclamações",
+    "backToTop": "Voltar ao topo"
   },
   "shop": {
     "title": "Loja",

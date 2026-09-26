@@ -13,7 +13,15 @@
     "admin": "Admin"
   },
   "footer": {
-    "rights": "All rights reserved"
+    "rights": "All rights reserved",
+    "tagline": "Premium vehicles in Portugal: luxury, sports, SUV and electric cars, each one carefully selected and ready to drive.",
+    "browseStock": "Browse our stock",
+    "explore": "Explore",
+    "account": "Account",
+    "visitUs": "Visit us",
+    "importGermany": "Import from Germany",
+    "complaintsBook": "Complaints Book",
+    "backToTop": "Back to top"
   },
   "shop": {
     "title": "Shop",
