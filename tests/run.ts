@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { CLIENT_VISIBLE_PRODUCT_FILTER, isProductHidden } from "@/lib/product-visibility";
 import { getTokenFromCookie } from "@/lib/auth-cookie";
+import { markdownToPlainText, truncateAtWord } from "@/lib/plain-text";
 
 function test(name: string, fn: () => void) {
   try {
@@ -35,3 +36,16 @@ test("getTokenFromCookie extracts authToken value", () => {
   assert.equal(getTokenFromCookie("foo=bar; authToken=abc123; baz=1"), "abc123");
 });
 
+
+test("markdownToPlainText strips markdown for link previews", () => {
+  const md = "**Mercedes-Benz EQB 250+ AMG Line**\n\n- 📝 2025 fully _electric_ SUV\n- [Book a test drive](https://x.pt)";
+  assert.equal(
+    markdownToPlainText(md),
+    "Mercedes-Benz EQB 250+ AMG Line 📝 2025 fully electric SUV Book a test drive"
+  );
+});
+
+test("truncateAtWord cuts on a word boundary with an ellipsis", () => {
+  assert.equal(truncateAtWord("one two three four", 12), "one two…");
+  assert.equal(truncateAtWord("short", 160), "short");
+});

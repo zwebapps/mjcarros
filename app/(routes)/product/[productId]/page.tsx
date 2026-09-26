@@ -7,6 +7,7 @@ import { buildProductJsonLd } from "@/lib/product-json-ld";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import { absoluteUrl } from "@/lib/site-url";
 import { getStorefrontProductById } from "@/lib/storefront-product";
+import { markdownToPlainText, truncateAtWord } from "@/lib/plain-text";
 
 export async function generateMetadata({
   params,
@@ -25,7 +26,7 @@ export async function generateMetadata({
 
   const title = product.title;
   const description =
-    product.description?.slice(0, 160) ||
+    truncateAtWord(markdownToPlainText(product.description || "")) ||
     `${product.title} — ${siteConfig.name}`;
   const canonical = `/product/${params.productId}`;
   const firstImage = Array.isArray(product.imageURLs)

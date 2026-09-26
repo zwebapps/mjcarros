@@ -2,6 +2,7 @@ import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import { absoluteUrl } from "@/lib/site-url";
 import { siteConfig } from "@/config/site";
 import type { StorefrontProductDoc } from "@/lib/storefront-product";
+import { markdownToPlainText } from "@/lib/plain-text";
 
 function productImages(product: StorefrontProductDoc): string[] {
   const raw = product.imageURLs;
@@ -26,7 +27,7 @@ export function buildProductJsonLd(
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.title,
-    description: product.description || product.title,
+    description: markdownToPlainText(product.description || "") || product.title,
     url,
     image: images.length > 0 ? images : undefined,
     brand: product.modelName
