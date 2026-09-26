@@ -57,7 +57,7 @@ export function generateContactFormEmail(contactData: ContactFormData): { subjec
   const subject = `${contactData.subject || 'General Inquiry'}`;
 
   const siteEmail = process.env.NEXT_PUBLIC_SITE_EMAIL || 'info@mjcarros.com';
-  const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || 'www.mjcarros.pt';
+  const siteWeb = process.env.NEXT_PUBLIC_SITE_WEB || 'www.majesticjourney.pt';
 
   const html = `
     <!DOCTYPE html>

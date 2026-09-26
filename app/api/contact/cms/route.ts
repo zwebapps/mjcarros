@@ -12,7 +12,7 @@ const defaultContact = {
   cityLine: "Verdelhas - Vale Mourelos Espaco no. 1, 2815-729 Pontevedra, Portugal",
   phone: "+351 927508220",
   email: "majesticjourneypt@gmail.com",
-  web: "www.mjcarros.pt",
+  web: "www.majesticjourney.pt",
   hours: "24/7 Customer Support",
 };
 
