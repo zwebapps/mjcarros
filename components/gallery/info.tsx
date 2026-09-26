@@ -14,6 +14,7 @@ import { useLocale } from "@/components/locale-provider";
 import { localeToIntl } from "@/lib/i18n";
 import { useTranslatedText } from "@/hooks/use-translated-text";
 import { ProductSpecs } from "@/components/gallery/product-specs";
+import { ShareLinkButton } from "@/components/gallery/share-link-button";
 
 interface InfoProps {
   data: Product;
@@ -32,7 +33,10 @@ const Info: React.FC<InfoProps> = ({ data }) => {
 
   return (
     <div className="min-w-0 max-w-full">
-      <h1 className="text-3xl font-bold text-foreground break-words">{displayTitle}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="min-w-0 text-3xl font-bold text-foreground break-words">{displayTitle}</h1>
+        <ShareLinkButton className="mt-1" />
+      </div>
 
       {/* Featured badge — category and specs shown as text below */}
       <div className="mt-3 flex flex-wrap items-center gap-2">

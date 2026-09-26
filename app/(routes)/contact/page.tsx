@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+// Theme-aware field styling: the storefront defaults to the dark "charcoal" theme, so
+// fixed light-mode grays made labels and typed text nearly invisible.
+const labelClass = "block text-sm font-medium text-foreground";
+const fieldClass = "mt-1 border-foreground/40 bg-background";
 
 type ContactCMS = {
   heroTitle: string;
@@ -62,30 +68,82 @@ export default function ContactPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
-                <input name="name" value={form.name} onChange={onChange} required className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-0 focus:border-black" />
+                <label htmlFor="contact-name" className={labelClass}>
+                  Name *
+                </label>
+                <Input
+                  id="contact-name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={onChange}
+                  required
+                  className={fieldClass}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input name="email" type="email" value={form.email} onChange={onChange} required className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-0 focus:border-black" />
+                <label htmlFor="contact-email" className={labelClass}>
+                  Email *
+                </label>
+                <Input
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={onChange}
+                  required
+                  className={fieldClass}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Phone</label>
-                <input name="phone" value={form.phone} onChange={onChange} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-0 focus:border-black" />
+                <label htmlFor="contact-phone" className={labelClass}>
+                  Phone
+                </label>
+                <Input
+                  id="contact-phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={form.phone}
+                  onChange={onChange}
+                  className={fieldClass}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Subject</label>
-                <input name="subject" value={form.subject} onChange={onChange} className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-0 focus:border-black" />
+                <label htmlFor="contact-subject" className={labelClass}>
+                  Subject
+                </label>
+                <Input
+                  id="contact-subject"
+                  name="subject"
+                  type="text"
+                  autoComplete="off"
+                  value={form.subject}
+                  onChange={onChange}
+                  className={fieldClass}
+                />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Message</label>
-              <textarea name="message" rows={6} value={form.message} onChange={onChange} required className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-0 focus:border-black" />
+              <label htmlFor="contact-message" className={labelClass}>
+                Message *
+              </label>
+              <textarea
+                id="contact-message"
+                name="message"
+                rows={6}
+                value={form.message}
+                onChange={onChange}
+                required
+                className="mt-1 w-full rounded-lg border border-foreground/40 bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors duration-200 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              />
             </div>
             <div className="flex items-center gap-3">
               <Button disabled={isSubmitting}>{isSubmitting ? "Sending..." : "Send Message"}</Button>
-              {ok === true && <span className="text-green-600 text-sm">Message sent. We’ll get back to you soon.</span>}
-              {ok === false && <span className="text-red-600 text-sm">Failed to send. Please try again.</span>}
+              {ok === true && <span role="status" className="text-sm text-green-500">Message sent. We’ll get back to you soon.</span>}
+              {ok === false && <span role="alert" className="text-sm text-red-400">Failed to send. Please try again.</span>}
             </div>
           </form>
         </div>

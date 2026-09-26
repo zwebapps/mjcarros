@@ -555,6 +555,26 @@
     color: hsl(var(--negotiable-foreground));
   }
 
+  /* Product detail — map Tailwind Typography colours to the site theme. `prose-neutral`
+     hard-codes dark greys, which disappear on the default dark "charcoal" theme
+     (list items, bullets, links and quotes had no per-element override). */
+  .prose.product-description {
+    --tw-prose-body: hsl(var(--foreground) / 0.88);
+    --tw-prose-headings: hsl(var(--foreground));
+    --tw-prose-lead: hsl(var(--foreground) / 0.88);
+    --tw-prose-links: hsl(var(--primary));
+    --tw-prose-bold: hsl(var(--foreground));
+    --tw-prose-counters: hsl(var(--muted-foreground));
+    --tw-prose-bullets: hsl(var(--foreground) / 0.6);
+    --tw-prose-hr: hsl(var(--border));
+    --tw-prose-quotes: hsl(var(--foreground));
+    --tw-prose-quote-borders: hsl(var(--border));
+    --tw-prose-captions: hsl(var(--muted-foreground));
+    --tw-prose-code: hsl(var(--foreground));
+    --tw-prose-th-borders: hsl(var(--border));
+    --tw-prose-td-borders: hsl(var(--border));
+  }
+
   /* Product detail — markdown tables from admin descriptions */
   .product-description table {
     width: 100%;

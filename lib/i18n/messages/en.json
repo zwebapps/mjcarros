@@ -44,7 +44,10 @@
     "specMileage": "Mileage",
     "specCondition": "Condition",
     "firstRegistration": "First registration",
-    "details": "Details"
+    "details": "Details",
+    "shareCopyLink": "Copy link to share",
+    "linkCopied": "Link copied",
+    "copyFailed": "Could not copy link"
   },
   "home": {
     "viewStock": "View our stock",
