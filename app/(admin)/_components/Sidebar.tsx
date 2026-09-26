@@ -18,7 +18,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       >
         <div className="shrink-0">
           <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-1 flux-glow">
-            <Logo />
+            <Logo size="compact" />
           </div>
         </div>
         {!collapsed && (

@@ -654,7 +654,7 @@
   }
 
   .shop-sidebar-title {
-    @apply text-xs font-bold uppercase tracking-widest text-brand;
+    @apply text-xs font-bold uppercase tracking-widest text-muted-foreground;
   }
 
   .shop-category-list {
@@ -682,7 +682,7 @@
   }
 
   .shop-toolbar-title {
-    @apply text-2xl font-bold uppercase tracking-wide text-brand sm:text-3xl;
+    @apply text-2xl font-bold uppercase tracking-wide text-foreground sm:text-3xl;
   }
 
   .shop-grid-catalog {

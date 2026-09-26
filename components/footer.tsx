@@ -76,7 +76,7 @@ const Footer = () => {
               href="/"
               className="inline-flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Image src={logoPng} alt="" width={36} height={36} className="h-9 w-9" />
+              <Image src={logoPng} alt="" className="h-10 w-auto" sizes="50px" />
               <span className="text-xl font-bold tracking-tight text-white">MJ Carros</span>
             </Link>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-brand-foreground/75">

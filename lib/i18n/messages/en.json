@@ -55,7 +55,8 @@
     "details": "Details",
     "shareCopyLink": "Copy link to share",
     "linkCopied": "Link copied",
-    "copyFailed": "Could not copy link"
+    "copyFailed": "Could not copy link",
+    "nextCar": "Next car"
   },
   "home": {
     "viewStock": "View our stock",

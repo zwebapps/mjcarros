@@ -17,7 +17,7 @@ export function AuthShell({
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-nav/95 px-4 py-3 backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <Logo />
+          <Logo size="compact" />
           <div className="flex items-center gap-3">
             <Link
               href="/"

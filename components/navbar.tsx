@@ -108,7 +108,7 @@ export function Navbar() {
   if (isLoading) {
     return (
       <header className="sticky top-0 z-50 border-b border-white/10 bg-nav text-nav-foreground backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:h-[72px] sm:px-6 lg:px-8">
           <Logo />
           <div className="ml-auto h-9 w-28 animate-pulse rounded-lg bg-muted" />
         </div>
@@ -166,7 +166,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-nav text-nav-foreground backdrop-blur-md supports-[backdrop-filter]:bg-nav/95">
       {/* Mobile-first: logo + actions */}
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-2 px-4 sm:h-16 sm:gap-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-2 px-4 sm:h-[72px] sm:gap-3 sm:px-6 lg:px-8">
         <div className="shrink-0">
           <Logo />
         </div>

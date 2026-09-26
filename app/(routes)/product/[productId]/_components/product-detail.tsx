@@ -11,6 +11,7 @@ import Spinner from "@/components/Spinner";
 import { resolvePublicImageSrc } from "@/lib/resolve-image-src";
 import { useLocale } from "@/components/locale-provider";
 import { t as translate } from "@/lib/i18n";
+import { NextCarLink } from "./next-car-link";
 
 interface ProductDetailProps {
   productId: string;
@@ -161,13 +162,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
     <div className="page-canvas min-h-full w-full">
       <div className="product-page-shell mx-auto w-full max-w-[1400px] bg-card">
         <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <Link
-            href="/shop"
-            className="mb-6 inline-flex items-center gap-1 font-semibold text-foreground hover:text-primary"
-          >
-            <ArrowLeft className="h-5 w-5 shrink-0" />
-            {t("product.backToShop")}
-          </Link>
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <Link
+              href="/shop"
+              className="inline-flex shrink-0 items-center gap-1 rounded-md font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {t("product.backToShop")}
+            </Link>
+            <NextCarLink productId={productId} />
+          </div>
 
           <div className="lg:grid lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)] lg:items-start lg:gap-x-10">
             <Gallery
@@ -184,7 +188,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
             <>
               <hr className="my-10 border-border" />
               <div className="space-y-4">
-                <h3 className="text-2xl font-bold text-brand sm:text-3xl">
+                <h3 className="text-2xl font-bold text-foreground sm:text-3xl">
                   {t("product.recommended")}
                 </h3>
                 <div className="shop-grid-catalog !p-0">
