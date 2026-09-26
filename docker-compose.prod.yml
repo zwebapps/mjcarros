@@ -51,7 +51,10 @@ services:
       ADMIN_NAME: ${ADMIN_NAME}
 
       JWT_SECRET: ${JWT_SECRET}
-      NEXT_PUBLIC_APP_URL: http://localhost:8080
+      # Public origin used for canonical/OG links (LinkedIn/WhatsApp previews), sitemap,
+      # Stripe/PayPal return URLs and email links. Must be the real https domain,
+      # never localhost. Override via NEXT_PUBLIC_APP_URL in .env if the domain changes.
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://majesticjourney.pt}
 
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
