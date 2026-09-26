@@ -8,30 +8,32 @@ export interface OrderWithItems {
   userEmail: string;
   phone: string;
   address: string;
-  paymentMethod: string;
-  transactionId?: string; // optional gateway transaction identifier
-  paymentIntentId?: string; // optional Stripe payment intent id
-  checkoutSessionId?: string; // optional Stripe checkout session id
-  createdAt: Date;
-  updatedAt: Date;
-  orderItems: { 
-    productId: string;
-    productName: string;
-    quantity: number;
-    price: number;
+  paymentMethod?: string | null;
+  transactionId?: string | null;
+  paymentIntentId?: string | null;
+  checkoutSessionId?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  orderItems: {
+    productId?: string | null;
+    productName?: string;
+    quantity?: number;
+    price?: number;
     product?: {
-      _id: string;
-      title: string;
-      description: string;
-      price: number;
-      category: string;
-      modelName: string;
-      year: number;
-      mileage: number;
-      fuelType: string;
-      color: string;
-      imageURLs: string[];
-    };
+      _id?: string;
+      id?: string;
+      title?: string;
+      description?: string;
+      price?: number;
+      category?: string;
+      modelName?: string | null;
+      year?: number | null;
+      mileage?: number | null;
+      fuelType?: string | null;
+      color?: string | null;
+      condition?: string | null;
+      imageURLs?: string[];
+    } | null;
   }[];
 }
 

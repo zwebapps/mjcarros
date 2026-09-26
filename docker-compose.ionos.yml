@@ -1,41 +1,25 @@
-# Optional IONOS variant (named uploads volume). Default production deploy: docker-compose.prod.yml + GitHub Actions.
-# Production-style stack for a VPS (e.g. IONOS Cloud Server) with CI/CD.
-# - MongoDB data: named volume (survives `docker compose down`; only `down -v` wipes it)
-# - Uploads: named volume → /app/public/uploads (NOT wiped on redeploy)
+# IONOS VPS production stack (Postgres + Next.js). Uploads on named volume.
 name: mjcarros
-#
-# Usage on the server (after cloning repo and creating `.env` from `.env.example`):
-#   docker compose -f docker-compose.ionos.yml up -d --build
-#
-# GitHub Actions can SSH in and run the same command (see .github/workflows/deploy-ionos.yml).
 
 services:
-  mongodb:
-    image: mongo:7
-    container_name: mjcarros-mongodb
+  db:
+    image: postgres:16-alpine
+    container_name: mjcarros-db
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
-      MONGO_DATABASE: ${MONGO_DATABASE}
-      MONGO_USERNAME: ${MONGO_USERNAME}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      ADMIN_NAME: ${ADMIN_NAME}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mjcarros}
     volumes:
-      - mongodb_data:/data/db
-      - ./mongo-init-simple.js:/docker-entrypoint-initdb.d/mongo-init-simple.js:ro
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mjcarros}"]
       interval: 5s
       timeout: 10s
       retries: 12
-      start_period: 40s
-    # Do not publish 27017 publicly on a VPS; DB is reachable only inside the Compose network.
+      start_period: 20s
     networks:
       - mjcarros
 
@@ -49,27 +33,35 @@ services:
     env_file:
       - .env
     ports:
-      # Reverse proxy (nginx/Caddy) on the host can forward 443 → this port
       - "${IONOS_HTTP_PORT:-8080}:3000"
     environment:
       NODE_ENV: production
       DOCKER: "true"
-      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=${MONGO_AUTH_SOURCE}
+      POSTGRES_PRISMA_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-mjcarros}?schema=public
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_NAME: ${ADMIN_NAME}
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
-      mongodb:
+      db:
         condition: service_healthy
     networks:
       - mjcarros
     volumes:
-      # Named volume: uploads persist independently of git clone path or new image layers
       - uploads_data:/app/public/uploads
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        npm run setup-admin &&
+        npm run start
+      "
 
 networks:
   mjcarros:
     driver: bridge
 
 volumes:
-  mongodb_data:
-    name: mjcarros_mongodb_data
+  pgdata:
+    name: mjcarros_pgdata
   uploads_data:
     name: mjcarros_uploads_data

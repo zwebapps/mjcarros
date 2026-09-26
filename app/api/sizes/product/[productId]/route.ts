@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -8,11 +8,8 @@ export async function GET(
   const { productId } = params;
 
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 500 });
-    }
-    const sizes = await db.productSize.findMany({
-      where: { productId: productId },
+    const sizes = await prisma.productSize.findMany({
+      where: { productId },
       include: {
         size: true,
       },

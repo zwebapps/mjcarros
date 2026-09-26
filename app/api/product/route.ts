@@ -1,81 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
 import {
   buildUploadRelativePath,
   writeBufferToPublicUploads,
 } from "@/lib/public-uploads";
 import { mergeProductImageUrls } from "@/lib/product-image-urls";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { prisma } from "@/lib/prisma";
+import { legacyMongoFilter } from "@/lib/id-resolve";
+import { withMongoId, withMongoIds } from "@/lib/serialize-api";
 import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  let client;
-  
   try {
     const includeHidden = request.nextUrl.searchParams.get("includeHidden") === "1";
+    let userRole = request.headers.get("x-user-role");
+    if (!userRole) {
+      const token = extractTokenFromHeader(request.headers.get("authorization") ?? undefined);
+      const payload = token ? verifyToken(token) : null;
+      userRole = payload?.role || null;
+    }
+    const isAdmin = userRole === "ADMIN";
+
+    const rows = await prisma.product.findMany({
+      where: includeHidden && isAdmin ? undefined : CLIENT_VISIBLE_PRODUCT_FILTER,
+      orderBy: { updatedAt: "desc" },
+    });
+    const products = withMongoIds(rows).map((p: (typeof rows)[number] & { _id: string }) => ({
+      ...p,
+      productCode: p.productCode || `PRD-${p.id.slice(-6).toUpperCase()}`,
+      sold: !!p.sold,
+    }));
+    return NextResponse.json(products);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return NextResponse.json({ error: "Error fetching products" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
     let userRole = request.headers.get("x-user-role");
     if (!userRole) {
       const token = extractTokenFromHeader(request.headers.get("authorization"));
       const payload = token ? verifyToken(token) : null;
       if (payload) userRole = payload.role;
     }
-    const isAdmin = userRole === "ADMIN";
-
-    client = new MongoClient(getMongoDbUri(), {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    
-    const filter = includeHidden && isAdmin ? {} : CLIENT_VISIBLE_PRODUCT_FILTER;
-    const products = await productsCollection.find(filter).toArray();
-    const withCode = products.map((p:any)=>({
-      ...p,
-      productCode: p.productCode || `PRD-${p._id.toString().slice(-6).toUpperCase()}`,
-      sold: !!p.sold,
-    }));
-    return NextResponse.json(withCode);
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    return NextResponse.json({ error: "Error fetching products" }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
-  }
-}
-
-export async function POST(request: NextRequest) {
-  let client;
-  
-  try {
-    // Check if user is admin (middleware sets these headers). Fallback to self-verification.
-    let userRole = request.headers.get('x-user-role');
-    if (!userRole) {
-      const token = extractTokenFromHeader(request.headers.get('authorization'));
-      const payload = token ? verifyToken(token) : null;
-      if (payload) userRole = payload.role;
-    }
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const contentType = request.headers.get('content-type') || '';
-    let title = '';
-    let description = '';
-    let category = '';
-    let categoryId = '';
+    const contentType = request.headers.get("content-type") || "";
+    let title = "";
+    let description = "";
+    let category = "";
+    let categoryId = "";
     let price: number = 0;
     let finalPrice: number | undefined = undefined;
     let discount: number | undefined = undefined;
@@ -84,12 +65,12 @@ export async function POST(request: NextRequest) {
     let sold: boolean = false;
     let negotiable: boolean = false;
     let imageURLs: string[] = [];
-    let extras: any = {};
+    let extras: Record<string, unknown> = {};
 
-    if (contentType.includes('multipart/form-data')) {
+    if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
-      const raw = String(formData.get('requestData') || '{}');
-      const parsed = JSON.parse(raw || '{}');
+      const raw = String(formData.get("requestData") || "{}");
+      const parsed = JSON.parse(raw || "{}");
       title = parsed.title;
       description = parsed.description;
       category = parsed.category;
@@ -101,8 +82,6 @@ export async function POST(request: NextRequest) {
       hidden = !!parsed.hidden;
       sold = !!parsed.sold;
       negotiable = !!parsed.negotiable;
-      // sizes removed
-      // Car attributes
       extras = {
         modelName: parsed.modelName || "",
         year: parsed.year ? Number(parsed.year) : 0,
@@ -123,7 +102,6 @@ export async function POST(request: NextRequest) {
       const uploadFailures: string[] = [];
       let uploadedUrls: string[] = [];
 
-      // Client pre-uploads via /api/upload; only fall back to multipart when no URLs were sent.
       if (preUrls.length === 0) {
         for (const file of files) {
           if (!file || typeof file === "string" || file.size === 0) continue;
@@ -188,52 +166,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    client = new MongoClient(getMongoDbUri(), {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const catRow = categoryId
+      ? await prisma.category.findFirst({ where: legacyMongoFilter(categoryId) })
+      : await prisma.category.findFirst({
+          where: { category: { equals: category, mode: "insensitive" } },
+        });
+
+    const resolvedCategoryId = catRow?.id ?? categoryId;
+    const resolvedCategoryName = catRow?.category ?? category;
+
+    if (!resolvedCategoryId) {
+      return NextResponse.json({ error: "Category not found" }, { status: 400 });
+    }
+
+    const row = await prisma.product.create({
+      data: {
+        title,
+        description,
+        imageURLs,
+        category: resolvedCategoryName,
+        categoryId: resolvedCategoryId,
+        price,
+        finalPrice,
+        discount,
+        featured: featured || false,
+        hidden: hidden || false,
+        sold: sold || false,
+        negotiable: negotiable || false,
+        modelName: (extras.modelName as string) || "",
+        year: (extras.year as number) || undefined,
+        stockQuantity: (extras.stockQuantity as number) || 1,
+        color: (extras.color as string) || "",
+        fuelType: (extras.fuelType as string) || "",
+        transmission: (extras.transmission as string) || "",
+        mileage: extras.mileage as number | null | undefined,
+        condition: (extras.condition as string) || "new",
+      },
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    
-    // Pre-generate an ObjectId so we can derive a human-friendly productCode
-    const newId = new ObjectId();
-    const productCode = `PRD-${newId.toHexString().slice(-6).toUpperCase()}`;
 
-    const productData = {
-      _id: newId,
-      title,
-      description,
-      imageURLs,
-      category,
-      categoryId: categoryId || category,
-      price,
-      finalPrice,
-      discount,
-      featured: featured || false,
-      hidden: hidden || false,
-      sold: sold || false,
-      negotiable: negotiable || false,
-      productCode,
-      ...extras,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const productCode = `PRD-${row.id.slice(-6).toUpperCase()}`;
+    const updated = await prisma.product.update({
+      where: { id: row.id },
+      data: { productCode },
+    });
 
-    const result = await productsCollection.insertOne(productData);
-    const newProduct = { ...productData, _id: result.insertedId };
-
-    return NextResponse.json(newProduct);
+    return NextResponse.json(withMongoId(updated));
   } catch (error) {
     console.error("Error creating product:", error);
-    const message =
-      error instanceof Error ? error.message : "Error creating product";
+    const message = error instanceof Error ? error.message : "Error creating product";
     return NextResponse.json({ error: message }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }

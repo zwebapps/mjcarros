@@ -1,63 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
-import { ObjectId } from "mongodb";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { readFile } from "fs/promises";
 import path from "path";
-
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-
-const MONGODB_URI = getMongoDbUri();
+import { prisma } from "@/lib/prisma";
+import { legacyMongoFilter } from "@/lib/id-resolve";
+import { apiId, withMongoId } from "@/lib/serialize-api";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { orderId: string } }
 ) {
-  let client;
-  
   try {
-    // Check if orderId is valid
-    if (!params.orderId || params.orderId === 'undefined') {
+    if (!params.orderId || params.orderId === "undefined") {
       return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
     }
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const order = await prisma.order.findFirst({
+      where: legacyMongoFilter(params.orderId),
+      include: {
+        orderItems: { include: { product: true } },
+      },
     });
-    
-    await client.connect();
-            const db = client.db(getMongoDbName());
-    const ordersCollection = db.collection('orders');
-    const productsCollection = db.collection('products');
-    
-    // Find the order
-    const order = await ordersCollection.findOne({ _id: new ObjectId(params.orderId) });
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Fetch products for order items
-    const orderItemsWithProducts = await Promise.all(
-      (order.orderItems || []).map(async (item: any) => {
-        const product = await productsCollection.findOne({ _id: new ObjectId(item.productId) });
-        return {
-          ...item,
-          product: product
-        };
-      })
-    );
+    const orderItemsWithProducts = order.orderItems.map((item: (typeof order.orderItems)[number]) => ({
+      ...item,
+      productId: item.productId,
+      productName: item.productName,
+      quantity: item.quantity,
+      price: item.price,
+      product: item.product ? withMongoId(item.product) : null,
+    }));
 
-    // Add products to order
     const orderWithProducts = {
-      ...order,
+      ...withMongoId(order),
       orderItems: orderItemsWithProducts,
       address: order.address || "",
       phone: order.phone || "",
-      userEmail: (order as any).userEmail || "",
-      createdAt: order.createdAt || new Date()
+      userEmail: order.userEmail || "",
+      createdAt: order.createdAt || new Date(),
     };
 
     const pdfDoc = await PDFDocument.create();
@@ -257,7 +241,7 @@ export async function GET(
     const modelVal = product?.modelName || product?.title || "";
     const mileageVal = product?.mileage != null ? String(product.mileage) : "";
     const fuelVal = product?.fuelType || "";
-    const vinVal = product?.id || product?._id?.toString() || "";
+    const vinVal = product ? apiId(product) : "";
     const deliveryVal = orderWithProducts.createdAt ? new Date(orderWithProducts.createdAt).toLocaleDateString() : "";
 
     // Layout positions (lowered) and vertical spacing
@@ -403,9 +387,5 @@ export async function GET(
       { error: "Failed to generate invoice" },
       { status: 500 }
     );
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }

@@ -2,9 +2,8 @@ import { Metadata } from "next";
 import ProductCard from "@/components/ui/product-card";
 import filteredData from "@/app/utils/filteredData";
 import { Product } from "@/types";
-import { MongoClient } from "mongodb";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
+import { skipMongoConnectionDuringBuild } from "@/lib/mongodb-connection";
+import { getFeaturedProducts } from "@/lib/data-access";
 
 export const metadata: Metadata = {
   title: "Featured | MJ Carros",
@@ -19,39 +18,34 @@ const FeaturedPage = async ({
   searchParams: { [key: string]: string | string[] | undefined };
 }) => {
   try {
-    const uri = getMongoDbUri();
-    const client = new MongoClient(uri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection("products");
-    const dbProducts = await productsCollection
-      .find({ featured: true, ...CLIENT_VISIBLE_PRODUCT_FILTER })
-      .sort({ updatedAt: -1 })
-      .toArray();
-    await client.close();
+    if (skipMongoConnectionDuringBuild()) {
+      return (
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Featured vehicles</h1>
+          <p className="text-gray-600">No featured vehicles are available right now.</p>
+        </div>
+      );
+    }
 
-    const products: Product[] = dbProducts.map((dbProduct: any) => ({
-      id: dbProduct._id?.toString(),
-      title: dbProduct.title,
-      description: dbProduct.description,
-      price: dbProduct.price,
-      finalPrice: dbProduct.finalPrice || undefined,
-      discount: dbProduct.discount || undefined,
-      featured: dbProduct.featured,
-      sold: !!dbProduct.sold,
-      negotiable: !!dbProduct.negotiable,
-      imageURLs: dbProduct.imageURLs || [],
-      category: dbProduct.category,
-      categoryId: dbProduct.categoryId,
-      createdAt: dbProduct.createdAt
-        ? new Date(dbProduct.createdAt).toISOString()
+    const rows = await getFeaturedProducts();
+    const products: Product[] = rows.map((p: (typeof rows)[number]) => ({
+      id: p._id,
+      title: p.title,
+      description: p.description,
+      price: p.price,
+      finalPrice: p.finalPrice || undefined,
+      discount: p.discount || undefined,
+      featured: p.featured,
+      sold: !!p.sold,
+      negotiable: !!p.negotiable,
+      imageURLs: p.imageURLs || [],
+      category: p.category,
+      categoryId: p.categoryId,
+      createdAt: p.createdAt
+        ? new Date(p.createdAt).toISOString()
         : new Date().toISOString(),
-      updatedAt: dbProduct.updatedAt
-        ? new Date(dbProduct.updatedAt).toISOString()
+      updatedAt: p.updatedAt
+        ? new Date(p.updatedAt).toISOString()
         : new Date().toISOString(),
     }));
 
@@ -73,7 +67,9 @@ const FeaturedPage = async ({
     if (displayed.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-gray-600">No featured vehicles match your filters. Try adjusting sort or search.</p>
+          <p className="text-gray-600">
+            No featured vehicles match your filters. Try adjusting sort or search.
+          </p>
         </div>
       );
     }

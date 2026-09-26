@@ -3,9 +3,10 @@ import filteredData from "@/app/utils/filteredData";
 import { sortSoldLast } from "@/lib/shop-products";
 import { Product } from "@/types";
 import ShopProductCard from "@/components/ui/shop-product-card";
-import { MongoClient } from "mongodb";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility"; 
+import { skipMongoConnectionDuringBuild } from "@/lib/mongodb-connection";
+import { prisma } from "@/lib/prisma";
+import { withMongoIds } from "@/lib/serialize-api";
+import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
 interface CategoryPageProps {
   params: { category: string };
@@ -19,42 +20,40 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   };
 }
 
-// Force dynamic rendering since we use searchParams
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
   try {
-    const uri = getMongoDbUri();
-    const client = new MongoClient(uri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    const dbProducts: any[] = await productsCollection
-      .find({
-        category: new RegExp(`^${params.category}$`, "i"),
-        ...CLIENT_VISIBLE_PRODUCT_FILTER,
-      })
-      .toArray();
+    if (skipMongoConnectionDuringBuild()) {
+      return (
+        <div className="px-6 py-12 text-center">
+          <p className="text-muted-foreground">No vehicles in this category right now.</p>
+        </div>
+      );
+    }
 
-    const products: Product[] = dbProducts.map((dbProduct) => ({
-      id: dbProduct._id?.toString(),
-      title: dbProduct.title,
-      description: dbProduct.description,
-      price: dbProduct.price,
-      finalPrice: dbProduct.finalPrice || undefined,
-      discount: dbProduct.discount || undefined,
-      featured: dbProduct.featured,
-      sold: !!dbProduct.sold,
-      negotiable: !!dbProduct.negotiable,
-      imageURLs: dbProduct.imageURLs,
-      category: dbProduct.category,
-      categoryId: dbProduct.categoryId,
-      createdAt: dbProduct.createdAt.toISOString(),
-      updatedAt: dbProduct.updatedAt.toISOString(),
+    const dbProducts = await prisma.product.findMany({
+      where: {
+        category: { equals: params.category, mode: "insensitive" },
+        ...CLIENT_VISIBLE_PRODUCT_FILTER,
+      },
+    });
+
+    const products: Product[] = withMongoIds(dbProducts).map((p) => ({
+      id: p._id,
+      title: p.title,
+      description: p.description,
+      price: p.price,
+      finalPrice: p.finalPrice || undefined,
+      discount: p.discount || undefined,
+      featured: p.featured,
+      sold: !!p.sold,
+      negotiable: !!p.negotiable,
+      imageURLs: p.imageURLs || [],
+      category: p.category,
+      categoryId: p.categoryId,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
     }));
 
     const inCategory = products.filter(
@@ -66,14 +65,11 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
     if (displayed.length === 0) {
       return (
         <div className="px-6 py-12 text-center">
-          <p className="text-muted-foreground">
-            No vehicles in this category right now.
-          </p>
+          <p className="text-muted-foreground">No vehicles in this category right now.</p>
         </div>
       );
     }
 
-    await client.close();
     return (
       <div className="shop-grid-catalog">
         {displayed.map((product: Product) => (
@@ -86,7 +82,9 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
     return (
       <div className="text-center py-8">
         <p className="text-red-600">Error loading products. Please try again.</p>
-        <p className="text-sm text-gray-500 mt-2">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+        <p className="text-sm text-gray-500 mt-2">
+          Error: {error instanceof Error ? error.message : "Unknown error"}
+        </p>
       </div>
     );
   }

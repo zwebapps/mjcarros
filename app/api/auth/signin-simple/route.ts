@@ -1,79 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-import bcrypt from 'bcryptjs';
-import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
-import { generateToken } from '@/lib/auth';
-import { setAuthCookie } from '@/lib/auth-cookie';
-import { normalizeRole } from '@/lib/roles';
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { generateToken } from "@/lib/auth";
+import { prismaRoleToAppRole } from "@/lib/roles";
+import { prisma } from "@/lib/prisma";
+import { withMongoId } from "@/lib/serialize-api";
+import { setAuthCookie } from "@/lib/auth-cookie";
 
 export async function POST(request: NextRequest) {
-  let client;
-  let MONGODB_URI: string;
   try {
-    MONGODB_URI = getMongoDbUri();
-  } catch (e) {
-    console.error('MongoDB configuration error:', e);
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-  }
-
-  try {
-    console.log('🔐 Simple signin request received');
-    
     const { email, password } = await request.json();
-    console.log('📧 Email:', email);
 
-    // Validate input
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: "Email and password are required" },
         { status: 400 }
       );
     }
 
-    // Connect to MongoDB
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    console.log('✅ Connected to MongoDB');
-    
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection('users');
-    
-    // Find user
-    const user = await usersCollection.findOne({ email });
-    console.log('👤 User found:', !!user);
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('🔐 Password valid:', isValidPassword);
 
     if (!isValidPassword) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    const serialized = withMongoId(user);
+    const role = prismaRoleToAppRole(user.role);
     const token = generateToken({
-      userId: user._id?.toString() || '',
+      userId: serialized._id,
       email: user.email,
-      role: normalizeRole(user.role),
+      role,
     });
 
-    // Return user data (without password) and token
-    const { password: _, ...userWithoutPassword } = user;
-    const role = normalizeRole(user.role);
+    const { password: _, ...userWithoutPassword } = serialized;
 
     const response = NextResponse.json({
       user: { ...userWithoutPassword, role },
@@ -81,16 +45,8 @@ export async function POST(request: NextRequest) {
     });
     setAuthCookie(response, token);
     return response;
-
   } catch (error) {
-    console.error('❌ Signin error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    console.error("Signin error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

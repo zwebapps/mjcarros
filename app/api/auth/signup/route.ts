@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
 import { hashPassword, generateToken } from "@/lib/auth";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-import { isReservedAdminEmail, SIGNUP_ROLE } from "@/lib/roles";
+import { isReservedAdminEmail, SIGNUP_ROLE, toPrismaUserRole } from "@/lib/roles";
+import { prisma } from "@/lib/prisma";
+import { withMongoId } from "@/lib/serialize-api";
 
 export const runtime = "nodejs";
 
-const MONGODB_URI = getMongoDbUri();
-
 export async function POST(request: NextRequest) {
-  let client;
-
   try {
     const body = await request.json();
     const email = typeof body?.email === "string" ? body.email.trim() : "";
@@ -34,18 +30,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection("users");
-
-    const existingUser = await usersCollection.findOne({
-      email: email.toLowerCase(),
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
     });
     if (existingUser) {
       return NextResponse.json(
@@ -56,20 +42,18 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password);
 
-    const userData = {
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      name,
-      role: SIGNUP_ROLE,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const row = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        name,
+        role: toPrismaUserRole(SIGNUP_ROLE),
+      },
+    });
 
-    const result = await usersCollection.insertOne(userData);
-    const user = { ...userData, _id: result.insertedId };
-
+    const user = withMongoId(row);
     const token = generateToken({
-      userId: user._id.toString(),
+      userId: user._id,
       email: user.email,
       role: SIGNUP_ROLE,
     });
@@ -79,9 +63,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }

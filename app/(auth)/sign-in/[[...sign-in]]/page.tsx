@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { Button } from '@/components/ui/button';
-import { isAdminRole } from '@/lib/roles';
+import { isAdminRole, isDealerRole } from '@/lib/roles';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -43,12 +43,15 @@ export default function SignInPage() {
       localStorage.setItem('user', JSON.stringify(data.user));
 
       const redirectTo = searchParams?.get('redirect');
-      if (redirectTo && redirectTo.startsWith('/')) {
+      if (redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
         window.location.assign(redirectTo);
         return;
       }
 
-      window.location.assign(isAdminRole(data.user?.role) ? '/admin' : '/');
+      let destination = '/';
+      if (isAdminRole(data.user?.role)) destination = '/admin';
+      else if (isDealerRole(data.user?.role)) destination = '/dealer';
+      window.location.assign(destination);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+import { UserRole } from '@prisma/client';
 import { db, findMany, findOne, countDocuments } from '@/lib/db';
 import { hashPassword, generateToken } from '@/lib/auth';
+import { prismaRoleToAppRole } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,7 +70,9 @@ export async function POST(request: NextRequest) {
         const jwt = require('jsonwebtoken');
         const payload = jwt.verify(token, process.env.JWT_SECRET!) as any;
         
-        const adminUser = await findOne('user', { id: payload.userId  });
+        const adminUser = (await findOne('user', { id: payload.userId })) as {
+          role?: string;
+        } | null;
 
         if (!adminUser || adminUser.role !== 'ADMIN') {
           return NextResponse.json(
@@ -93,12 +97,16 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        role: 'ADMIN'
-      }
+        role: UserRole.ADMIN,
+      },
     });
 
     // Generate token for immediate login
-    const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: prismaRoleToAppRole(user.role as UserRole),
+    });
 
     const { password: _, ...userWithoutPassword } = user;
 
@@ -128,7 +136,7 @@ export async function GET() {
       );
     }
     const adminCount = await db.user.count({
-      role: 'ADMIN'
+      where: { role: UserRole.ADMIN },
     });
 
     const categoryCount = await countDocuments('category');

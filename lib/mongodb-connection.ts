@@ -27,9 +27,13 @@ function rewriteDockerServiceHostForLocalDev(uri: string): string {
   return uri;
 }
 
-/** Only when `SKIP_DB_ENV_VALIDATION=1` (e.g. `next build` in Docker without `.env` in context). Never use at runtime. */
+/** Only when `SKIP_DB_ENV_VALIDATION=1` (e.g. `next build` in Docker). Never use at runtime. */
 const BUILD_PLACEHOLDER_URI =
-  'mongodb://buildtime:buildtime@127.0.0.1:27017/buildtime?authSource=admin';
+  "postgresql://build:build@127.0.0.1:5432/buildtime?schema=public";
+
+import { skipDbConnectionDuringBuild } from "./db-connection";
+
+export { skipDbConnectionDuringBuild };
 
 function allowMissingDbEnvForBuild(): boolean {
   const v = process.env.SKIP_DB_ENV_VALIDATION;
@@ -40,8 +44,9 @@ function allowMissingDbEnvForBuild(): boolean {
  * True during `next build` when `SKIP_DB_ENV_VALIDATION=1` (e.g. Docker) — no MongoDB is available.
  * Server components must not call `MongoClient.connect()` in that case (avoids ECONNREFUSED to 127.0.0.1:27017).
  */
+/** @deprecated Use skipDbConnectionDuringBuild from `@/lib/db-connection` */
 export function skipMongoConnectionDuringBuild(): boolean {
-  return allowMissingDbEnvForBuild();
+  return skipDbConnectionDuringBuild();
 }
 
 /** Build URI in Docker from MONGO_* with encoded credentials (Compose/.env DATABASE_URL breaks on @ : % $ in passwords). */

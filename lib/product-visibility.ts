@@ -1,6 +1,6 @@
-/** Mongo filter: products visible on the storefront (hidden !== true). */
+/** Prisma `where` fragment: products visible on the storefront. */
 export const CLIENT_VISIBLE_PRODUCT_FILTER = {
-  hidden: { $ne: true },
+  hidden: false,
 } as const;
 
 export function isProductHidden(product: unknown): boolean {

@@ -1,52 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 import { writeBufferToPublicUploads } from "@/lib/public-uploads";
+import { prisma } from "@/lib/prisma";
+import { withMongoId, withMongoIds } from "@/lib/serialize-api";
 
-export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+export const runtime = "nodejs";
 
-const MONGODB_URI = getMongoDbUri();
-
-export async function GET(request: NextRequest) {
-  let client;
-  
+export async function GET() {
   try {
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const billboardsCollection = db.collection('billboards');
-    
-    const billboards = await billboardsCollection.find({}).sort({ createdAt: -1 }).toArray();
-    return NextResponse.json(billboards);
+    const billboards = await prisma.billboard.findMany({ orderBy: { createdAt: "desc" } });
+    return NextResponse.json(withMongoIds(billboards));
   } catch (error) {
     console.error("Error fetching billboards:", error);
     return NextResponse.json({ error: "Error fetching billboards" }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }
 
 export async function POST(request: NextRequest) {
-  let client;
-  
   try {
-    // Check if user is admin (middleware headers) or verify JWT directly
-    let userRole = request.headers.get('x-user-role');
+    let userRole = request.headers.get("x-user-role");
     if (!userRole) {
-      const token = extractTokenFromHeader(request.headers.get('authorization') ?? undefined);
+      const token = extractTokenFromHeader(request.headers.get("authorization") ?? undefined);
       const payload = token ? verifyToken(token) : null;
-      userRole = payload?.role || null as any;
+      userRole = payload?.role || null;
     }
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
     const contentType = request.headers.get("content-type") || "";
@@ -58,7 +37,6 @@ export async function POST(request: NextRequest) {
       const file = form.get("file") as File | null;
       const rawBillboard = form.get("billboard");
       billboard = typeof rawBillboard === "string" ? rawBillboard : String(rawBillboard || "");
-      // existing UI sends JSON.stringify(value)
       try {
         billboard = JSON.parse(billboard);
       } catch {
@@ -78,37 +56,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Connect to MongoDB
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const row = await prisma.billboard.create({
+      data: { billboard, imageURL },
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const billboardsCollection = db.collection('billboards');
-    
-    const billboardData = {
-      billboard,
-      imageURL,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
 
-    const result = await billboardsCollection.insertOne(billboardData);
-    const newBillboard = { ...billboardData, _id: result.insertedId };
-
-    return NextResponse.json(newBillboard);
+    return NextResponse.json(withMongoId(row));
   } catch (error) {
     console.error("Error creating billboard:", error);
-    return NextResponse.json(
-      { error: "Error creating billboard" },
-      { status: 500 }
-    );
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    return NextResponse.json({ error: "Error creating billboard" }, { status: 500 });
   }
 }

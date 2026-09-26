@@ -1,60 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient, ObjectId } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
 import { writeBufferToPublicUploads } from "@/lib/public-uploads";
+import { prisma } from "@/lib/prisma";
+import { legacyMongoFilter } from "@/lib/id-resolve";
+import { withMongoId } from "@/lib/serialize-api";
 
-export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
+export const runtime = "nodejs";
 
-const MONGODB_URI = getMongoDbUri();
+function slugifyCategory(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "");
+}
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    // Validate ObjectId format
-    if (!ObjectId.isValid(params.id)) {
-      return NextResponse.json({ error: 'Invalid category ID format' }, { status: 400 });
-    }
+    const category = await prisma.category.findFirst({
+      where: legacyMongoFilter(params.id),
+    });
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const categoriesCollection = db.collection('categories');
-    
-    const category = await categoriesCollection.findOne({
-      _id: new ObjectId(params.id)
-    });
-    
     if (!category) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
-    
-    // Add id field for compatibility and map fields correctly
-    const categoryWithId = {
-      ...category,
-      id: category._id.toString(),
+
+    const serialized = withMongoId(category);
+    return NextResponse.json({
+      ...serialized,
       category: category.category || "",
       billboard: category.billboard || "",
-      billboardId: category.billboardId || ""
-    };
-    
-    return NextResponse.json(categoryWithId);
+      billboardId: category.billboardId || "",
+    });
   } catch (error) {
     console.error("Error fetching category:", error);
     return NextResponse.json({ error: "Error fetching category" }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }
 
@@ -62,28 +45,27 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    // Admin authentication required
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const token = extractTokenFromHeader(authHeader);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
     if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - Invalid token" }, { status: 401 });
     }
 
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
+    if (decoded.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 });
     }
 
-    // Validate ObjectId format
-    if (!ObjectId.isValid(params.id)) {
-      return NextResponse.json({ error: 'Invalid category ID format' }, { status: 400 });
+    const existingCategory = await prisma.category.findFirst({
+      where: legacyMongoFilter(params.id),
+    });
+    if (!existingCategory) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
     const contentType = request.headers.get("content-type") || "";
@@ -91,13 +73,6 @@ export async function PUT(
     let billboardId = "";
     let category = "";
     let uploadedImageUrl: string | null = null;
-
-    const slugifyCategory = (name: string): string =>
-      name
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9_-]/g, "");
 
     if (contentType.includes("multipart/form-data")) {
       const form = await request.formData();
@@ -107,7 +82,9 @@ export async function PUT(
       category = String(form.get("category") || "");
       if (file) {
         const bytes = Buffer.from(await file.arrayBuffer());
-        const safeExt = (file.name.split(".").pop() || "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase();
+        const safeExt = (file.name.split(".").pop() || "jpg")
+          .replace(/[^a-z0-9]/gi, "")
+          .toLowerCase();
         const slug = slugifyCategory(category);
         const rel = `category/${slug || Date.now()}.${safeExt || "jpg"}`;
         uploadedImageUrl = await writeBufferToPublicUploads(rel, bytes);
@@ -118,76 +95,33 @@ export async function PUT(
     }
 
     if (!billboard || !billboardId || !category) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const billboardRow = await prisma.billboard.findFirst({
+      where: legacyMongoFilter(billboardId),
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const categoriesCollection = db.collection('categories');
-    const billboardsCollection = db.collection('billboards');
 
-    // Check if category exists
-    const existingCategory = await categoriesCollection.findOne({ _id: new ObjectId(params.id) });
-    if (!existingCategory) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    if (uploadedImageUrl && billboardRow) {
+      await prisma.billboard.update({
+        where: { id: billboardRow.id },
+        data: { imageURL: uploadedImageUrl },
+      });
     }
 
-    if (uploadedImageUrl && ObjectId.isValid(billboardId)) {
-      await billboardsCollection.updateOne(
-        { _id: new ObjectId(billboardId) },
-        { $set: { imageURL: uploadedImageUrl, updatedAt: new Date() } }
-      );
-    }
+    const updatedCategory = await prisma.category.update({
+      where: { id: existingCategory.id },
+      data: {
+        billboard,
+        billboardId: billboardRow?.id ?? null,
+        category,
+      },
+    });
 
-    const updateData = {
-      billboard,
-      billboardId,
-      category,
-      updatedAt: new Date()
-    };
-
-    const result = await categoriesCollection.updateOne(
-      { _id: new ObjectId(params.id) },
-      { $set: updateData }
-    );
-
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
-    }
-
-    // Get updated category
-    const updatedCategory = await categoriesCollection.findOne({ _id: new ObjectId(params.id) });
-    
-    if (!updatedCategory) {
-      return NextResponse.json({ error: 'Category not found after update' }, { status: 404 });
-    }
-
-    // Add id field for compatibility
-    const categoryWithId = {
-      ...updatedCategory,
-      id: updatedCategory._id.toString()
-    };
-
-    return NextResponse.json(categoryWithId);
+    return NextResponse.json(withMongoId(updatedCategory));
   } catch (error) {
     console.error("Error updating category:", error);
-    return NextResponse.json(
-      { error: "Error updating category" },
-      { status: 500 }
-    );
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    return NextResponse.json({ error: "Error updating category" }, { status: 500 });
   }
 }
 
@@ -195,53 +129,34 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    // Admin authentication required
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const token = extractTokenFromHeader(authHeader);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
     if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - Invalid token" }, { status: 401 });
     }
 
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
+    if (decoded.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 });
     }
 
-    // Validate ObjectId format
-    if (!ObjectId.isValid(params.id)) {
-      return NextResponse.json({ error: 'Invalid category ID format' }, { status: 400 });
-    }
-
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const existing = await prisma.category.findFirst({
+      where: legacyMongoFilter(params.id),
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const categoriesCollection = db.collection('categories');
-    
-    const result = await categoriesCollection.deleteOne({ _id: new ObjectId(params.id) });
-    
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    if (!existing) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
-    
-    return NextResponse.json({ message: 'Category deleted successfully' });
+
+    await prisma.category.delete({ where: { id: existing.id } });
+
+    return NextResponse.json({ message: "Category deleted successfully" });
   } catch (error) {
     console.error("Error deleting category:", error);
     return NextResponse.json({ error: "Error deleting category" }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }

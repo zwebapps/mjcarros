@@ -1,14 +1,11 @@
-import { MongoClient } from "mongodb";
 import { Product as UIProduct } from "@/types";
-import {
-  getMongoDbUri,
-  getMongoDbName,
-} from "@/lib/mongodb-connection";
+import { skipMongoConnectionDuringBuild } from "@/lib/mongodb-connection";
 import {
   sortCategoriesForDisplay,
   DEFAULT_CATEGORY_ORDER,
 } from "@/lib/default-categories";
-import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
+import { getAllProducts, getCategories } from "@/lib/data-access";
+import { apiId } from "@/lib/serialize-api";
 
 export type ShopSidebarCategory = {
   id: string;
@@ -23,29 +20,18 @@ export type ShopSidebarPayload = {
 };
 
 export async function getShopSidebarData(): Promise<ShopSidebarPayload> {
-  let client: MongoClient | undefined;
+  if (skipMongoConnectionDuringBuild()) {
+    return { categories: [], totalCount: 0, products: [] };
+  }
 
   try {
-    const uri = getMongoDbUri();
-    const dbNameResolved = getMongoDbName();
-    client = new MongoClient(uri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-
-    await client.connect();
-    const db = client.db(dbNameResolved);
-    const categoriesCollection = db.collection("categories");
-    const productsCollection = db.collection("products");
-
     const [dbCategories, dbProducts] = await Promise.all([
-      categoriesCollection.find({}).toArray(),
-      productsCollection.find(CLIENT_VISIBLE_PRODUCT_FILTER).toArray(),
+      getCategories(),
+      getAllProducts(),
     ]);
 
     const products: UIProduct[] = dbProducts.map((p) => ({
-      id: p._id ? p._id.toString() : "",
+      id: p._id,
       title: p.title,
       description: p.description,
       price: p.price,
@@ -87,7 +73,7 @@ export async function getShopSidebarData(): Promise<ShopSidebarPayload> {
       const name = String(c.category || "").trim();
       if (!name) continue;
       byName.set(name, {
-        id: c._id?.toString?.() ? c._id.toString() : name,
+        id: apiId(c),
         category: name,
         count: categoryToCount[name] || 0,
       });
@@ -116,9 +102,8 @@ export async function getShopSidebarData(): Promise<ShopSidebarPayload> {
       totalCount: products.length,
       products: availableProducts,
     };
-  } finally {
-    if (client) {
-      await client.close();
-    }
+  } catch (error) {
+    console.error("getShopSidebarData error:", error);
+    return { categories: [], totalCount: 0, products: [] };
   }
 }

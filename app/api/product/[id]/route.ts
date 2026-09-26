@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
 import { extractTokenFromHeader, verifyToken } from "@/lib/auth";
-import { ObjectId } from "mongodb";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
+import { prisma } from "@/lib/prisma";
+import { legacyMongoFilter } from "@/lib/id-resolve";
+import { withMongoId, withMongoIds } from "@/lib/serialize-api";
 import { isProductHidden, CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
 
-const MONGODB_URI = getMongoDbUri();
-
-export const runtime = 'nodejs';
-
+export const runtime = "nodejs";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const product = await prisma.product.findFirst({
+      where: legacyMongoFilter(params.id),
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    
-    // Find the product by _id
-    const product = await productsCollection.findOne({ _id: new ObjectId(params.id) });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -36,9 +22,9 @@ export async function GET(
 
     let userRole = request.headers.get("x-user-role");
     if (!userRole) {
-      const token = extractTokenFromHeader(request.headers.get("authorization"));
+      const token = extractTokenFromHeader(request.headers.get("authorization") ?? undefined);
       const payload = token ? verifyToken(token) : null;
-      if (payload) userRole = payload.role;
+      userRole = payload?.role || null;
     }
     const isAdmin = userRole === "ADMIN";
 
@@ -46,41 +32,31 @@ export async function GET(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // Find related products (same category, excluding current product)
-    const relatedProducts = await productsCollection
-      .find({ 
-        category: product.category, 
-        _id: { $ne: new ObjectId(params.id) },
+    const relatedProducts = await prisma.product.findMany({
+      where: {
+        category: product.category,
+        NOT: { id: product.id },
         ...CLIENT_VISIBLE_PRODUCT_FILTER,
-      })
-      .limit(4)
-      .toArray();
+      },
+      take: 4,
+    });
 
-    // Transform the product to include id field for compatibility
     const transformedProduct = {
-      ...product,
-      id: product._id.toString(),
-      productCode: (product as any).productCode || `PRD-${product._id.toString().slice(-6).toUpperCase()}`,
-      sold: !!(product as any).sold
+      ...withMongoId(product),
+      productCode:
+        product.productCode || `PRD-${product.id.slice(-6).toUpperCase()}`,
+      sold: !!product.sold,
     };
 
-    // Transform related products
-    const transformedRelatedProducts = relatedProducts.map(relatedProduct => ({
-      ...relatedProduct,
-      id: relatedProduct._id.toString()
-    }));
+    const transformedRelatedProducts = withMongoIds(relatedProducts);
 
-    return NextResponse.json({ 
-      product: transformedProduct, 
-      relatedProducts: transformedRelatedProducts 
+    return NextResponse.json({
+      product: transformedProduct,
+      relatedProducts: transformedRelatedProducts,
     });
   } catch (error) {
     console.error("Error fetching product:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 }
 
@@ -88,47 +64,29 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let client;
-  
   try {
-    // Admin guard with JWT fallback
-    let userRole = request.headers.get('x-user-role');
+    let userRole = request.headers.get("x-user-role");
     if (!userRole) {
-      const token = extractTokenFromHeader(request.headers.get('authorization') ?? undefined);
+      const token = extractTokenFromHeader(request.headers.get("authorization") ?? undefined);
       const payload = token ? verifyToken(token) : null;
-      userRole = payload?.role || null as any;
+      userRole = payload?.role || null;
     }
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+    const existing = await prisma.product.findFirst({
+      where: legacyMongoFilter(params.id),
     });
-    
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    
-    // Delete the product
-    const result = await productsCollection.deleteOne({ _id: new ObjectId(params.id) });
-    
-    if (result.deletedCount === 0) {
+    if (!existing) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
+
+    await prisma.product.delete({ where: { id: existing.id } });
 
     return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);
-    return NextResponse.json(
-      { error: "Error deleting product" },
-      { status: 500 }
-    );
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    return NextResponse.json({ error: "Error deleting product" }, { status: 500 });
   }
 }

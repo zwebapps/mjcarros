@@ -2,17 +2,15 @@ import ShopProductCard from "@/components/ui/shop-product-card";
 import filteredData from "@/app/utils/filteredData";
 import { sortSoldLast } from "@/lib/shop-products";
 import { Product } from "@/types";
-import { MongoClient } from "mongodb";
-import { getMongoDbUri, getMongoDbName } from "@/lib/mongodb-connection";
-import { CLIENT_VISIBLE_PRODUCT_FILTER } from "@/lib/product-visibility";
+import { skipMongoConnectionDuringBuild } from "@/lib/mongodb-connection";
+import { getAllProducts } from "@/lib/data-access";
 
 export const metadata = {
   title: "Shop | MJ Carros",
   description: "Shop for luxury cars, sports cars, SUVs, and electric vehicles",
 };
 
-// Force dynamic rendering since we use searchParams
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const ShopPage = async ({
   searchParams,
@@ -20,34 +18,34 @@ const ShopPage = async ({
   searchParams: { [key: string]: string | string[] | undefined };
 }) => {
   try {
-    // Query MongoDB directly during SSR to avoid self-HTTP calls
-    const uri = getMongoDbUri();
-    const client = new MongoClient(uri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    await client.connect();
-    const db = client.db(getMongoDbName());
-    const productsCollection = db.collection('products');
-    const dbProducts = await productsCollection.find(CLIENT_VISIBLE_PRODUCT_FILTER).toArray();
-    await client.close();
+    if (skipMongoConnectionDuringBuild()) {
+      return (
+        <div className="px-6 py-12 text-center">
+          <p className="text-muted-foreground">No vehicles in stock right now.</p>
+        </div>
+      );
+    }
 
-    const products: Product[] = dbProducts.map((dbProduct: any) => ({
-      id: dbProduct._id?.toString(),
-      title: dbProduct.title,
-      description: dbProduct.description,
-      price: dbProduct.price,
-      finalPrice: dbProduct.finalPrice || undefined,
-      discount: dbProduct.discount || undefined,
-      featured: dbProduct.featured,
-      sold: !!dbProduct.sold,
-      negotiable: !!dbProduct.negotiable,
-      imageURLs: dbProduct.imageURLs || [],
-      category: dbProduct.category,
-      categoryId: dbProduct.categoryId,
-      createdAt: dbProduct.createdAt ? new Date(dbProduct.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: dbProduct.updatedAt ? new Date(dbProduct.updatedAt).toISOString() : new Date().toISOString(),
+    const rows = await getAllProducts();
+    const products: Product[] = rows.map((p: (typeof rows)[number]) => ({
+      id: p._id,
+      title: p.title,
+      description: p.description,
+      price: p.price,
+      finalPrice: p.finalPrice || undefined,
+      discount: p.discount || undefined,
+      featured: p.featured,
+      sold: !!p.sold,
+      negotiable: !!p.negotiable,
+      imageURLs: p.imageURLs || [],
+      category: p.category,
+      categoryId: p.categoryId,
+      createdAt: p.createdAt
+        ? new Date(p.createdAt).toISOString()
+        : new Date().toISOString(),
+      updatedAt: p.updatedAt
+        ? new Date(p.updatedAt).toISOString()
+        : new Date().toISOString(),
     }));
 
     if (!products || products.length === 0) {

@@ -1,70 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-import { comparePassword, generateToken } from '@/lib/auth';
-import { setAuthCookie } from '@/lib/auth-cookie';
-import { getMongoDbUri, getMongoDbName } from '@/lib/mongodb-connection';
-import { normalizeRole } from '@/lib/roles';
+import { NextRequest, NextResponse } from "next/server";
+import { comparePassword, generateToken } from "@/lib/auth";
+import { normalizeRole, prismaRoleToAppRole } from "@/lib/roles";
+import { prisma } from "@/lib/prisma";
+import { withMongoId } from "@/lib/serialize-api";
+import { setAuthCookie } from "@/lib/auth-cookie";
 
-export const runtime = 'nodejs'; // Force Node.js runtime for JWT compatibility
-
-const MONGODB_URI = getMongoDbUri();
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  let client;
-  
   try {
-    console.log('🔐 Signin request received');
-    
     const { email, password } = await request.json();
     const emailRaw = typeof email === "string" ? email.trim() : "";
     const passwordRaw = typeof password === "string" ? password : "";
 
     if (!emailRaw || !passwordRaw) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: "Email and password are required" },
         { status: 400 }
       );
     }
 
-    client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    await client.connect();
-    
-    const db = client.db(getMongoDbName());
-    const usersCollection = db.collection('users');
-    
-    const user = await usersCollection.findOne({
-      email: { $regex: new RegExp(`^${emailRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: emailRaw, mode: "insensitive" } },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const isValidPassword = await comparePassword(passwordRaw, user.password);
 
     if (!isValidPassword) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    const role = normalizeRole(user.role);
+    const role = normalizeRole(prismaRoleToAppRole(user.role));
+    const serialized = withMongoId(user);
     const token = generateToken({
-      userId: user._id?.toString() || '',
+      userId: serialized._id,
       email: user.email,
       role,
     });
 
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = serialized;
 
     const response = NextResponse.json({
       user: { ...userWithoutPassword, role },
@@ -72,16 +50,8 @@ export async function POST(request: NextRequest) {
     });
     setAuthCookie(response, token);
     return response;
-
   } catch (error) {
-    console.error('❌ Signin error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  } finally {
-    if (client) {
-      await client.close();
-    }
+    console.error("Signin error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

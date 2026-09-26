@@ -16,7 +16,7 @@ function test(name: string, fn: () => void) {
 }
 
 test("CLIENT_VISIBLE_PRODUCT_FILTER excludes hidden === true", () => {
-  assert.deepEqual(CLIENT_VISIBLE_PRODUCT_FILTER, { hidden: { $ne: true } });
+  assert.deepEqual(CLIENT_VISIBLE_PRODUCT_FILTER, { hidden: false });
 });
 
 test("isProductHidden returns true only for hidden === true", () => {
