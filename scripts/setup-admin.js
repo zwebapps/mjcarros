@@ -118,98 +118,105 @@ async function setupAdmin() {
       }
     }
 
-    console.log("\n2️⃣ Default categories...");
-    for (const categoryData of defaultCategoriesSeed) {
-      const name = categoryData.name;
-      const existing = await prisma.category.findUnique({ where: { category: name } });
-      if (existing) {
-        console.log(`✅ Category exists: ${name}`);
-        continue;
+    // Demo categories, products and billboards are for local/dev databases only.
+    // In production they would appear on the live shop and are re-created on every
+    // start, so they only run when SEED_DEMO_DATA=1 is set explicitly.
+    if (process.env.SEED_DEMO_DATA === "1") {
+      console.log("\n2️⃣ Default categories...");
+      for (const categoryData of defaultCategoriesSeed) {
+        const name = categoryData.name;
+        const existing = await prisma.category.findUnique({ where: { category: name } });
+        if (existing) {
+          console.log(`✅ Category exists: ${name}`);
+          continue;
+        }
+
+        const bb = await prisma.billboard.create({
+          data: {
+            billboard: `${name} Category`,
+            imageURL: "/placeholder-image.svg",
+          },
+        });
+
+        await prisma.category.create({
+          data: {
+            category: name,
+            billboard: `${name} Category`,
+            billboardId: bb.id,
+          },
+        });
+        console.log(`✅ Category created: ${name}`);
       }
 
-      const bb = await prisma.billboard.create({
-        data: {
-          billboard: `${name} Category`,
-          imageURL: "/placeholder-image.svg",
-        },
-      });
+      console.log("\n2️⃣.5️⃣ Default products...");
+      for (const p of defaultProductsSeed) {
+        if (!p.seedKey || !p.category || !p.title) continue;
 
-      await prisma.category.create({
-        data: {
-          category: name,
-          billboard: `${name} Category`,
-          billboardId: bb.id,
-        },
-      });
-      console.log(`✅ Category created: ${name}`);
-    }
+        const exists = await prisma.product.findUnique({ where: { seedKey: p.seedKey } });
+        if (exists) {
+          console.log(`✅ Default product exists: ${p.title}`);
+          continue;
+        }
 
-    console.log("\n2️⃣.5️⃣ Default products...");
-    for (const p of defaultProductsSeed) {
-      if (!p.seedKey || !p.category || !p.title) continue;
+        const cat = await prisma.category.findUnique({ where: { category: p.category } });
+        if (!cat) {
+          console.warn(`⚠️ Skip "${p.title}": category "${p.category}" not found`);
+          continue;
+        }
 
-      const exists = await prisma.product.findUnique({ where: { seedKey: p.seedKey } });
-      if (exists) {
-        console.log(`✅ Default product exists: ${p.title}`);
-        continue;
+        const productCode = `PRD-${p.seedKey.slice(-6).toUpperCase()}`;
+        await prisma.product.create({
+          data: {
+            seedKey: p.seedKey,
+            productCode,
+            title: p.title,
+            description: p.description || "",
+            imageURLs:
+              Array.isArray(p.imageURLs) && p.imageURLs.length
+                ? p.imageURLs
+                : ["/placeholder-image.svg"],
+            category: p.category,
+            categoryId: cat.id,
+            price: Number(p.price) || 0,
+            finalPrice: p.finalPrice !== undefined ? Number(p.finalPrice) : Number(p.price) || 0,
+            discount: p.discount !== undefined ? Number(p.discount) : 0,
+            featured: !!p.featured,
+            sold: !!p.sold,
+            negotiable: !!p.negotiable,
+            modelName: p.modelName || "",
+            year: p.year ? Number(p.year) : 0,
+            stockQuantity: p.stockQuantity !== undefined ? Number(p.stockQuantity) : 1,
+            color: p.color || "",
+            fuelType: p.fuelType || "",
+            transmission: p.transmission || "",
+            mileage:
+              p.mileage !== undefined && p.mileage !== null ? Number(p.mileage) : null,
+            condition: p.condition || "used",
+          },
+        });
+        console.log(`✅ Seeded: ${p.title}`);
       }
 
-      const cat = await prisma.category.findUnique({ where: { category: p.category } });
-      if (!cat) {
-        console.warn(`⚠️ Skip "${p.title}": category "${p.category}" not found`);
-        continue;
+      console.log("\n3️⃣ Sample billboards...");
+      const sampleBillboards = [
+        { billboard: "Premium Collection", imageURL: "/placeholder-image.svg" },
+        { billboard: "New Arrivals", imageURL: "/placeholder-image.svg" },
+        { billboard: "Luxury Vehicles", imageURL: "/placeholder-image.svg" },
+      ];
+
+      for (const billboardData of sampleBillboards) {
+        const existing = await prisma.billboard.findFirst({
+          where: { billboard: billboardData.billboard },
+        });
+        if (!existing) {
+          await prisma.billboard.create({ data: billboardData });
+          console.log(`✅ Billboard created: ${billboardData.billboard}`);
+        } else {
+          console.log(`✅ Billboard exists: ${billboardData.billboard}`);
+        }
       }
-
-      const productCode = `PRD-${p.seedKey.slice(-6).toUpperCase()}`;
-      await prisma.product.create({
-        data: {
-          seedKey: p.seedKey,
-          productCode,
-          title: p.title,
-          description: p.description || "",
-          imageURLs:
-            Array.isArray(p.imageURLs) && p.imageURLs.length
-              ? p.imageURLs
-              : ["/placeholder-image.svg"],
-          category: p.category,
-          categoryId: cat.id,
-          price: Number(p.price) || 0,
-          finalPrice: p.finalPrice !== undefined ? Number(p.finalPrice) : Number(p.price) || 0,
-          discount: p.discount !== undefined ? Number(p.discount) : 0,
-          featured: !!p.featured,
-          sold: !!p.sold,
-          negotiable: !!p.negotiable,
-          modelName: p.modelName || "",
-          year: p.year ? Number(p.year) : 0,
-          stockQuantity: p.stockQuantity !== undefined ? Number(p.stockQuantity) : 1,
-          color: p.color || "",
-          fuelType: p.fuelType || "",
-          transmission: p.transmission || "",
-          mileage:
-            p.mileage !== undefined && p.mileage !== null ? Number(p.mileage) : null,
-          condition: p.condition || "used",
-        },
-      });
-      console.log(`✅ Seeded: ${p.title}`);
-    }
-
-    console.log("\n3️⃣ Sample billboards...");
-    const sampleBillboards = [
-      { billboard: "Premium Collection", imageURL: "/placeholder-image.svg" },
-      { billboard: "New Arrivals", imageURL: "/placeholder-image.svg" },
-      { billboard: "Luxury Vehicles", imageURL: "/placeholder-image.svg" },
-    ];
-
-    for (const billboardData of sampleBillboards) {
-      const existing = await prisma.billboard.findFirst({
-        where: { billboard: billboardData.billboard },
-      });
-      if (!existing) {
-        await prisma.billboard.create({ data: billboardData });
-        console.log(`✅ Billboard created: ${billboardData.billboard}`);
-      } else {
-        console.log(`✅ Billboard exists: ${billboardData.billboard}`);
-      }
+    } else {
+      console.log("\n2️⃣ Demo data skipped (set SEED_DEMO_DATA=1 to seed categories, products, billboards)");
     }
 
     console.log("\n4️⃣ Contact page...");

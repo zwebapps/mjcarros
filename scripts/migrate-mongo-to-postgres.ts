@@ -124,8 +124,11 @@ async function main() {
       continue;
     }
 
+    // A category with the same name may already exist (e.g. created by setup-admin);
+    // adopt it instead of failing on the unique name.
+    const sameName = await prisma.category.findUnique({ where: { category: name } });
     const row = await prisma.category.upsert({
-      where: { legacyMongoId: legacy },
+      where: sameName && !sameName.legacyMongoId ? { id: sameName.id } : { legacyMongoId: legacy },
       create: {
         legacyMongoId: legacy,
         category: name,
@@ -135,6 +138,7 @@ async function main() {
         updatedAt: doc.updatedAt ? new Date(doc.updatedAt) : undefined,
       },
       update: {
+        legacyMongoId: legacy,
         category: name,
         billboard: String(doc.billboard || name),
         billboardId,
